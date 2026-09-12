@@ -1,0 +1,121 @@
+import { v4 as uuidv4 } from 'uuid';
+import { db } from '@/core/db/app_database';
+import type { SyncOperation, SyncQueueItem } from '@/types';
+
+/**
+ * 🦅 Falcon ERP - Outbox Pattern Sync Queue Manager
+ * Ensures that every local state change is recorded atomically for cloud synchronization.
+ */
+export class SyncQueueManager {
+  /**
+   * Enqueues an operation to the sync queue.
+   */
+  public static async enqueue(
+    table: string,
+    id: string,
+    operation: SyncOperation,
+    data: object
+  ): Promise<SyncQueueItem> {
+    const now = new Date().toISOString();
+
+    // Check if there is an existing pending action for the exact same entity to coalesce updates
+    const existing = await db.sync_queue
+      .where('entity_table')
+      .equals(table)
+      .and((item) => item.entity_id === id && item.status === 'pending')
+      .first();
+
+    if (existing) {
+      if (existing.operation === 'insert' && operation === 'update') {
+        // Merge payloads for an un-synced inserted item
+        const mergedPayload = JSON.stringify({
+          ...JSON.parse(existing.payload),
+          ...data,
+          updated_at: now,
+        });
+
+        await db.sync_queue.update(existing.id, {
+          payload: mergedPayload,
+          updated_at: now,
+        });
+
+        return { ...existing, payload: mergedPayload, updated_at: now };
+      }
+
+      if (existing.operation === 'insert' && operation === 'delete') {
+        // If inserted then deleted before syncing to cloud, simply remove from queue
+        await db.sync_queue.delete(existing.id);
+        return existing;
+      }
+    }
+
+    const queueItem: SyncQueueItem = {
+      id: uuidv4(),
+      entity_table: table,
+      entity_id: id,
+      operation,
+      payload: JSON.stringify(data),
+      status: 'pending',
+      retry_count: 0,
+      last_error: null,
+      created_at: now,
+      updated_at: now,
+    };
+
+    await db.sync_queue.add(queueItem);
+    return queueItem;
+  }
+
+  /**
+   * Retrieves pending sync items ordered by creation time.
+   */
+  public static async getPendingItems(limit = 50): Promise<SyncQueueItem[]> {
+    return await db.sync_queue
+      .where('status')
+      .equals('pending')
+      .limit(limit)
+      .sortBy('created_at');
+  }
+
+  /**
+   * Marks an item as in-flight.
+   */
+  public static async markInFlight(id: string): Promise<void> {
+    await db.sync_queue.update(id, {
+      status: 'in_flight',
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Marks an item as synced and clears or archives it.
+   */
+  public static async markSynced(id: string): Promise<void> {
+    await db.sync_queue.delete(id);
+  }
+
+  /**
+   * Marks an item as failed with error details and increments retry count.
+   */
+  public static async markFailed(id: string, errorMessage: string): Promise<void> {
+    const item = await db.sync_queue.get(id);
+    if (!item) return;
+
+    const retryCount = item.retry_count + 1;
+    const isPermanentFailure = retryCount >= 5;
+
+    await db.sync_queue.update(id, {
+      status: isPermanentFailure ? 'failed' : 'pending',
+      retry_count: retryCount,
+      last_error: errorMessage,
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Count total pending sync items.
+   */
+  public static async getPendingCount(): Promise<number> {
+    return await db.sync_queue.where('status').equals('pending').count();
+  }
+}
