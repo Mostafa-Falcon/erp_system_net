@@ -126,7 +126,7 @@ export interface Product {
   category_id?: EntityId | null;
   brand_id?: EntityId | null;
   item_type: ItemType;
-  product_type?: string; // التصنيف الطبي/التجاري الواقعي (أدوية بشرية، مستلزمات، مكملات، تجميل، إلخ)
+  product_type?: string; // نوع الصنف التجاري العام (حسب نشاط المنشأة)
   
   // Measurement & Level configuration
   measurement_type?: 'unit' | 'weight'; // قطعة/وحدات أو بالوزن (كيلو)

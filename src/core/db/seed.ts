@@ -12,15 +12,21 @@ import type {
 } from '@/types';
 
 /**
- * تنظيف البيانات التجريبية/الصيدلانية القديمة لضمان نظام عام نظيف 100% لكل الأنشطة
+ * ضمان بداية نظيفة وخالية من أي بيانات افتراضية إذا لم تكن هناك أصناف مسجلة
  */
-export async function cleanLegacyDemoData(): Promise<void> {
+export async function ensureCleanLookupState(): Promise<void> {
   try {
-    const legacyNames = ['أدوية', 'أدوية بشرية', 'أجهزة طبية', 'مستلزمات', 'مكملات غذائية', 'مستحضرات تجميل'];
-    await db.product_categories.where('name').anyOf(legacyNames).delete();
-    await db.product_types.where('name').anyOf(legacyNames).delete();
+    if (typeof window !== 'undefined' && !localStorage.getItem('falcon_catalog_clean_v1')) {
+      const prodCount = await db.products.count();
+      if (prodCount === 0) {
+        await db.product_categories.clear();
+        await db.product_types.clear();
+        await db.product_brands.clear();
+      }
+      localStorage.setItem('falcon_catalog_clean_v1', 'true');
+    }
   } catch (err) {
-    console.warn('cleanLegacyDemoData warning:', err);
+    console.warn('ensureCleanLookupState notice:', err);
   }
 }
 
@@ -29,7 +35,7 @@ export async function cleanLegacyDemoData(): Promise<void> {
  * Seeds essential lookup data for first-time boot offline.
  */
 export async function seedInitialData(): Promise<void> {
-  await cleanLegacyDemoData();
+  await ensureCleanLookupState();
   const orgCount = await db.organizations.count();
   if (orgCount > 0) {
     return; // Already seeded
