@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import type { ProductBrand, ProductCategory, ProductTypeItem } from '@/types';
 import type { ModalType } from '../types';
@@ -52,14 +53,16 @@ export const ClassificationsSection: React.FC<ClassificationsSectionProps> = ({
             <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">
               الشركة المصنعة / الماركة
             </Label>
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => setActiveModal('brand')}
-              className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+              className="h-6 px-1.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 flex items-center gap-0.5 cursor-pointer rounded-lg"
             >
               <Plus className="w-3 h-3" />
               <span>إضافة / إدارة</span>
-            </button>
+            </Button>
           </div>
           <Select value={brandId} onValueChange={setBrandId}>
             <SelectTrigger className="w-full h-11 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold">
@@ -82,14 +85,16 @@ export const ClassificationsSection: React.FC<ClassificationsSectionProps> = ({
             <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">
               المجموعة / التصنيف
             </Label>
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => setActiveModal('category')}
-              className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+              className="h-6 px-1.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 flex items-center gap-0.5 cursor-pointer rounded-lg"
             >
               <Plus className="w-3 h-3" />
               <span>إضافة / إدارة</span>
-            </button>
+            </Button>
           </div>
           <Select value={categoryId} onValueChange={setCategoryId}>
             <SelectTrigger className="w-full h-11 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold">
@@ -112,14 +117,16 @@ export const ClassificationsSection: React.FC<ClassificationsSectionProps> = ({
             <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">
               نوع المنتج
             </Label>
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => setActiveModal('product_type')}
-              className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+              className="h-6 px-1.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 flex items-center gap-0.5 cursor-pointer rounded-lg"
             >
               <Plus className="w-3 h-3" />
               <span>إضافة / إدارة</span>
-            </button>
+            </Button>
           </div>
           <Select value={productType} onValueChange={setProductType}>
             <SelectTrigger className="w-full h-11 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold">

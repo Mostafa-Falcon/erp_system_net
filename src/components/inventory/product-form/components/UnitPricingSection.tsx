@@ -3,9 +3,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
 import { Trash2, TrendingUp, Plus, X } from 'lucide-react';
 import type { UnitLevelItem } from '../types';
-import { calculateMargin } from '../utils';
+import { calculatePriceDetails } from '../utils';
 
 interface UnitPricingSectionProps {
   unitLevels: UnitLevelItem[];
@@ -27,7 +28,12 @@ export const UnitPricingSection: React.FC<UnitPricingSectionProps> = ({
         const activeSale = lvl.dualPricing
           ? lvl.newSalePrice || lvl.salePrice
           : lvl.salePrice;
-        const margin = calculateMargin(lvl.purchasePrice, activeSale);
+        const priceDetails = calculatePriceDetails(
+          lvl.purchasePrice,
+          activeSale,
+          lvl.discountValue,
+          lvl.discountType
+        );
 
         return (
           <Card
@@ -148,14 +154,16 @@ export const UnitPricingSection: React.FC<UnitPricingSectionProps> = ({
                   </div>
 
                   {!isFirst && (
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon"
                       onClick={() => removeUnitLevel(idx)}
-                      className="p-1.5 text-red-500 hover:text-red-700 transition-colors cursor-pointer"
+                      className="w-8 h-8 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer"
                       title="حذف هذا المستوى"
                     >
                       <Trash2 className="w-4 h-4" />
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
@@ -194,7 +202,7 @@ export const UnitPricingSection: React.FC<UnitPricingSectionProps> = ({
                       placeholder=""
                       className="h-10 text-xs font-mono flex-1"
                     />
-                    <button
+                    <Button
                       type="button"
                       onClick={() =>
                         updateUnitLevel(idx, {
@@ -202,11 +210,24 @@ export const UnitPricingSection: React.FC<UnitPricingSectionProps> = ({
                             lvl.discountType === 'percent' ? 'amount' : 'percent',
                         })
                       }
-                      className="h-10 px-2.5 rounded-xl bg-emerald-600 text-white text-xs font-black shrink-0 cursor-pointer"
+                      className="h-10 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shrink-0 cursor-pointer shadow-2xs"
                     >
                       {lvl.discountType === 'percent' ? '%' : 'ج.م'}
-                    </button>
+                    </Button>
                   </div>
+                  {lvl.discountValue && parseFloat(lvl.discountValue) > 0 && priceDetails.grossCost > 0 && (
+                    <div className="flex items-center justify-between mt-1 px-1 text-[10px] font-bold">
+                      <span className="text-slate-600 dark:text-slate-400">
+                        صافي الشراء:{' '}
+                        <strong className="text-emerald-700 dark:text-emerald-400 font-mono">
+                          {priceDetails.netCost.toFixed(2)} ج.م
+                        </strong>
+                      </span>
+                      <span className="text-slate-400 font-mono">
+                        (خصم {priceDetails.discountAmount.toFixed(2)} ج.م)
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between p-2 h-10 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
@@ -287,14 +308,26 @@ export const UnitPricingSection: React.FC<UnitPricingSectionProps> = ({
                   </div>
                 )}
 
-                <div className="sm:col-span-2 h-11 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 flex flex-col items-center justify-center p-1">
-                  <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400">
+                <div
+                  className={`sm:col-span-2 min-h-11 py-1 px-1.5 rounded-xl border flex flex-col items-center justify-center transition-all ${
+                    priceDetails.marginPercent < 0
+                      ? 'bg-red-50/60 dark:bg-red-950/40 border-red-200 dark:border-red-800/80 text-red-700 dark:text-red-400'
+                      : 'bg-emerald-50/60 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/80 text-emerald-800 dark:text-emerald-300'
+                  }`}
+                  title={`صافي التكلفة: ${priceDetails.netCost.toFixed(2)} ج.م | الربح: ${priceDetails.profitText}`}
+                >
+                  <div className="flex items-center gap-1 text-[10px] font-bold">
                     <TrendingUp className="w-3 h-3" />
                     <span>هامش الربح</span>
                   </div>
-                  <span className="text-xs font-black font-mono text-emerald-800 dark:text-emerald-300">
-                    {margin}
+                  <span className="text-xs font-black font-mono">
+                    {priceDetails.marginText}
                   </span>
+                  {priceDetails.salePrice > 0 && priceDetails.grossCost > 0 && (
+                    <span className="text-[9px] font-bold font-mono opacity-80">
+                      {priceDetails.profitText}
+                    </span>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -304,14 +337,15 @@ export const UnitPricingSection: React.FC<UnitPricingSectionProps> = ({
 
       {/* زر إضافة وحدة أصغر (بحد أقصى 3 مستويات) */}
       {unitLevels.length < 3 && (
-        <button
+        <Button
           type="button"
+          variant="outline"
           onClick={handleAddSmallerUnit}
-          className="w-full py-3.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+          className="w-full h-12 rounded-2xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 border-dashed border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-black flex items-center justify-center gap-2 cursor-pointer shadow-xs transition-all"
         >
           <Plus className="w-4 h-4" />
           <span>إضافة وحدة أصغر (المستوى {unitLevels.length + 1})</span>
-        </button>
+        </Button>
       )}
     </>
   );

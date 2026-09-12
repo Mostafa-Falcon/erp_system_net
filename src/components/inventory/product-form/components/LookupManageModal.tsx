@@ -54,13 +54,15 @@ export const LookupManageModal: React.FC<LookupManageModalProps> = ({
               {activeModal === 'product_type' && 'إدارة وإضافة أنواع المنتجات'}
             </DialogTitle>
           </div>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={() => setActiveModal(null)}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
           >
             <X className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
 
         {/* إضافة جديد */}
@@ -110,14 +112,16 @@ export const LookupManageModal: React.FC<LookupManageModalProps> = ({
                     className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700 text-xs"
                   >
                     <span className="font-bold text-slate-800 dark:text-slate-200">{b.name}</span>
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon"
                       onClick={() => handleDeleteLookupItem('brand', b.id, b.name)}
-                      className="p-1 text-red-500 hover:text-red-700 cursor-pointer"
+                      className="w-7 h-7 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer rounded-lg"
                       title="حذف"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    </Button>
                   </div>
                 ))
               ))}
@@ -132,14 +136,16 @@ export const LookupManageModal: React.FC<LookupManageModalProps> = ({
                     className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700 text-xs"
                   >
                     <span className="font-bold text-slate-800 dark:text-slate-200">{c.name}</span>
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon"
                       onClick={() => handleDeleteLookupItem('category', c.id, c.name)}
-                      className="p-1 text-red-500 hover:text-red-700 cursor-pointer"
+                      className="w-7 h-7 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer rounded-lg"
                       title="حذف"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    </Button>
                   </div>
                 ))
               ))}
@@ -154,14 +160,16 @@ export const LookupManageModal: React.FC<LookupManageModalProps> = ({
                     className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700 text-xs"
                   >
                     <span className="font-bold text-slate-800 dark:text-slate-200">{t.name}</span>
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon"
                       onClick={() => handleDeleteLookupItem('product_type', t.id, t.name)}
-                      className="p-1 text-red-500 hover:text-red-700 cursor-pointer"
+                      className="w-7 h-7 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer rounded-lg"
                       title="حذف"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    </Button>
                   </div>
                 ))
               ))}

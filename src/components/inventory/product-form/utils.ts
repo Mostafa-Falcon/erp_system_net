@@ -11,10 +11,68 @@ export function generateSku(name: string): string {
   return `${prefix}-${rand}`;
 }
 
-export function calculateMargin(costStr: string, saleStr: string): string {
-  const cost = parseFloat(costStr);
-  const sale = parseFloat(saleStr);
-  if (!cost || cost <= 0 || !sale) return '0.0%';
-  const margin = ((sale - cost) / cost) * 100;
-  return `${margin.toFixed(1)}%`;
+export interface PriceCalculationResult {
+  grossCost: number;
+  discountAmount: number;
+  netCost: number;
+  salePrice: number;
+  profit: number;
+  marginPercent: number;
+  marginText: string;
+  profitText: string;
+}
+
+/**
+ * حساب تفاصيل التسعير والخصم وهامش الربح:
+ * 1. نسبة أو قيمة الخصم تُطبق على سعر الشراء لحساب صافي سعر الشراء (Net Cost).
+ * 2. هامش الربح يُحسب من سعر البيع: ((سعر البيع - صافي سعر الشراء) / سعر البيع) * 100
+ */
+export function calculatePriceDetails(
+  costStr: string,
+  saleStr: string,
+  discountValStr?: string,
+  discountType: 'percent' | 'amount' = 'percent'
+): PriceCalculationResult {
+  const grossCost = parseFloat(costStr) || 0;
+  const salePrice = parseFloat(saleStr) || 0;
+  const disc = parseFloat(discountValStr || '0') || 0;
+
+  let discountAmount = 0;
+  if (grossCost > 0 && disc > 0) {
+    if (discountType === 'amount') {
+      discountAmount = Math.min(grossCost, disc);
+    } else {
+      discountAmount = (grossCost * disc) / 100;
+    }
+  }
+
+  const netCost = Math.max(0, grossCost - discountAmount);
+  const profit = salePrice > 0 ? salePrice - netCost : 0;
+
+  let marginPercent = 0;
+  if (salePrice > 0) {
+    marginPercent = (profit / salePrice) * 100;
+  } else if (grossCost > 0) {
+    marginPercent = 0;
+  }
+
+  return {
+    grossCost,
+    discountAmount,
+    netCost,
+    salePrice,
+    profit,
+    marginPercent,
+    marginText: `${marginPercent.toFixed(1)}%`,
+    profitText: `${profit >= 0 ? '+' : ''}${profit.toFixed(2)} ج.م`,
+  };
+}
+
+export function calculateMargin(
+  costStr: string,
+  saleStr: string,
+  discountValStr?: string,
+  discountType: 'percent' | 'amount' = 'percent'
+): string {
+  return calculatePriceDetails(costStr, saleStr, discountValStr, discountType).marginText;
 }

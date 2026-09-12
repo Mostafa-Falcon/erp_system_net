@@ -3,8 +3,9 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
 import { Scale, TrendingUp } from 'lucide-react';
-import { calculateMargin } from '../utils';
+import { calculatePriceDetails } from '../utils';
 
 interface WeightPricingSectionProps {
   weightUnitName: string;
@@ -52,7 +53,12 @@ export const WeightPricingSection: React.FC<WeightPricingSectionProps> = ({
   const activeSale = weightDualPricing
     ? weightNewSalePrice || weightSalePrice
     : weightSalePrice;
-  const margin = calculateMargin(weightPurchasePrice, activeSale);
+  const priceDetails = calculatePriceDetails(
+    weightPurchasePrice,
+    activeSale,
+    weightDiscount,
+    weightDiscountType
+  );
 
   return (
     <Card className="border border-blue-200 dark:border-blue-900/60 bg-white dark:bg-[#131b2e] shadow-xs">
@@ -144,18 +150,31 @@ export const WeightPricingSection: React.FC<WeightPricingSectionProps> = ({
                 placeholder=""
                 className="h-11 text-xs font-mono flex-1"
               />
-              <button
+              <Button
                 type="button"
                 onClick={() =>
                   setWeightDiscountType((prev) =>
                     prev === 'percent' ? 'amount' : 'percent'
                   )
                 }
-                className="h-11 px-3 rounded-xl bg-blue-600 text-white text-xs font-black shrink-0 cursor-pointer"
+                className="h-11 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black shrink-0 cursor-pointer shadow-2xs"
               >
                 {weightDiscountType === 'percent' ? '%' : 'ج.م'}
-              </button>
+              </Button>
             </div>
+            {weightDiscount && parseFloat(weightDiscount) > 0 && priceDetails.grossCost > 0 && (
+              <div className="flex items-center justify-between mt-1 px-1 text-[10px] font-bold">
+                <span className="text-slate-600 dark:text-slate-400">
+                  صافي الشراء:{' '}
+                  <strong className="text-blue-700 dark:text-blue-400 font-mono">
+                    {priceDetails.netCost.toFixed(2)} ج.م
+                  </strong>
+                </span>
+                <span className="text-slate-400 font-mono">
+                  (خصم {priceDetails.discountAmount.toFixed(2)} ج.م)
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -214,14 +233,26 @@ export const WeightPricingSection: React.FC<WeightPricingSectionProps> = ({
             </div>
           )}
 
-          <div className="sm:col-span-2 h-11 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex flex-col items-center justify-center p-1">
-            <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400">
+          <div
+            className={`sm:col-span-2 min-h-11 py-1 px-1.5 rounded-xl border flex flex-col items-center justify-center transition-all ${
+              priceDetails.marginPercent < 0
+                ? 'bg-red-50/60 dark:bg-red-950/40 border-red-200 dark:border-red-800/80 text-red-700 dark:text-red-400'
+                : 'bg-emerald-50/60 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
+            }`}
+            title={`صافي التكلفة: ${priceDetails.netCost.toFixed(2)} ج.م | الربح: ${priceDetails.profitText}`}
+          >
+            <div className="flex items-center gap-1 text-[10px] font-bold">
               <TrendingUp className="w-3 h-3" />
               <span>هامش الربح</span>
             </div>
-            <span className="text-xs font-black font-mono text-emerald-800 dark:text-emerald-300">
-              {margin}
+            <span className="text-xs font-black font-mono">
+              {priceDetails.marginText}
             </span>
+            {priceDetails.salePrice > 0 && priceDetails.grossCost > 0 && (
+              <span className="text-[9px] font-bold font-mono opacity-80">
+                {priceDetails.profitText}
+              </span>
+            )}
           </div>
         </div>
       </CardContent>

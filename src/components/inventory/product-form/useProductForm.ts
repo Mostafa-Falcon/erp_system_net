@@ -17,7 +17,7 @@ import type {
   ModalType,
   ItemTypeMode,
 } from './types';
-import { generateSku } from './utils';
+import { generateSku, calculatePriceDetails } from './utils';
 
 export function useProductForm({
   orgId,
@@ -473,8 +473,18 @@ export function useProductForm({
 
       const pPrice =
         itemTypeMode === 'weight'
-          ? parseFloat(weightPurchasePrice) || 0
-          : parseFloat(unitLevels[0].purchasePrice) || 0;
+          ? (calculatePriceDetails(
+              weightPurchasePrice,
+              weightSalePrice,
+              weightDiscount,
+              weightDiscountType
+            ).netCost || parseFloat(weightPurchasePrice) || 0)
+          : (calculatePriceDetails(
+              unitLevels[0].purchasePrice,
+              unitLevels[0].salePrice,
+              unitLevels[0].discountValue,
+              unitLevels[0].discountType
+            ).netCost || parseFloat(unitLevels[0].purchasePrice) || 0);
 
       const sPrice =
         itemTypeMode === 'weight'
@@ -554,10 +564,19 @@ export function useProductForm({
             ? parseFloat(lvl.oldSalePrice)
             : undefined;
 
+          const secondaryCost = lvl.purchasePrice
+            ? (calculatePriceDetails(
+                lvl.purchasePrice,
+                lvl.salePrice,
+                lvl.discountValue,
+                lvl.discountType
+              ).netCost || parseFloat(lvl.purchasePrice))
+            : undefined;
+
           secondaryUnitsData.push({
             unit_id: subU.id,
             conversion_factor: parseFloat(lvl.conversionFactor) || 1,
-            purchase_price: lvl.purchasePrice ? parseFloat(lvl.purchasePrice) : undefined,
+            purchase_price: secondaryCost,
             sale_price: secondarySale,
             old_sale_price: secondaryOldSale,
             has_dual_pricing: lvl.dualPricing,

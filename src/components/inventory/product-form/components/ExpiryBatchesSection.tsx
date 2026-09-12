@@ -11,7 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Clock, Info, Trash2, Calendar, Plus } from 'lucide-react';
+import { DatePicker } from '@/components/ui/date-picker';
+import { Clock, Info, Trash2, Calendar as CalendarIcon, Plus } from 'lucide-react';
 import type { FormBatchEntry, UnitLevelItem, ItemTypeMode } from '../types';
 
 interface ExpiryBatchesSectionProps {
@@ -66,165 +67,183 @@ export const ExpiryBatchesSection: React.FC<ExpiryBatchesSectionProps> = ({
               </div>
             ) : (
               <div className="space-y-3">
-                {batchEntries.map((b, idx) => (
-                  <div
-                    key={b.id}
-                    className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex flex-wrap lg:flex-nowrap items-center gap-3"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveBatch(idx)}
-                      className="w-9 h-9 rounded-xl flex items-center justify-center text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer shrink-0"
-                      title="حذف هذا التاريخ"
+                {batchEntries.map((b, idx) => {
+                  const currentDateObj =
+                    b.year && b.month && b.day
+                      ? new Date(
+                          parseInt(b.year, 10),
+                          parseInt(b.month, 10) - 1,
+                          parseInt(b.day, 10)
+                        )
+                      : undefined;
+
+                  return (
+                    <div
+                      key={b.id}
+                      className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex flex-wrap lg:flex-nowrap items-center gap-3"
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-
-                    <div className="w-28 shrink-0">
-                      <Label className="block text-[11px] font-bold text-slate-500 mb-1">
-                        الكمية
-                      </Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        step="any"
-                        value={b.quantity}
-                        onChange={(e) =>
-                          handleUpdateBatch(idx, { quantity: e.target.value })
-                        }
-                        placeholder="1"
-                        className="h-10 text-xs font-mono font-bold"
-                      />
-                    </div>
-
-                    {/* الوحدة المرتبطة: تدعم الوحدات المتعددة للقطع أو الميزان */}
-                    <div className="flex-1 min-w-[200px]">
-                      <Label className="block text-[11px] font-bold text-slate-500 mb-1">
-                        الوحدة المرتبطة
-                      </Label>
-                      <Select
-                        value={b.unitLevelId}
-                        onValueChange={(val) =>
-                          handleUpdateBatch(idx, { unitLevelId: val })
-                        }
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveBatch(idx)}
+                        className="w-9 h-9 rounded-xl text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer shrink-0"
+                        title="حذف هذا التاريخ"
                       >
-                        <SelectTrigger className="w-full h-10 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold">
-                          <SelectValue placeholder="اختر الوحدة..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {itemTypeMode === 'unit' ? (
-                            <>
-                              <SelectItem value="level-1">
-                                {unitLevels[0]?.unitName
-                                  ? `${unitLevels[0].unitName} (المستوى 1)`
-                                  : 'الوحدة الأساسية (المستوى 1)'}
-                              </SelectItem>
-                              {unitLevels.length > 1 && (
-                                <SelectItem value="level-2">
-                                  {unitLevels[1]?.unitName
-                                    ? `${unitLevels[1].unitName} (المستوى 2)`
-                                    : 'المستوى 2'}
-                                </SelectItem>
-                              )}
-                              {unitLevels.length > 2 && (
-                                <SelectItem value="level-3">
-                                  {unitLevels[2]?.unitName
-                                    ? `${unitLevels[2].unitName} (المستوى 3)`
-                                    : 'المستوى 3'}
-                                </SelectItem>
-                              )}
-                            </>
-                          ) : (
-                            <SelectItem value="weight">
-                              كيلوجرام (كجم)
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
 
-                    {/* تاريخ الصلاحية: [يوم] [شهر] [سنة] مع أيقونة التقويم */}
-                    <div className="flex-1 min-w-[240px]">
-                      <Label className="block text-[11px] font-bold text-slate-500 mb-1">
-                        تاريخ الصلاحية
-                      </Label>
-                      <div className="flex items-center gap-1.5">
-                        <div className="relative flex items-center">
-                          <input
-                            type="date"
-                            value={
-                              b.year && b.month && b.day
-                                ? `${b.year.padStart(4, '20')}-${b.month.padStart(2, '0')}-${b.day.padStart(2, '0')}`
-                                : ''
-                            }
-                            onChange={(e) => {
-                              if (e.target.value) {
-                                const [y, m, d] = e.target.value.split('-');
-                                handleUpdateBatch(idx, { year: y, month: m, day: d });
+                      <div className="w-28 shrink-0">
+                        <Label className="block text-[11px] font-bold text-slate-500 mb-1">
+                          الكمية
+                        </Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          step="any"
+                          value={b.quantity}
+                          onChange={(e) =>
+                            handleUpdateBatch(idx, { quantity: e.target.value })
+                          }
+                          placeholder="1"
+                          className="h-10 text-xs font-mono font-bold"
+                        />
+                      </div>
+
+                      {/* الوحدة المرتبطة: تدعم الوحدات المتعددة للقطع أو الميزان */}
+                      <div className="flex-1 min-w-[200px]">
+                        <Label className="block text-[11px] font-bold text-slate-500 mb-1">
+                          الوحدة المرتبطة
+                        </Label>
+                        <Select
+                          value={b.unitLevelId}
+                          onValueChange={(val) =>
+                            handleUpdateBatch(idx, { unitLevelId: val })
+                          }
+                        >
+                          <SelectTrigger className="w-full h-10 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold">
+                            <SelectValue placeholder="اختر الوحدة..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {itemTypeMode === 'unit' ? (
+                              <>
+                                <SelectItem value="level-1">
+                                  {unitLevels[0]?.unitName
+                                    ? `${unitLevels[0].unitName} (المستوى 1)`
+                                    : 'الوحدة الأساسية (المستوى 1)'}
+                                </SelectItem>
+                                {unitLevels.length > 1 && (
+                                  <SelectItem value="level-2">
+                                    {unitLevels[1]?.unitName
+                                      ? `${unitLevels[1].unitName} (المستوى 2)`
+                                      : 'المستوى 2'}
+                                  </SelectItem>
+                                )}
+                                {unitLevels.length > 2 && (
+                                  <SelectItem value="level-3">
+                                    {unitLevels[2]?.unitName
+                                      ? `${unitLevels[2].unitName} (المستوى 3)`
+                                      : 'المستوى 3'}
+                                  </SelectItem>
+                                )}
+                              </>
+                            ) : (
+                              <SelectItem value="weight">
+                                كيلوجرام (كجم)
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* تاريخ الصلاحية: اختيار من shadcn Popover Calendar مع الحقول الرقمية المزامنة */}
+                      <div className="flex-1 min-w-[260px]">
+                        <Label className="block text-[11px] font-bold text-slate-500 mb-1">
+                          تاريخ الصلاحية
+                        </Label>
+                        <div className="flex items-center gap-1.5">
+                          {/* زر فتح تقويم shadcn UI المنبثق */}
+                          <DatePicker
+                            date={currentDateObj}
+                            onSelect={(newDate) => {
+                              if (newDate) {
+                                handleUpdateBatch(idx, {
+                                  year: String(newDate.getFullYear()),
+                                  month: String(newDate.getMonth() + 1).padStart(2, '0'),
+                                  day: String(newDate.getDate()).padStart(2, '0'),
+                                });
+                              } else {
+                                handleUpdateBatch(idx, { year: '', month: '', day: '' });
                               }
                             }}
-                            className="w-10 h-10 p-0 opacity-0 absolute inset-0 cursor-pointer z-10"
+                            trigger={
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="w-10 h-10 p-0 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 flex items-center justify-center shrink-0 cursor-pointer shadow-2xs transition-colors"
+                                title="اختيار من التقويم (shadcn UI)"
+                              >
+                                <CalendarIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                              </Button>
+                            }
                           />
-                          <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700 pointer-events-none">
-                            <Calendar className="w-4 h-4" />
-                          </div>
+
+                          <Input
+                            type="number"
+                            min={2024}
+                            max={2040}
+                            value={b.year}
+                            onChange={(e) =>
+                              handleUpdateBatch(idx, { year: e.target.value })
+                            }
+                            placeholder="سنة"
+                            className="h-10 text-xs font-mono font-bold text-center w-20"
+                          />
+
+                          <Input
+                            type="number"
+                            min={1}
+                            max={12}
+                            value={b.month}
+                            onChange={(e) =>
+                              handleUpdateBatch(idx, { month: e.target.value })
+                            }
+                            placeholder="شهر"
+                            className="h-10 text-xs font-mono font-bold text-center w-16"
+                          />
+
+                          <Input
+                            type="number"
+                            min={1}
+                            max={31}
+                            value={b.day}
+                            onChange={(e) =>
+                              handleUpdateBatch(idx, { day: e.target.value })
+                            }
+                            placeholder="يوم"
+                            className="h-10 text-xs font-mono font-bold text-center w-16"
+                          />
                         </div>
+                      </div>
 
+                      {/* رقم التشغيلة */}
+                      <div className="w-36 shrink-0">
+                        <Label className="block text-[11px] font-bold text-slate-500 mb-1">
+                          رقم التشغيلة
+                        </Label>
                         <Input
-                          type="number"
-                          min={2024}
-                          max={2040}
-                          value={b.year}
+                          type="text"
+                          value={b.batchNumber}
                           onChange={(e) =>
-                            handleUpdateBatch(idx, { year: e.target.value })
+                            handleUpdateBatch(idx, { batchNumber: e.target.value })
                           }
-                          placeholder="سنة"
-                          className="h-10 text-xs font-mono font-bold text-center w-20"
-                        />
-
-                        <Input
-                          type="number"
-                          min={1}
-                          max={12}
-                          value={b.month}
-                          onChange={(e) =>
-                            handleUpdateBatch(idx, { month: e.target.value })
-                          }
-                          placeholder="شهر"
-                          className="h-10 text-xs font-mono font-bold text-center w-16"
-                        />
-
-                        <Input
-                          type="number"
-                          min={1}
-                          max={31}
-                          value={b.day}
-                          onChange={(e) =>
-                            handleUpdateBatch(idx, { day: e.target.value })
-                          }
-                          placeholder="يوم"
-                          className="h-10 text-xs font-mono font-bold text-center w-16"
+                          placeholder="توليد تلقائي"
+                          className="h-10 text-xs font-mono"
                         />
                       </div>
                     </div>
-
-                    {/* رقم التشغيلة */}
-                    <div className="w-36 shrink-0">
-                      <Label className="block text-[11px] font-bold text-slate-500 mb-1">
-                        رقم التشغيلة
-                      </Label>
-                      <Input
-                        type="text"
-                        value={b.batchNumber}
-                        onChange={(e) =>
-                          handleUpdateBatch(idx, { batchNumber: e.target.value })
-                        }
-                        placeholder="توليد تلقائي"
-                        className="h-10 text-xs font-mono"
-                      />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 

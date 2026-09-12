@@ -1,5 +1,6 @@
 import React from 'react';
 import { SlidersHorizontal, FileText, Settings, Clock, Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface CustomizationToolbarProps {
   showSpecs: boolean;
@@ -28,54 +29,60 @@ export const CustomizationToolbar: React.FC<CustomizationToolbarProps> = ({
           <span>تخصيص واجهة الإدخال:</span>
         </div>
 
-        {/* تبديل: المواصفات الإضافية (Default: false) */}
-        <button
+        {/* تبديل: المواصفات الإضافية */}
+        <Button
           type="button"
+          variant={showSpecs ? 'default' : 'outline'}
+          size="sm"
           onClick={() => setShowSpecs(!showSpecs)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+          className={`h-8 px-3 rounded-xl text-xs font-black cursor-pointer transition-all ${
             showSpecs
-              ? 'bg-emerald-600 text-white shadow-xs'
-              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-emerald-500'
+              ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs border-emerald-600'
+              : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-emerald-500'
           }`}
         >
-          <FileText className="w-3.5 h-3.5" />
+          <FileText className="w-3.5 h-3.5 ml-1" />
           <span>المواصفات الإضافية</span>
-          {showSpecs && <Check className="w-3 h-3" />}
-        </button>
+          {showSpecs && <Check className="w-3 h-3 mr-1" />}
+        </Button>
 
-        {/* تبديل: الإعدادات المتقدمة (Default: false) */}
-        <button
+        {/* تبديل: الإعدادات المتقدمة */}
+        <Button
           type="button"
+          variant={showAdvanced ? 'default' : 'outline'}
+          size="sm"
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+          className={`h-8 px-3 rounded-xl text-xs font-black cursor-pointer transition-all ${
             showAdvanced
-              ? 'bg-emerald-600 text-white shadow-xs'
-              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-emerald-500'
+              ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs border-emerald-600'
+              : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-emerald-500'
           }`}
         >
-          <Settings className="w-3.5 h-3.5" />
+          <Settings className="w-3.5 h-3.5 ml-1" />
           <span>الإعدادات المتقدمة</span>
-          {showAdvanced && <Check className="w-3 h-3" />}
-        </button>
+          {showAdvanced && <Check className="w-3 h-3 mr-1" />}
+        </Button>
 
-        {/* تبديل: تتبع الصلاحية (Default: false) */}
-        <button
+        {/* تبديل: تتبع الصلاحية */}
+        <Button
           type="button"
+          variant={showExpiry ? 'default' : 'outline'}
+          size="sm"
           onClick={() => {
             const next = !showExpiry;
             setShowExpiry(next);
             setEnableExpiryTracking(next);
           }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+          className={`h-8 px-3 rounded-xl text-xs font-black cursor-pointer transition-all ${
             showExpiry
-              ? 'bg-emerald-600 text-white shadow-xs'
-              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-emerald-500'
+              ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs border-emerald-600'
+              : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-emerald-500'
           }`}
         >
-          <Clock className="w-3.5 h-3.5" />
+          <Clock className="w-3.5 h-3.5 ml-1" />
           <span>تتبع الصلاحية</span>
-          {showExpiry && <Check className="w-3 h-3" />}
-        </button>
+          {showExpiry && <Check className="w-3 h-3 mr-1" />}
+        </Button>
       </div>
 
       <p className="text-[11px] text-slate-500 font-medium hidden sm:block">

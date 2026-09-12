@@ -3,6 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Settings,
   Receipt,
@@ -175,12 +176,12 @@ export const AdvancedSettingsSection: React.FC<AdvancedSettingsSectionProps> = (
           <Label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
             ملاحظات الصنف
           </Label>
-          <textarea
+          <Textarea
             rows={2}
             value={productNotes}
             onChange={(e) => setProductNotes(e.target.value)}
             placeholder="أي تعليمات أو ملاحظات إضافية..."
-            className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-hidden resize-none"
+            className="text-xs resize-none"
           />
         </div>
       </CardContent>

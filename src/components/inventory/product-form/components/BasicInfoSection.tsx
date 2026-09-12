@@ -175,14 +175,16 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                   <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                     الباركود الرئيسي
                   </Label>
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={handleGenerateRandomBarcode}
-                    className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+                    className="h-6 px-1.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 flex items-center gap-1 cursor-pointer rounded-lg"
                   >
                     <Wand2 className="w-3 h-3" />
                     <span>توليد باركود تلقائي</span>
-                  </button>
+                  </Button>
                 </div>
                 <div className="relative">
                   <Input
@@ -197,14 +199,16 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
 
                 {/* زر إضافة باركود بديل */}
                 <div className="mt-2">
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={handleAddAlternateBarcode}
-                    className="text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-400 flex items-center gap-1 cursor-pointer"
+                    className="h-7 px-2 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 flex items-center gap-1 cursor-pointer rounded-lg"
                   >
                     <Plus className="w-3 h-3 text-emerald-600" />
                     <span>إضافة باركود بديل</span>
-                  </button>
+                  </Button>
 
                   {alternateBarcodes.length > 0 && (
                     <div className="space-y-1.5 mt-2">
@@ -219,13 +223,15 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                             placeholder={`باركود بديل ${bIdx + 1}`}
                             className="h-9 text-xs font-mono rounded-lg flex-1"
                           />
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleRemoveAlternateBarcode(bIdx)}
-                            className="p-1.5 text-red-500 hover:text-red-700 cursor-pointer"
+                            className="w-8 h-8 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer"
                           >
                             <X className="w-3.5 h-3.5" />
-                          </button>
+                          </Button>
                         </div>
                       ))}
                     </div>
