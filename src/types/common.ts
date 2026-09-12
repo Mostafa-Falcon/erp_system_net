@@ -1,0 +1,102 @@
+/**
+ * 🦅 LOGIXA FALCON ERP - COMMON & SYSTEM TYPES
+ */
+
+export type EntityId = string;
+export type ISODateString = string;
+
+// ==========================================
+// ORGANIZATIONAL & SYSTEM
+// ==========================================
+
+export interface Organization {
+  id: EntityId;
+  name: string;
+  legal_name?: string;
+  tax_number?: string;
+  commercial_reg_no?: string;
+  currency: string; // e.g. EGP, SAR, USD
+  phone?: string;
+  email?: string;
+  address?: string;
+  logo_url?: string;
+  created_at: ISODateString;
+  updated_at: ISODateString;
+  is_active: boolean;
+  sync_status?: 'synced' | 'pending' | 'failed';
+}
+
+export interface Branch {
+  id: EntityId;
+  org_id: EntityId;
+  code: string;
+  name: string;
+  phone?: string;
+  address?: string;
+  is_main: boolean;
+  is_active: boolean;
+  created_at: ISODateString;
+  updated_at: ISODateString;
+  sync_status?: 'synced' | 'pending' | 'failed';
+}
+
+export type UserRole = 'super_admin' | 'admin' | 'manager' | 'cashier' | 'accountant' | 'warehouse_keeper';
+
+export interface User {
+  id: EntityId;
+  org_id: EntityId;
+  branch_id?: EntityId;
+  username: string;
+  full_name: string;
+  email?: string;
+  phone?: string;
+  role: UserRole;
+  pin_code_hash?: string; // For rapid cashier shift switch offline
+  is_active: boolean;
+  created_at: ISODateString;
+  updated_at: ISODateString;
+  sync_status?: 'synced' | 'pending' | 'failed';
+}
+
+export interface AppSetting {
+  id: EntityId; // key, e.g. "vat_rate", "allow_negative_stock"
+  org_id: EntityId;
+  value: string; // JSON stringified or raw string
+  description?: string;
+  updated_at: ISODateString;
+  sync_status?: 'synced' | 'pending' | 'failed';
+}
+
+// ==========================================
+// OFFLINE-FIRST SYNC QUEUE (OUTBOX PATTERN)
+// ==========================================
+
+export type SyncOperation = 'insert' | 'update' | 'delete' | 'upsert';
+export type SyncStatus = 'pending' | 'in_flight' | 'synced' | 'failed' | 'conflict';
+
+export interface SyncQueueItem {
+  id: EntityId;
+  entity_table: string; // e.g. "products", "sales_invoices"
+  entity_id: EntityId;
+  operation: SyncOperation;
+  payload: string; // JSON stringified data
+  status: SyncStatus;
+  retry_count: number;
+  last_error?: string | null;
+  created_at: ISODateString;
+  updated_at: ISODateString;
+}
+
+export interface ActivityLog {
+  id: EntityId;
+  org_id: EntityId;
+  user_id?: EntityId | null;
+  user_name?: string;
+  action: string;
+  entity_type: string;
+  entity_id?: string;
+  details?: string;
+  ip_address?: string;
+  created_at: ISODateString;
+  sync_status?: 'synced' | 'pending' | 'failed';
+}

@@ -1,0 +1,318 @@
+import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Trash2, TrendingUp, Plus, X } from 'lucide-react';
+import type { UnitLevelItem } from '../types';
+import { calculateMargin } from '../utils';
+
+interface UnitPricingSectionProps {
+  unitLevels: UnitLevelItem[];
+  handleAddSmallerUnit: () => void;
+  updateUnitLevel: (idx: number, patch: Partial<UnitLevelItem>) => void;
+  removeUnitLevel: (idx: number) => void;
+}
+
+export const UnitPricingSection: React.FC<UnitPricingSectionProps> = ({
+  unitLevels,
+  handleAddSmallerUnit,
+  updateUnitLevel,
+  removeUnitLevel,
+}) => {
+  return (
+    <>
+      {unitLevels.map((lvl, idx) => {
+        const isFirst = idx === 0;
+        const activeSale = lvl.dualPricing
+          ? lvl.newSalePrice || lvl.salePrice
+          : lvl.salePrice;
+        const margin = calculateMargin(lvl.purchasePrice, activeSale);
+
+        return (
+          <Card
+            key={lvl.id}
+            className="border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#131b2e] shadow-xs overflow-hidden"
+          >
+            <CardContent className="p-5 space-y-4">
+              {/* السطر 1: الشارة، اسم الوحدة، معامل التفكيك، الرصيد، سويتش مسموح بالبيع */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3 flex-1 min-w-[280px]">
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${
+                      isFirst
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                        : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                    }`}
+                  >
+                    {idx + 1}
+                  </div>
+
+                  <div className="flex-1">
+                    <Label className="block text-[11px] font-bold text-slate-500 mb-1">
+                      اسم الوحدة {isFirst ? '(الأساسية / الكبرى)' : `(المستوى ${idx + 1})`}
+                    </Label>
+                    <Input
+                      type="text"
+                      value={lvl.unitName}
+                      onChange={(e) =>
+                        updateUnitLevel(idx, { unitName: e.target.value })
+                      }
+                      placeholder={
+                        isFirst
+                          ? 'مثال: قطعة، كرتونة، كجم...'
+                          : 'مثال: باكت، شريط، جرام...'
+                      }
+                      className="h-10 text-xs font-bold"
+                    />
+                  </div>
+
+                  {!isFirst && (
+                    <div className="w-32">
+                      <Label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                        معامل التفكيك
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          min={1}
+                          value={lvl.conversionFactor}
+                          onChange={(e) =>
+                            updateUnitLevel(idx, {
+                              conversionFactor: e.target.value,
+                            })
+                          }
+                          placeholder=""
+                          className="h-10 text-xs font-mono font-bold pr-3 pl-8"
+                        />
+                        {lvl.conversionFactor && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateUnitLevel(idx, { conversionFactor: '' })
+                            }
+                            className="absolute left-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="w-28">
+                    <Label className="block text-[11px] font-bold text-slate-500 mb-1">
+                      الرصيد الافتتاحي
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={lvl.openingStock}
+                        onChange={(e) =>
+                          updateUnitLevel(idx, { openingStock: e.target.value })
+                        }
+                        placeholder=""
+                        className="h-10 text-xs font-mono font-bold pr-3 pl-8"
+                      />
+                      {lvl.openingStock !== '' && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateUnitLevel(idx, { openingStock: '' })
+                          }
+                          className="absolute left-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={lvl.allowSale}
+                      onCheckedChange={(checked) =>
+                        updateUnitLevel(idx, { allowSale: checked })
+                      }
+                      id={`allow-sale-${idx}`}
+                    />
+                    <Label
+                      htmlFor={`allow-sale-${idx}`}
+                      className="text-xs font-bold text-emerald-700 dark:text-emerald-400 cursor-pointer"
+                    >
+                      مسموح بالبيع
+                    </Label>
+                  </div>
+
+                  {!isFirst && (
+                    <button
+                      type="button"
+                      onClick={() => removeUnitLevel(idx)}
+                      className="p-1.5 text-red-500 hover:text-red-700 transition-colors cursor-pointer"
+                      title="حذف هذا المستوى"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* السطر 2: سعر الشراء، الخصم، وسويتش تسعير مزدوج */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                <div>
+                  <Label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                    سعر الشراء
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={lvl.purchasePrice}
+                    onChange={(e) =>
+                      updateUnitLevel(idx, { purchasePrice: e.target.value })
+                    }
+                    placeholder=""
+                    className="h-10 text-xs font-mono font-bold"
+                  />
+                </div>
+
+                <div>
+                  <Label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                    الخصم
+                  </Label>
+                  <div className="flex gap-1.5">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={lvl.discountValue}
+                      onChange={(e) =>
+                        updateUnitLevel(idx, { discountValue: e.target.value })
+                      }
+                      placeholder=""
+                      className="h-10 text-xs font-mono flex-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateUnitLevel(idx, {
+                          discountType:
+                            lvl.discountType === 'percent' ? 'amount' : 'percent',
+                        })
+                      }
+                      className="h-10 px-2.5 rounded-xl bg-emerald-600 text-white text-xs font-black shrink-0 cursor-pointer"
+                    >
+                      {lvl.discountType === 'percent' ? '%' : 'ج.م'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-2 h-10 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                    تسعير مزدوج
+                  </span>
+                  <Switch
+                    checked={lvl.dualPricing}
+                    onCheckedChange={(checked) =>
+                      updateUnitLevel(idx, { dualPricing: checked })
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* السطر 3: أسعار البيع وهامش الربح */}
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                {lvl.dualPricing ? (
+                  <>
+                    <div className="sm:col-span-5">
+                      <Label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                        سعر البيع القديم
+                      </Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="any"
+                        value={lvl.oldSalePrice}
+                        onChange={(e) =>
+                          updateUnitLevel(idx, { oldSalePrice: e.target.value })
+                        }
+                        placeholder=""
+                        className="h-11 text-sm font-mono font-bold text-slate-700 dark:text-slate-300"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-5">
+                      <Label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        سعر البيع الجديد *
+                      </Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="any"
+                        value={lvl.newSalePrice}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          updateUnitLevel(idx, {
+                            newSalePrice: val,
+                            salePrice: val,
+                          });
+                        }}
+                        placeholder=""
+                        className="h-11 text-sm font-mono font-black text-slate-900 dark:text-white"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="sm:col-span-10">
+                    <Label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      سعر البيع الحالي *
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="any"
+                      value={lvl.salePrice}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        updateUnitLevel(idx, {
+                          salePrice: val,
+                          newSalePrice: val,
+                        });
+                      }}
+                      placeholder=""
+                      className="h-11 text-sm font-mono font-black text-slate-900 dark:text-white"
+                    />
+                  </div>
+                )}
+
+                <div className="sm:col-span-2 h-11 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 flex flex-col items-center justify-center p-1">
+                  <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400">
+                    <TrendingUp className="w-3 h-3" />
+                    <span>هامش الربح</span>
+                  </div>
+                  <span className="text-xs font-black font-mono text-emerald-800 dark:text-emerald-300">
+                    {margin}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+
+      {/* زر إضافة وحدة أصغر (بحد أقصى 3 مستويات) */}
+      {unitLevels.length < 3 && (
+        <button
+          type="button"
+          onClick={handleAddSmallerUnit}
+          className="w-full py-3.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+        >
+          <Plus className="w-4 h-4" />
+          <span>إضافة وحدة أصغر (المستوى {unitLevels.length + 1})</span>
+        </button>
+      )}
+    </>
+  );
+};
