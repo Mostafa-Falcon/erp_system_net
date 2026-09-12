@@ -38,6 +38,7 @@ export class RealtimeSyncListener {
       'units',
       'product_categories',
       'product_brands',
+      'app_settings',
     ];
 
     let channel = supabase.channel(`falcon-inventory-realtime-${orgId}`);
@@ -106,6 +107,18 @@ export class RealtimeSyncListener {
 
         // تحديث محلي مباشر بدون إدخال في طابور المزامنة لتفادي التكرار اللانهائي
         await localTable.put(recordToStore);
+
+        // إذا كان الحدث في إعدادات المؤسسة ويخص أنواع المنتجات، نحدث جدول product_types محلياً
+        if (tableName === 'app_settings' && newRecord.id === 'custom_product_types' && typeof newRecord.value === 'string') {
+          try {
+            const types = JSON.parse(newRecord.value);
+            if (Array.isArray(types)) {
+              await db.product_types.bulkPut(types.map((t) => ({ ...t, sync_status: 'synced' })));
+            }
+          } catch (e) {
+            console.warn('[RealtimeSyncListener] Error parsing realtime custom_product_types:', e);
+          }
+        }
       }
     } catch (err) {
       console.error(`[RealtimeSyncListener] Error handling event on ${tableName}:`, err);

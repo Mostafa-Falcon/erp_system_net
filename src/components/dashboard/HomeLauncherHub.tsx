@@ -175,7 +175,7 @@ export const HomeLauncherHub: React.FC = () => {
           <div className="flex flex-col gap-2.5">
             <div className="grid grid-cols-2 gap-2.5">
               <Link
-                href="/sales/returns"
+                href="/purchases/returns"
                 className="h-16 rounded-xl bg-[#d97706] hover:bg-[#b45309] text-white flex flex-col items-center justify-center gap-1 text-center shadow-xs hover:shadow-sm transition-all duration-150 cursor-pointer"
               >
                 <RotateCcw className="w-4 h-4 text-white" />

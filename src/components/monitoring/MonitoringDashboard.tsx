@@ -206,8 +206,10 @@ export const MonitoringDashboard: React.FC = () => {
         const expenseTotal = filteredExpenses.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
         const cashBalance = allTreasuries.reduce((acc, t) => acc + (Number(t.current_balance) || 0), 0);
 
-        // Estimate Net Profit from Sales minus Purchases/Expenses or actual sales margin
-        const estimatedProfit = Math.max(0, (salesTotal * 0.18) - (expenseTotal * 0.2));
+        // صافي المبيعات وصافي المشتريات وصافي الأرباح الحقيقي من واقع العمليات المسجلة بالكامل في الداتابيز
+        const netSales = salesTotal - salesReturnTotal;
+        const netPurchases = purchaseTotal - purchReturnTotal;
+        const realNetProfit = netSales - netPurchases - expenseTotal;
 
         // 2. Real Daily Trend Data (Last 30 Days)
         const dailyPoints: { label: string; date: string; amount: number }[] = [];
@@ -362,7 +364,7 @@ export const MonitoringDashboard: React.FC = () => {
         const recentPurchasesList: RecentInvoiceItem[] = allPurchases.slice(-25).reverse().map((p) => ({
           id: p.id,
           invoiceNumber: p.invoice_number,
-          partyName: (p.supplier_id ? contactMap.get(p.supplier_id) : undefined) || 'المورد الرئيسي',
+          partyName: (p.supplier_id ? contactMap.get(p.supplier_id) : undefined) || 'مورد نقدي',
           total: Number(p.total) || 0,
           remainingAmount: Number(p.remaining_amount) || 0,
           paymentMethod: formatPayment(p.payment_type),
@@ -371,8 +373,13 @@ export const MonitoringDashboard: React.FC = () => {
           status: p.status === 'completed' ? 'مستلمة' : 'مسجلة',
         }));
 
-        // 8. Real Delivery Shipments
-        const deliveryList: DeliveryShipmentItem[] = allSales
+        // 8. Real Delivery Shipments (فقط الفواتير المسجل عليها شحن أو توصيل فعلي)
+        const deliverySales = allSales.filter((s) => {
+          const notes = (s.notes || '').toLowerCase();
+          return notes.includes('توصيل') || notes.includes('شحن') || notes.includes('دليفري') || notes.includes('delivery');
+        });
+
+        const deliveryList: DeliveryShipmentItem[] = deliverySales
           .slice(-25)
           .reverse()
           .map((s, idx) => ({
@@ -382,13 +389,13 @@ export const MonitoringDashboard: React.FC = () => {
             customerName: (s.customer_id ? contactMap.get(s.customer_id) : undefined) || 'عميل نقدي',
             total: Number(s.total) || 0,
             paymentMethod: formatPayment(s.payment_type),
-            status: 'تم التسليم',
+            status: s.status === 'completed' ? 'تم التسليم' : 'قيد التوصيل',
           }));
 
         if (isMounted) {
           setKpis({
             totalSales: salesTotal,
-            netProfit: estimatedProfit,
+            netProfit: realNetProfit,
             creditSales: creditSalesTotal,
             salesReturns: salesReturnTotal,
             totalPurchases: purchaseTotal,
@@ -618,7 +625,7 @@ export const MonitoringDashboard: React.FC = () => {
         <div className="bg-white dark:bg-[#131b2e] rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between border-r-4 border-r-emerald-500">
           <div className="flex flex-col">
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">
-              صافي الأرباح التقديري
+              صافي الأرباح الفعلي
             </span>
             <div className="flex items-baseline gap-1">
               <span className="text-xl font-black text-slate-900 dark:text-white">

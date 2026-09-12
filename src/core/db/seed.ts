@@ -12,10 +12,24 @@ import type {
 } from '@/types';
 
 /**
+ * تنظيف البيانات التجريبية/الصيدلانية القديمة لضمان نظام عام نظيف 100% لكل الأنشطة
+ */
+export async function cleanLegacyDemoData(): Promise<void> {
+  try {
+    const legacyNames = ['أدوية', 'أدوية بشرية', 'أجهزة طبية', 'مستلزمات', 'مكملات غذائية', 'مستحضرات تجميل'];
+    await db.product_categories.where('name').anyOf(legacyNames).delete();
+    await db.product_types.where('name').anyOf(legacyNames).delete();
+  } catch (err) {
+    console.warn('cleanLegacyDemoData warning:', err);
+  }
+}
+
+/**
  * 🦅 Falcon ERP - Local Database Seeder
  * Seeds essential lookup data for first-time boot offline.
  */
 export async function seedInitialData(): Promise<void> {
+  await cleanLegacyDemoData();
   const orgCount = await db.organizations.count();
   if (orgCount > 0) {
     return; // Already seeded

@@ -122,20 +122,18 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   // =========================================================================
   const [localBrands, setLocalBrands] = useState<ProductBrand[]>(brands);
   const [localCategories, setLocalCategories] = useState<ProductCategory[]>(categories);
-  const [localProductTypes, setLocalProductTypes] = useState<ProductTypeItem[]>(productTypes);
+  const [localProductTypes, setLocalProductTypes] = useState<ProductTypeItem[]>(productTypes || []);
 
   useEffect(() => {
-    setLocalBrands(brands);
+    setLocalBrands(brands || []);
   }, [brands]);
 
   useEffect(() => {
-    setLocalCategories(categories);
+    setLocalCategories(categories || []);
   }, [categories]);
 
   useEffect(() => {
-    if (productTypes && productTypes.length > 0) {
-      setLocalProductTypes(productTypes);
-    }
+    setLocalProductTypes(productTypes || []);
   }, [productTypes]);
 
   // منع تكرار الأسماء في القوائم

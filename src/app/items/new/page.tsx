@@ -7,6 +7,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { ProductForm } from '@/components/inventory/ProductForm';
 import { useSessionStore } from '@/core/state/useSessionStore';
 import { ProductRepository } from '@/modules/inventory/product_repository';
+import { cleanLegacyDemoData } from '@/core/db/seed';
 import type { Product, ProductCategory, ProductBrand, ProductTypeItem, ProductUnit, Unit, Warehouse } from '@/types';
 
 function NewItemContent() {
@@ -31,6 +32,7 @@ function NewItemContent() {
 
     const load = async () => {
       try {
+        await cleanLegacyDemoData();
         const [cats, brs, ptypes, uns, whs] = await Promise.all([
           ProductRepository.getCategories(currentUser.org_id),
           ProductRepository.getBrands(currentUser.org_id),

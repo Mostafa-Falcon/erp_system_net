@@ -112,7 +112,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       purchases.forEach((p) => {
         const notifId = `purch-${p.id}`;
         if (deletedIds.has(notifId)) return;
-        const supplierName = (p.supplier_id ? contactMap.get(p.supplier_id) : undefined) || 'المورد الرئيسي';
+        const supplierName = (p.supplier_id ? contactMap.get(p.supplier_id) : undefined) || 'مورد نقدي';
         list.push({
           id: notifId,
           type: 'purchase',

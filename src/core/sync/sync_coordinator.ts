@@ -8,23 +8,25 @@ import type { SyncQueueItem } from '@/types';
  * ترتيب أولوية المزامنة لضمان حفظ الجداول الرئيسية قبل الجداول التابعة (لتفادي أخطاء Foreign Key)
  */
 const TABLE_SYNC_ORDER: Record<string, number> = {
-  organizations: 1,
-  branches: 2,
-  warehouses: 3,
-  treasuries: 4,
-  units: 5,
-  product_categories: 6,
-  product_brands: 7,
-  products: 8,
-  product_units: 9,
-  product_batches: 10,
-  stock_levels: 11,
-  inventory_transactions: 12,
-  contacts: 13,
-  sales_invoices: 14,
-  sales_invoice_items: 15,
-  purchase_invoices: 16,
-  purchase_invoice_items: 17,
+  app_settings: 0,
+  product_types: 1,
+  organizations: 2,
+  branches: 3,
+  warehouses: 4,
+  treasuries: 5,
+  units: 6,
+  product_categories: 7,
+  product_brands: 8,
+  products: 9,
+  product_units: 10,
+  product_batches: 11,
+  stock_levels: 12,
+  inventory_transactions: 13,
+  contacts: 14,
+  sales_invoices: 15,
+  sales_invoice_items: 16,
+  purchase_invoices: 17,
+  purchase_invoice_items: 18,
 };
 
 /**
@@ -136,6 +138,15 @@ export function sanitizePayloadForCloud(table: string, payload: Record<string, u
   } else if (table === 'product_brands') {
     const allowedColumns = new Set([
       'id', 'org_id', 'name', 'created_at', 'updated_at'
+    ]);
+    for (const k of Object.keys(clean)) {
+      if (!allowedColumns.has(k)) {
+        delete clean[k];
+      }
+    }
+  } else if (table === 'app_settings') {
+    const allowedColumns = new Set([
+      'id', 'org_id', 'value', 'description', 'updated_at'
     ]);
     for (const k of Object.keys(clean)) {
       if (!allowedColumns.has(k)) {
@@ -257,6 +268,30 @@ export class SyncCoordinator {
     try {
       await SyncQueueManager.markInFlight(item.id);
       const rawPayload = JSON.parse(item.payload) as Record<string, unknown>;
+
+      // معالجة خاصة لجدول أنواع المنتجات (تخزينها سحابياً في إعدادات المؤسسة app_settings)
+      if (item.entity_table === 'product_types') {
+        const orgId = (rawPayload.org_id as string) || '';
+        if (orgId) {
+          const allTypes = await db.product_types.where('org_id').equals(orgId).toArray();
+          const cleanTypes = allTypes.map((t) => ({ id: t.id, org_id: t.org_id, name: t.name, code: t.code, is_active: t.is_active }));
+          const { error: settingsErr } = await supabase.from('app_settings').upsert({
+            id: 'custom_product_types',
+            org_id: orgId,
+            value: JSON.stringify(cleanTypes),
+            description: 'Custom Product Types List',
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'id,org_id' });
+
+          if (settingsErr) {
+            console.warn('[Sync] Error syncing product_types to app_settings:', settingsErr.message);
+            await SyncQueueManager.markFailed(item.id, settingsErr.message);
+            return false;
+          }
+        }
+        await SyncQueueManager.markSynced(item.id);
+        return true;
+      }
 
       // تنقية البيانات لتطابق جداول Supabase 100%
       const payload = sanitizePayloadForCloud(item.entity_table, rawPayload);

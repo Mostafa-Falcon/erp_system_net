@@ -69,6 +69,25 @@ export class PullSyncService {
 
       await localTable.bulkPut(recordsToStore);
 
+      // إذا كانت التحديثات تخص app_settings، نفك تشفير أنواع المنتجات المخصصة إن وجدت
+      if (tableName === 'app_settings') {
+        const typesSetting = (data as Array<{ id: string; value: string }>).find(
+          (d) => d.id === 'custom_product_types'
+        );
+        if (typesSetting && typesSetting.value) {
+          try {
+            const types = JSON.parse(typesSetting.value);
+            if (Array.isArray(types) && types.length > 0) {
+              await db.product_types.bulkPut(
+                types.map((t) => ({ ...t, sync_status: 'synced' }))
+              );
+            }
+          } catch (e) {
+            console.warn('[PullSync] Error unpacking custom_product_types:', e);
+          }
+        }
+      }
+
       // Save newest updated_at
       const newestDate = data[data.length - 1].updated_at;
       await db.app_settings.put({

@@ -8,6 +8,7 @@ import { useSessionStore } from '@/core/state/useSessionStore';
 import { useGlobalShortcuts } from '@/core/hooks/useGlobalShortcuts';
 import { realtimeSyncListener } from '@/core/sync/realtime_sync_listener';
 import { syncCoordinator } from '@/core/sync/sync_coordinator';
+import { cleanLegacyDemoData } from '@/core/db/seed';
 
 interface AppShellProps {
   title: string;
@@ -102,6 +103,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   // تفعيل المزامنة اللحظية مع Supabase Realtime ودفع العمليات المعلقة فورياً
   useEffect(() => {
     if (currentUser?.org_id) {
+      cleanLegacyDemoData().catch(console.warn);
       realtimeSyncListener.start(currentUser.org_id);
       syncCoordinator.triggerSync().catch(console.error);
     }
