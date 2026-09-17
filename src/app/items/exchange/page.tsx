@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSessionStore } from '@/core/state/useSessionStore';
 import { db } from '@/core/db/app_database';
+import { SyncQueueManager } from '@/core/sync/sync_queue_manager';
 import { formatNumber } from '@/lib/format';
 import type { Product, Warehouse, StockLevel } from '@/types';
 import { Repeat2, ArrowLeftRight, Search, CheckCircle2, AlertCircle, Box } from 'lucide-react';
@@ -98,7 +99,7 @@ function ExchangeContent() {
       setIsProcessing(true);
       const now = new Date().toISOString();
 
-      await db.transaction('rw', [db.stock_levels, db.inventory_transactions], async () => {
+      await db.transaction('rw', [db.stock_levels, db.inventory_transactions, db.sync_queue], async () => {
         // Decrease source product
         const sourceLevel = await db.stock_levels
           .where('product_id')
@@ -107,10 +108,15 @@ function ExchangeContent() {
           .first();
 
         if (sourceLevel) {
-          await db.stock_levels.update(sourceLevel.id, {
+          const updatedSource: StockLevel = {
+            ...sourceLevel,
             quantity: sourceLevel.quantity - qty,
+            available_quantity: sourceLevel.quantity - qty - (sourceLevel.reserved_quantity || 0),
             updated_at: now,
-          });
+            sync_status: 'pending',
+          };
+          await db.stock_levels.put(updatedSource);
+          await SyncQueueManager.enqueue('stock_levels', updatedSource.id, 'upsert', updatedSource);
         }
 
         // Increase target product
@@ -121,13 +127,19 @@ function ExchangeContent() {
           .first();
 
         if (targetLevel) {
-          await db.stock_levels.update(targetLevel.id, {
+          const updatedTarget: StockLevel = {
+            ...targetLevel,
             quantity: targetLevel.quantity + qty,
+            available_quantity: targetLevel.quantity + qty - (targetLevel.reserved_quantity || 0),
             updated_at: now,
-          });
+            sync_status: 'pending',
+          };
+          await db.stock_levels.put(updatedTarget);
+          await SyncQueueManager.enqueue('stock_levels', updatedTarget.id, 'upsert', updatedTarget);
         } else {
-          await db.stock_levels.add({
-            id: uuidv4(),
+          const stockId = `${sourceWarehouseId}_${targetProductId}`;
+          const newTarget: StockLevel = {
+            id: stockId,
             org_id: orgId,
             product_id: targetProductId,
             warehouse_id: sourceWarehouseId,
@@ -135,16 +147,20 @@ function ExchangeContent() {
             reserved_quantity: 0,
             available_quantity: qty,
             updated_at: now,
-          });
+            sync_status: 'pending',
+          };
+          await db.stock_levels.put(newTarget);
+          await SyncQueueManager.enqueue('stock_levels', stockId, 'upsert', newTarget);
         }
 
         // Log transaction
-        await db.inventory_transactions.add({
-          id: uuidv4(),
+        const outTxId = uuidv4();
+        const outTx = {
+          id: outTxId,
           org_id: orgId,
           warehouse_id: sourceWarehouseId,
           product_id: sourceProductId,
-          transaction_type: 'adjustment_out',
+          transaction_type: 'adjustment_out' as const,
           quantity: -qty,
           unit_id: 'default_unit',
           unit_conversion_factor: 1,
@@ -152,20 +168,23 @@ function ExchangeContent() {
           unit_cost: 0,
           total_cost: 0,
           balance_after: (sourceLevel?.quantity || 0) - qty,
-          reference_type: 'adjustment',
+          reference_type: 'adjustment' as const,
           reference_id: uuidv4(),
           notes: `تبادل صنف إلى (${targetProduct?.name}) - ${exchangeNotes}`,
           created_by: currentUser?.id || '',
           created_at: now,
-          sync_status: 'pending',
-        });
+          sync_status: 'pending' as const,
+        };
+        await db.inventory_transactions.add(outTx);
+        await SyncQueueManager.enqueue('inventory_transactions', outTxId, 'insert', outTx);
 
-        await db.inventory_transactions.add({
-          id: uuidv4(),
+        const inTxId = uuidv4();
+        const inTx = {
+          id: inTxId,
           org_id: orgId,
           warehouse_id: sourceWarehouseId,
           product_id: targetProductId,
-          transaction_type: 'adjustment_in',
+          transaction_type: 'adjustment_in' as const,
           quantity: qty,
           unit_id: 'default_unit',
           unit_conversion_factor: 1,
@@ -173,13 +192,15 @@ function ExchangeContent() {
           unit_cost: 0,
           total_cost: 0,
           balance_after: (targetLevel?.quantity || 0) + qty,
-          reference_type: 'adjustment',
+          reference_type: 'adjustment' as const,
           reference_id: uuidv4(),
           notes: `تبادل صنف وارد من (${sourceProduct?.name}) - ${exchangeNotes}`,
           created_by: currentUser?.id || '',
           created_at: now,
-          sync_status: 'pending',
-        });
+          sync_status: 'pending' as const,
+        };
+        await db.inventory_transactions.add(inTx);
+        await SyncQueueManager.enqueue('inventory_transactions', inTxId, 'insert', inTx);
       });
 
       setSuccessMessage('تمت عملية تبادل الأصناف وتحديث الأرصدة بنجاح');

@@ -64,7 +64,8 @@ const CLOUD_COLUMN_MAP: Record<string, Set<string>> = {
   branches: new Set(['id', 'org_id', 'code', 'name', 'phone', 'address', 'is_main', 'is_active', 'created_at', 'updated_at']),
   users: new Set([
     'id', 'org_id', 'branch_id', 'username', 'full_name', 'email', 'phone', 'role',
-    'pin_code_hash', 'basic_salary', 'salary_cycle', 'deductions', 'allowances',
+    'pin_code_hash', 'department_id', 'job_title', 'hire_date', 'annual_leave_days',
+    'basic_salary', 'salary_cycle', 'deductions', 'allowances',
     'permissions', 'is_active', 'created_at', 'updated_at',
   ]),
   app_settings: new Set(['id', 'org_id', 'value', 'description', 'updated_at']),
@@ -382,8 +383,9 @@ export class SyncCoordinator {
         if (success) {
           pushedCount++;
         } else {
-          // التوقف عند تعثر عنصر للحفاظ على الترتيب المنطقي
-          break;
+          // لا نتوقف عن عنصر فاشل فردي (منع حجب الطابور)، نكمّل بقية العناصر
+          // ويُعاد محاولة الفاشل في الدورات القادمة حتى حد retry_count الأقصى.
+          continue;
         }
       }
 
@@ -429,6 +431,9 @@ export class SyncCoordinator {
       if (transfer) {
         await ensureUpsert('stock_transfers', transfer.id, transfer);
       }
+      await ensureUpsert('products', payload.product_id as string, await db.products.get(payload.product_id as string));
+    } else if (table === 'stocktake_items') {
+      await ensureUpsert('stocktake_sessions', payload.session_id as string, await db.stocktake_sessions.get(payload.session_id as string));
       await ensureUpsert('products', payload.product_id as string, await db.products.get(payload.product_id as string));
     } else if (table === 'sales_invoice_items') {
       await ensureUpsert('sales_invoices', payload.invoice_id as string, await db.sales_invoices.get(payload.invoice_id as string));

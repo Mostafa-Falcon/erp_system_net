@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSessionStore } from '@/core/state/useSessionStore';
 import { db } from '@/core/db/app_database';
+import { SyncQueueManager } from '@/core/sync/sync_queue_manager';
 import { formatNumber } from '@/lib/format';
 import type { Product, ProductCategory, ProductBrand } from '@/types';
 import { FileDown, Search, CheckSquare, Square, Percent, Tag, Save, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -94,7 +95,7 @@ function BulkUpdateContent() {
       setIsUpdating(true);
       const now = new Date().toISOString();
 
-      await db.transaction('rw', db.products, async () => {
+      await db.transaction('rw', [db.products, db.sync_queue], async () => {
         for (const id of selectedIds) {
           const prod = products.find((p) => p.id === id);
           if (!prod) continue;
@@ -110,11 +111,14 @@ function BulkUpdateContent() {
             newPrice = Math.max(0, prod.sale_price - val);
           }
 
-          await db.products.update(id, {
+          const updatedProd: Product = {
+            ...prod,
             sale_price: Math.round(newPrice * 100) / 100,
             updated_at: now,
             sync_status: 'pending',
-          });
+          };
+          await db.products.put(updatedProd);
+          await SyncQueueManager.enqueue('products', id, 'update', updatedProd);
         }
       });
 
@@ -142,13 +146,18 @@ function BulkUpdateContent() {
       setIsUpdating(true);
       const now = new Date().toISOString();
 
-      await db.transaction('rw', db.products, async () => {
+      await db.transaction('rw', [db.products, db.sync_queue], async () => {
         for (const id of selectedIds) {
-          await db.products.update(id, {
+          const prod = products.find((p) => p.id === id);
+          if (!prod) continue;
+          const updatedProd: Product = {
+            ...prod,
             category_id: targetCategoryId,
             updated_at: now,
             sync_status: 'pending',
-          });
+          };
+          await db.products.put(updatedProd);
+          await SyncQueueManager.enqueue('products', id, 'update', updatedProd);
         }
       });
 

@@ -10,6 +10,7 @@ import type {
   SalesInvoice,
   SalesInvoiceItem,
   SalesReturn,
+  Treasury,
   InvoicePaymentType,
 } from '@/types';
 
@@ -140,14 +141,22 @@ export class SalesRepository {
         const sourceTreasury = await db.treasuries.get(shift.treasury_id);
         const destTreasury = await db.treasuries.get(destinationTreasuryId);
         if (sourceTreasury && destTreasury) {
-          await db.treasuries.update(shift.treasury_id, {
+          const sourceUpdated: Treasury = {
+            ...sourceTreasury,
             current_balance: Math.max(0, (sourceTreasury.current_balance || 0) - actualClosingBalance),
             updated_at: now,
-          });
-          await db.treasuries.update(destinationTreasuryId, {
+            sync_status: 'pending',
+          };
+          const destUpdated: Treasury = {
+            ...destTreasury,
             current_balance: (destTreasury.current_balance || 0) + actualClosingBalance,
             updated_at: now,
-          });
+            sync_status: 'pending',
+          };
+          await db.treasuries.put(sourceUpdated);
+          await SyncQueueManager.enqueue('treasuries', shift.treasury_id, 'update', sourceUpdated);
+          await db.treasuries.put(destUpdated);
+          await SyncQueueManager.enqueue('treasuries', destinationTreasuryId, 'update', destUpdated);
         }
       }
     });

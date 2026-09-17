@@ -68,9 +68,13 @@ export class StocktakeRepository {
     sessionId: string,
     items: Omit<StocktakeItem, 'id' | 'session_id'>[]
   ): Promise<void> {
-    await db.transaction('rw', [db.stocktake_items, db.stocktake_sessions], async () => {
-      // Clear existing items for this session
+    await db.transaction('rw', [db.stocktake_items, db.stocktake_sessions, db.sync_queue], async () => {
+      // Clear existing items for this session (and remove them from the cloud queue)
+      const existingItems = await db.stocktake_items.where('session_id').equals(sessionId).toArray();
       await db.stocktake_items.where('session_id').equals(sessionId).delete();
+      for (const oldItem of existingItems) {
+        await SyncQueueManager.enqueue('stocktake_items', oldItem.id, 'delete', { id: oldItem.id });
+      }
 
       let totalDiffValue = 0;
       const toAdd: StocktakeItem[] = items.map((it) => {
@@ -81,9 +85,21 @@ export class StocktakeRepository {
 
       if (toAdd.length > 0) {
         await db.stocktake_items.bulkAdd(toAdd);
+        for (const item of toAdd) {
+          await SyncQueueManager.enqueue('stocktake_items', item.id, 'insert', item);
+        }
       }
 
-      await db.stocktake_sessions.update(sessionId, { total_difference_value: totalDiffValue });
+      const session = await db.stocktake_sessions.get(sessionId);
+      if (session) {
+        const updatedSession: StocktakeSession = {
+          ...session,
+          total_difference_value: totalDiffValue,
+          sync_status: 'pending',
+        };
+        await db.stocktake_sessions.put(updatedSession);
+        await SyncQueueManager.enqueue('stocktake_sessions', sessionId, 'update', updatedSession);
+      }
     });
   }
 

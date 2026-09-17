@@ -6,6 +6,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/button';
 import { useSessionStore } from '@/core/state/useSessionStore';
 import { db } from '@/core/db/app_database';
+import { SyncQueueManager } from '@/core/sync/sync_queue_manager';
 import { formatNumber } from '@/lib/format';
 import type { Product } from '@/types';
 import { FileUp, Download, CheckCircle2, AlertCircle, FileSpreadsheet, Layers } from 'lucide-react';
@@ -65,7 +66,7 @@ function ImportContent() {
       setErrorMessage(null);
       const now = new Date().toISOString();
 
-      await db.transaction('rw', [db.products, db.stock_levels, db.product_units], async () => {
+      await db.transaction('rw', [db.products, db.stock_levels, db.product_units, db.sync_queue], async () => {
         for (const row of rows) {
           const prodId = uuidv4();
           const newProduct: Product = {
@@ -90,10 +91,11 @@ function ImportContent() {
           };
 
           await db.products.add(newProduct);
+          await SyncQueueManager.enqueue('products', prodId, 'insert', newProduct);
 
           // If barcode exists
           if (row.barcode) {
-            await db.product_units.add({
+            const newUnit = {
               id: uuidv4(),
               product_id: prodId,
               unit_id: 'default_unit',
@@ -103,18 +105,21 @@ function ImportContent() {
               conversion_factor: 1,
               sale_price: row.sale_price,
               purchase_price: row.cost_price,
-              sync_status: 'pending',
+              sync_status: 'pending' as const,
               created_at: now,
               updated_at: now,
-            });
+            };
+            await db.product_units.add(newUnit);
+            await SyncQueueManager.enqueue('product_units', newUnit.id, 'insert', newUnit);
           }
 
           // If initial stock exists
           if (row.stock && row.stock > 0) {
             const defaultWh = await db.warehouses.where('org_id').equals(orgId).first();
             if (defaultWh) {
-              await db.stock_levels.add({
-                id: uuidv4(),
+              const stockId = `${defaultWh.id}_${prodId}`;
+              const stockLevel = {
+                id: stockId,
                 org_id: orgId,
                 product_id: prodId,
                 warehouse_id: defaultWh.id,
@@ -122,7 +127,10 @@ function ImportContent() {
                 reserved_quantity: 0,
                 available_quantity: row.stock,
                 updated_at: now,
-              });
+                sync_status: 'pending' as const,
+              };
+              await db.stock_levels.put(stockLevel);
+              await SyncQueueManager.enqueue('stock_levels', stockId, 'upsert', stockLevel);
             }
           }
         }

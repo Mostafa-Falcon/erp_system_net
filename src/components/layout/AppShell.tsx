@@ -8,6 +8,8 @@ import { useSessionStore } from '@/core/state/useSessionStore';
 import { useGlobalShortcuts } from '@/core/hooks/useGlobalShortcuts';
 import { realtimeSyncListener } from '@/core/sync/realtime_sync_listener';
 import { syncCoordinator } from '@/core/sync/sync_coordinator';
+import { PullSyncService } from '@/core/sync/pull_sync_service';
+import { networkListener } from '@/core/sync/network_listener';
 import { restoreOrgTransportToken } from '@/core/supabase/supabase_client';
 import { ensureCleanLookupState } from '@/core/db/seed';
 
@@ -101,19 +103,47 @@ export const AppShell: React.FC<AppShellProps> = ({
     }
   }, [mounted, currentUser, router]);
 
-  // تفعيل المزامنة اللحظية مع Supabase Realtime ودفع العمليات المعلقة فورياً
+  // تفعيل المزامنة اللحظية مع Supabase Realtime + دورة سحب (pull) ودفع (push) ذكية
   useEffect(() => {
-    if (currentUser?.org_id) {
-      ensureCleanLookupState().catch(console.warn);
-      restoreOrgTransportToken()
-        .then(() => {
-          realtimeSyncListener.start(currentUser.org_id);
-          syncCoordinator.triggerSync().catch(console.error);
-        })
-        .catch(console.warn);
-    }
+    if (!currentUser?.org_id) return;
+    const orgId = currentUser.org_id;
+
+    let reconcileInterval: ReturnType<typeof setInterval> | null = null;
+
+    // سحب أولاً (تحديث الحالة من السحابة) ثم دفع العمليات المعلقة
+    const reconcile = async () => {
+      await PullSyncService.pullAll(orgId).catch(console.warn);
+      await syncCoordinator.triggerSync().catch(console.error);
+    };
+
+    ensureCleanLookupState().catch(console.warn);
+    restoreOrgTransportToken()
+      .then(() => {
+        realtimeSyncListener.start(orgId);
+        return reconcile();
+      })
+      .catch(console.warn);
+
+    // عند عودة الاتصال: سحب ما فات ثم دفع
+    const unsubscribeNetwork = networkListener.subscribe((isOnline) => {
+      if (isOnline) {
+        reconcile();
+      }
+    });
+
+    // دورة أمان احتياطية كل 60 ثانية لتقارب الحالة بين الأجهزة
+    reconcileInterval = setInterval(() => {
+      if (networkListener.getStatus()) {
+        reconcile();
+      }
+    }, 60000);
+
     return () => {
       realtimeSyncListener.stop();
+      unsubscribeNetwork();
+      if (reconcileInterval) {
+        clearInterval(reconcileInterval);
+      }
     };
   }, [currentUser?.org_id]);
 

@@ -61,7 +61,16 @@ export class StockTransferRepository {
         .first();
       if (mainWh) {
         if (!mainWh.branch_id) {
-          await db.warehouses.update(mainWh.id, { branch_id: branchId });
+          const linkedWh: Warehouse = {
+            ...mainWh,
+            branch_id: branchId,
+            updated_at: new Date().toISOString(),
+            sync_status: 'pending',
+          };
+          await db.transaction('rw', [db.warehouses, db.sync_queue], async () => {
+            await db.warehouses.put(linkedWh);
+            await SyncQueueManager.enqueue('warehouses', mainWh.id, 'update', linkedWh);
+          });
         }
         return mainWh.id;
       }
@@ -462,6 +471,7 @@ export class StockTransferRepository {
     } else {
       const createdDest: ProductBatch = {
         id: uuidv4(),
+        org_id: params.orgId,
         product_id: params.productId,
         warehouse_id: params.toWarehouseId,
         batch_number: sourceLot.batch_number,

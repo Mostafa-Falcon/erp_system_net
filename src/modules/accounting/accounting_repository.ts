@@ -814,6 +814,43 @@ export class AccountingRepository {
   }
 
   /**
+   * Posts a cash advance / loan / bonus payment to an employee.
+   * - Dr Payroll & Salaries (5301) / Cr Cash or Bank.
+   */
+  public static async postEmployeeAdvancePayment(params: {
+    orgId: string;
+    branchId?: string | null;
+    referenceId: string;
+    date: string;
+    amount: number;
+    description: string;
+    treasuryId: string;
+    userId?: string | null;
+  }): Promise<void> {
+    if (await this.hasPosted(params.orgId, 'advance', params.referenceId)) return;
+    if (!(params.amount > 0)) return;
+
+    const treasury = await db.treasuries.get(params.treasuryId);
+    const cashAccount = await this.resolveTreasuryAccountId(params.orgId, treasury);
+    const salaries = await this.accountId(params.orgId, NATIVE_ACCOUNT_CODES.PAYROLL_SALARIES);
+
+    await this.journalize({
+      org_id: params.orgId,
+      branch_id: params.branchId,
+      type: 'payroll',
+      entry_date: params.date,
+      description: params.description,
+      reference_type: 'advance',
+      reference_id: params.referenceId,
+      lines: [
+        { account_id: salaries, debit: params.amount, credit: 0 },
+        { account_id: cashAccount, debit: 0, credit: params.amount },
+      ],
+      created_by: params.userId,
+    });
+  }
+
+  /**
    * Posts inventory variance from a committed stocktake session.
    * - Positive variance (surplus): Dr Inventory (1140) / Cr Other Revenue (4900).
    * - Negative variance (shortage): Dr COGS (5100) / Cr Inventory (1140).

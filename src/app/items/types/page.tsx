@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSessionStore } from '@/core/state/useSessionStore';
 import { db } from '@/core/db/app_database';
+import { ProductTypeRepository } from '@/modules/inventory/lookups/product_type_repository';
 import type { ProductTypeItem, Product } from '@/types';
 import { Tags, Plus, Search, Trash2, Edit2, PackageCheck } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
@@ -74,27 +75,15 @@ function ProductTypesContent() {
     try {
       setIsSaving(true);
       setErrorMessage('');
-      const now = new Date().toISOString();
 
       if (editingType) {
-        await db.product_types.update(editingType.id, {
-          name: typeName.trim(),
-          code: typeCode.trim() || undefined,
-          updated_at: now,
-          sync_status: 'pending',
-        });
+        await ProductTypeRepository.updateProductType(
+          editingType.id,
+          { name: typeName.trim(), code: typeCode.trim() || undefined },
+          orgId
+        );
       } else {
-        const newType: ProductTypeItem = {
-          id: uuidv4(),
-          org_id: orgId,
-          name: typeName.trim(),
-          code: typeCode.trim() || undefined,
-          is_active: true,
-          created_at: now,
-          updated_at: now,
-          sync_status: 'pending',
-        };
-        await db.product_types.add(newType);
+        await ProductTypeRepository.createProductType(typeName.trim(), orgId, typeCode.trim() || undefined);
       }
 
       setIsModalOpen(false);
@@ -110,7 +99,7 @@ function ProductTypesContent() {
   const handleDelete = async (t: ProductTypeItem) => {
     if (confirm(`هل أنت متأكد من حذف نوع المنتج "${t.name}"؟`)) {
       try {
-        await db.product_types.delete(t.id);
+        await ProductTypeRepository.deleteProductType(t.id, orgId);
         await loadData();
       } catch (err) {
         console.error('Error deleting product type:', err);
@@ -134,7 +123,7 @@ function ProductTypesContent() {
           <div>
             <h1 className="text-xl font-black text-slate-900 dark:text-white">أنواع المنتجات</h1>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-bold mt-0.5">
-              تصنيف المنتجات حسب النوع (بضاعة مخزنية، خدمات، مواد ترويجية، مركّبات)
+              تصنيف المنتجات حسب النوع (بضاعة مخزنية، خدمات، مواد ترويجية، مجموعات)
             </p>
           </div>
         </div>

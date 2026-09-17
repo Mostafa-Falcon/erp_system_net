@@ -1,4 +1,5 @@
 import { db } from '@/core/db/app_database';
+import { SyncQueueManager } from '@/core/sync/sync_queue_manager';
 import type { ActivityLog } from '@/types';
 
 export class ActivityRepository {
@@ -28,10 +29,19 @@ export class ActivityRepository {
   }
 
   public static async deleteLog(id: string): Promise<void> {
-    await db.activity_logs.delete(id);
+    await db.transaction('rw', [db.activity_logs, db.sync_queue], async () => {
+      await db.activity_logs.delete(id);
+      await SyncQueueManager.enqueue('activity_logs', id, 'delete', { id });
+    });
   }
 
   public static async clearAll(orgId: string): Promise<void> {
-    await db.activity_logs.where('org_id').equals(orgId).delete();
+    const logs = await db.activity_logs.where('org_id').equals(orgId).toArray();
+    await db.transaction('rw', [db.activity_logs, db.sync_queue], async () => {
+      await db.activity_logs.where('org_id').equals(orgId).delete();
+      for (const log of logs) {
+        await SyncQueueManager.enqueue('activity_logs', log.id, 'delete', { id: log.id });
+      }
+    });
   }
 }

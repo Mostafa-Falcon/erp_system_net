@@ -34,6 +34,7 @@ import {
   Wallet
 } from 'lucide-react';
 import { SalesRepository } from '@/modules/sales/sales_repository';
+import { TreasuryRepository } from '@/modules/treasury/treasury_repository';
 import { formatNumber } from '@/lib/format';
 import type { CashierShift, Treasury, User as UserType } from '@/types';
 import { toast } from 'sonner';
@@ -95,20 +96,10 @@ export function OpenShiftModal({
         if (currentList.length === 0 && orgId) {
           currentList = await db.treasuries.where('org_id').equals(orgId).and((t) => t.is_active).toArray();
           if (currentList.length === 0) {
-            const defaultTreasury: Treasury = {
-              id: uuidv4(),
-              org_id: orgId,
-              branch_id: resolvedBranchId || undefined,
-              name: 'الخزينة الرئيسية',
-              type: 'safe',
-              current_balance: 0,
-              is_default: true,
-              is_active: true,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              sync_status: 'pending',
-            };
-            await db.treasuries.put(defaultTreasury);
+            const defaultTreasury = await TreasuryRepository.ensureDefaultTreasury({
+              orgId,
+              branchId: resolvedBranchId || undefined,
+            });
             currentList = [defaultTreasury];
           }
         }

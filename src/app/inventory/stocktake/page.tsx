@@ -17,7 +17,7 @@ import { db } from '@/core/db/app_database';
 import { formatNumber, formatDateTime } from '@/lib/format';
 import type { StocktakeSession, StocktakeItem, Warehouse, Product } from '@/types';
 import { ClipboardCheck, Plus, Search, CheckCircle2, Clock, XCircle, Box, AlertTriangle } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
+import { StocktakeRepository } from '@/modules/inventory/stocktake/stocktake_repository';
 
 function StocktakeContent() {
   const { currentUser, activeBranchId } = useSessionStore();
@@ -71,19 +71,13 @@ function StocktakeContent() {
     if (!orgId || !selectedWarehouseId) return;
     try {
       setIsSubmitting(true);
-      const newSession: StocktakeSession = {
-        id: uuidv4(),
-        org_id: orgId,
-        branch_id: branchId,
-        warehouse_id: selectedWarehouseId,
-        session_number: `STK-${Date.now().toString().slice(-6)}`,
-        status: 'draft',
+      const newSession = await StocktakeRepository.createStocktakeSession({
+        orgId,
+        branchId,
+        warehouseId: selectedWarehouseId,
+        userId: currentUser?.id || 'system',
         notes: sessionNotes || undefined,
-        total_difference_value: 0,
-        created_by: currentUser?.id || 'system',
-        created_at: new Date().toISOString(),
-        sync_status: 'pending',
-      };
+      });
 
       // Seed items from current stock levels
       const stockLevels = await db.stock_levels
@@ -91,14 +85,12 @@ function StocktakeContent() {
         .equals(selectedWarehouseId)
         .toArray();
 
-      const itemsToCreate: StocktakeItem[] = stockLevels.map((sl) => {
+      const itemsToCreate: Omit<StocktakeItem, 'id' | 'session_id'>[] = stockLevels.map((sl) => {
         const prod = products.find((p) => p.id === sl.product_id);
         const cost = prod?.cost_price || 0;
         return {
-          id: uuidv4(),
-          session_id: newSession.id,
           product_id: sl.product_id,
-          batch_id: (sl as any).batch_id || null,
+          batch_id: null,
           expected_quantity: sl.quantity,
           actual_quantity: sl.quantity,
           difference_quantity: 0,
@@ -107,12 +99,7 @@ function StocktakeContent() {
         };
       });
 
-      await db.transaction('rw', [db.stocktake_sessions, db.stocktake_items], async () => {
-        await db.stocktake_sessions.add(newSession);
-        if (itemsToCreate.length > 0) {
-          await db.stocktake_items.bulkAdd(itemsToCreate);
-        }
-      });
+      await StocktakeRepository.updateStocktakeItems(newSession.id, itemsToCreate);
 
       setIsNewModalOpen(false);
       setSessionNotes('');
@@ -127,7 +114,7 @@ function StocktakeContent() {
   const handleViewSession = async (sess: StocktakeSession) => {
     setActiveSession(sess);
     try {
-      const items = await db.stocktake_items.where('session_id').equals(sess.id).toArray();
+      const { items } = await StocktakeRepository.getStocktakeDetail(sess.id);
       setSessionItems(items);
     } catch (err) {
       console.error('Error fetching session items:', err);
@@ -136,11 +123,14 @@ function StocktakeContent() {
 
   const handleCompleteSession = async (sessionId: string) => {
     try {
-      await db.stocktake_sessions.update(sessionId, {
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-        sync_status: 'pending',
-      });
+      const result = await StocktakeRepository.commitStocktakeSession(
+        sessionId,
+        currentUser?.id || 'system'
+      );
+      if (!result.success) {
+        console.error('Error completing session:', result.error);
+        return;
+      }
       setActiveSession(null);
       await loadData();
     } catch (err) {

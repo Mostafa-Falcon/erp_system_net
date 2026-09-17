@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { useSessionStore } from '@/core/state/useSessionStore';
 import { SalesRepository } from '@/modules/sales/sales_repository';
 import { ContactsRepository } from '@/modules/contacts/contacts_repository';
+import { TreasuryRepository } from '@/modules/treasury/treasury_repository';
 import { ScaleManager, ScaleConfig, DEFAULT_SCALE_CONFIG } from '@/lib/scale_manager';
 import type {
   Warehouse,
@@ -151,20 +152,10 @@ export function usePosData() {
       // Auto-heal Treasuries if empty
       let activeTreasuries = tres;
       if (activeTreasuries.length === 0 && orgId) {
-        const defaultTreasury: Treasury = {
-          id: uuidv4(),
-          org_id: orgId,
-          branch_id: effectiveBranchId || undefined,
-          name: 'الخزينة الرئيسية',
-          type: 'safe',
-          current_balance: 0,
-          is_default: true,
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          sync_status: 'pending',
-        };
-        await db.treasuries.put(defaultTreasury);
+        const defaultTreasury = await TreasuryRepository.ensureDefaultTreasury({
+          orgId,
+          branchId: effectiveBranchId || undefined,
+        });
         activeTreasuries = [defaultTreasury];
       }
 

@@ -125,7 +125,7 @@ export function AdminCloseShiftModal({
       try {
         const orgId = currentUser?.org_id || shift?.org_id;
         const branchId = shift?.branch_id || currentUser?.branch_id;
-        let query = db.cashier_shifts.where('status').equals('open');
+        const query = db.cashier_shifts.where('status').equals('open');
 
         let allOpen = await query.toArray();
         if (orgId) {

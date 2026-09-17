@@ -24,6 +24,40 @@ export class TreasuryRepository {
   }
 
   /**
+   * إنشاء خزينة رئيسية افتراضية عند عدم وجود أي خزينة فعلية
+   * (مسار موحد لجميع الدخولات، مع إدراج تلقائي في طابور المزامنة)
+   */
+  public static async ensureDefaultTreasury(params: {
+    orgId: string;
+    branchId?: string | null;
+  }): Promise<Treasury> {
+    const existing = await db.treasuries.where('org_id').equals(params.orgId).and((t) => t.is_active).first();
+    if (existing) return existing;
+
+    const now = new Date().toISOString();
+    const defaultTreasury: Treasury = {
+      id: uuidv4(),
+      org_id: params.orgId,
+      branch_id: params.branchId || undefined,
+      name: 'الخزينة الرئيسية',
+      type: 'safe',
+      current_balance: 0,
+      is_default: true,
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+      sync_status: 'pending',
+    };
+
+    await db.transaction('rw', [db.treasuries, db.sync_queue], async () => {
+      await db.treasuries.put(defaultTreasury);
+      await SyncQueueManager.enqueue('treasuries', defaultTreasury.id, 'insert', defaultTreasury);
+    });
+
+    return defaultTreasury;
+  }
+
+  /**
    * Get main/default treasury
    */
   public static async getDefaultTreasury(orgId: string): Promise<Treasury | undefined> {
@@ -313,6 +347,52 @@ export class TreasuryRepository {
   /**
    * Record Financial Voucher (Receipt or Payment)
    */
+  /**
+   * Creates a voucher document only (receipt/payment receipt) WITHOUT moving any
+   * treasury balance. Use when the caller already moved the cash itself, e.g.
+   * payroll payment, so the cash effect is not applied twice.
+   */
+  public static async registerVoucherOnly(params: {
+    orgId: string;
+    type: VoucherType;
+    treasuryId: string;
+    contactId?: string | null;
+    shiftId?: string | null;
+    amount: number;
+    description: string;
+    referenceNo?: string;
+    userId: string;
+  }): Promise<FinancialVoucher> {
+    const now = new Date().toISOString();
+    const voucherId = uuidv4();
+    const count = await db.financial_vouchers.where('org_id').equals(params.orgId).count();
+    const prefix = params.type === 'receipt' ? 'RV' : 'PV';
+    const voucherNo = `${prefix}-${String(count + 1).padStart(5, '0')}`;
+
+    const voucher: FinancialVoucher = {
+      id: voucherId,
+      org_id: params.orgId,
+      voucher_no: voucherNo,
+      type: params.type,
+      treasury_id: params.treasuryId,
+      contact_id: params.contactId ?? null,
+      shift_id: params.shiftId ?? null,
+      amount: params.amount,
+      description: params.description,
+      reference_no: params.referenceNo,
+      created_by: params.userId,
+      created_at: now,
+      sync_status: 'pending',
+    };
+
+    await db.transaction('rw', [db.financial_vouchers, db.sync_queue], async () => {
+      await db.financial_vouchers.add(voucher);
+      await SyncQueueManager.enqueue('financial_vouchers', voucherId, 'insert', voucher);
+    });
+
+    return voucher;
+  }
+
   public static async createVoucher(params: {
     orgId: string;
     type: VoucherType;
@@ -326,7 +406,7 @@ export class TreasuryRepository {
   }): Promise<FinancialVoucher> {
     const now = new Date().toISOString();
     const voucherId = uuidv4();
-    const count = await db.financial_vouchers.count();
+    const count = await db.financial_vouchers.where('org_id').equals(params.orgId).count();
     const prefix = params.type === 'receipt' ? 'RV' : 'PV';
     const voucherNo = `${prefix}-${String(count + 1).padStart(5, '0')}`;
 
@@ -336,8 +416,8 @@ export class TreasuryRepository {
       voucher_no: voucherNo,
       type: params.type,
       treasury_id: params.treasuryId,
-      contact_id: params.contactId,
-      shift_id: params.shiftId,
+      contact_id: params.contactId ?? null,
+      shift_id: params.shiftId ?? null,
       amount: params.amount,
       description: params.description,
       reference_no: params.referenceNo,

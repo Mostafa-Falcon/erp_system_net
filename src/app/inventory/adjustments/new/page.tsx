@@ -558,7 +558,7 @@ export default function NewStocktakePage() {
               <div>
                 <h3 className="text-sm font-black text-slate-900 dark:text-white">إدخال الأصناف والمخزن المستهدف</h3>
                 <p className="text-[11px] text-slate-400">
-                  يدعم قارئ الباركود، باركود الوحدات (الشريط/القرص)، والبحث بالاسم أو الرف
+                  يدعم قارئ الباركود، باركود الوحدات الفرعية (العبوة/العلبة)، والبحث بالاسم أو الرف
                 </p>
               </div>
             </div>

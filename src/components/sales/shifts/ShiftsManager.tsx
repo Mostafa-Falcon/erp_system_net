@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useSessionStore } from '@/core/state/useSessionStore';
 import { SalesRepository } from '@/modules/sales/sales_repository';
+import { TreasuryRepository } from '@/modules/treasury/treasury_repository';
 import { db } from '@/core/db/app_database';
 import { formatNumber } from '@/lib/format';
 import type { CashierShift, Treasury, User as UserType } from '@/types';
@@ -85,20 +86,10 @@ export function ShiftsManager() {
       ]);
 
       if (tres.length === 0 && orgId) {
-        const defaultTreasury: Treasury = {
-          id: uuidv4(),
-          org_id: orgId,
-          branch_id: effectiveBranchId || undefined,
-          name: 'الخزينة الرئيسية',
-          type: 'safe',
-          current_balance: 0,
-          is_default: true,
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          sync_status: 'pending',
-        };
-        await db.treasuries.put(defaultTreasury);
+        const defaultTreasury = await TreasuryRepository.ensureDefaultTreasury({
+          orgId,
+          branchId: effectiveBranchId || undefined,
+        });
         tres = [defaultTreasury];
       }
 

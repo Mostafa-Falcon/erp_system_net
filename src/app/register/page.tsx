@@ -176,6 +176,12 @@ export default function RegisterPage() {
           await SyncQueueManager.enqueue('warehouses', warehouseId, 'insert', newWarehouse);
           await SyncQueueManager.enqueue('treasuries', treasuryId, 'insert', newTreasury);
           await SyncQueueManager.enqueue('users', userId, 'insert', newUser);
+          for (const unit of defaultUnits) {
+            await SyncQueueManager.enqueue('units', unit.id, 'insert', unit);
+          }
+          for (const category of defaultExpenseCategories) {
+            await SyncQueueManager.enqueue('expense_categories', category.id, 'insert', category);
+          }
         }
       );
 

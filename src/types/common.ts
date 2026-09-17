@@ -55,6 +55,12 @@ export interface User {
   role: UserRole;
   pin_code_hash?: string; // For rapid cashier shift switch offline
 
+  // HR Profile
+  department_id?: EntityId | null;
+  job_title?: string;
+  hire_date?: string; // YYYY-MM-DD
+  annual_leave_days?: number; // Yearly annual-leave entitlement (default 21)
+
   // Payroll & Permissions
   basic_salary?: number;
   salary_cycle?: 'monthly' | 'weekly' | 'daily' | 'hourly';

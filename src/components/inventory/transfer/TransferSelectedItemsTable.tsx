@@ -35,7 +35,7 @@ export const TransferSelectedItemsTable: React.FC<TransferSelectedItemsTableProp
             لم يتم إضافة أي أصناف حتى الآن
           </span>
           <span className="text-[11px] text-slate-400 max-w-sm">
-            ابحث عن الأصناف أو المستلزمات أعلاه وحدد الكمية ثم اضغط زر "إضافة" لإدراجها في أمر التحويل.
+            ابحث عن الأصناف أو المستلزمات أعلاه وحدد الكمية ثم اضغط زر &quot;إضافة&quot; لإدراجها في أمر التحويل.
           </span>
         </div>
       ) : (

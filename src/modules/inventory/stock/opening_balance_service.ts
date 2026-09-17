@@ -100,6 +100,10 @@ export class OpeningBalanceService {
               batch_id: batch.id,
               sync_status: 'pending',
             });
+            const linkedTx = await db.inventory_transactions.get(txId);
+            if (linkedTx) {
+              await SyncQueueManager.enqueue('inventory_transactions', txId, 'update', linkedTx);
+            }
           }
         }
       );

@@ -109,7 +109,7 @@ function CategoriesContent() {
 
     if (confirm(`هل أنت متأكد من حذف التصنيف "${c.name}"؟`)) {
       try {
-        await db.product_categories.delete(c.id);
+        await ProductRepository.deleteCategory(c.id);
         await loadData();
       } catch (err) {
         console.error('Error deleting category:', err);

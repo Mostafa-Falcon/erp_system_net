@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSessionStore } from '@/core/state/useSessionStore';
 import { db } from '@/core/db/app_database';
+import { SyncQueueManager } from '@/core/sync/sync_queue_manager';
 import { formatNumber } from '@/lib/format';
 import type { Product, Warehouse, StockLevel } from '@/types';
 import { ArrowRightToLine, Search, Save, CheckCircle2, AlertCircle, Box } from 'lucide-react';
@@ -98,7 +99,7 @@ function OpeningBalanceContent() {
       setSavedSuccess(false);
       const now = new Date().toISOString();
 
-      await db.transaction('rw', [db.stock_levels, db.products, db.inventory_transactions], async () => {
+      await db.transaction('rw', [db.stock_levels, db.products, db.inventory_transactions, db.sync_queue], async () => {
         for (const [prodId, val] of Object.entries(editValues)) {
           const qty = parseFloat(val.qty) || 0;
           const cost = parseFloat(val.cost) || 0;
@@ -106,7 +107,14 @@ function OpeningBalanceContent() {
           // Update cost price on product if changed
           const prod = products.find((p) => p.id === prodId);
           if (prod && prod.cost_price !== cost) {
-            await db.products.update(prodId, { cost_price: cost, updated_at: now });
+            const updatedProd: Product = {
+              ...prod,
+              cost_price: cost,
+              updated_at: now,
+              sync_status: 'pending',
+            };
+            await db.products.put(updatedProd);
+            await SyncQueueManager.enqueue('products', prodId, 'update', updatedProd);
           }
 
           // Update stock level
@@ -118,17 +126,24 @@ function OpeningBalanceContent() {
 
           if (existingLevel) {
             if (existingLevel.quantity !== qty) {
-              await db.stock_levels.update(existingLevel.id, {
+              const updatedLevel: StockLevel = {
+                ...existingLevel,
                 quantity: qty,
+                available_quantity: qty - (existingLevel.reserved_quantity || 0),
                 updated_at: now,
-              });
+                sync_status: 'pending',
+              };
+              await db.stock_levels.put(updatedLevel);
+              await SyncQueueManager.enqueue('stock_levels', updatedLevel.id, 'upsert', updatedLevel);
+
               // Log opening balance change
-              await db.inventory_transactions.add({
-                id: uuidv4(),
+              const txId = uuidv4();
+              const tx = {
+                id: txId,
                 org_id: orgId,
                 warehouse_id: selectedWarehouseId,
                 product_id: prodId,
-                transaction_type: 'opening_balance',
+                transaction_type: 'opening_balance' as const,
                 quantity: qty - existingLevel.quantity,
                 unit_id: 'default_unit',
                 unit_conversion_factor: 1,
@@ -139,12 +154,15 @@ function OpeningBalanceContent() {
                 notes: 'تسجيل / تعديل رصيد أول المدة',
                 created_by: currentUser?.id || '',
                 created_at: now,
-                sync_status: 'pending',
-              });
+                sync_status: 'pending' as const,
+              };
+              await db.inventory_transactions.add(tx);
+              await SyncQueueManager.enqueue('inventory_transactions', txId, 'insert', tx);
             }
           } else if (qty > 0) {
-            await db.stock_levels.add({
-              id: uuidv4(),
+            const stockId = `${selectedWarehouseId}_${prodId}`;
+            const newLevel: StockLevel = {
+              id: stockId,
               org_id: orgId,
               product_id: prodId,
               warehouse_id: selectedWarehouseId,
@@ -152,13 +170,18 @@ function OpeningBalanceContent() {
               reserved_quantity: 0,
               available_quantity: qty,
               updated_at: now,
-            });
-            await db.inventory_transactions.add({
-              id: uuidv4(),
+              sync_status: 'pending',
+            };
+            await db.stock_levels.put(newLevel);
+            await SyncQueueManager.enqueue('stock_levels', stockId, 'upsert', newLevel);
+
+            const txId = uuidv4();
+            const tx = {
+              id: txId,
               org_id: orgId,
               warehouse_id: selectedWarehouseId,
               product_id: prodId,
-              transaction_type: 'opening_balance',
+              transaction_type: 'opening_balance' as const,
               quantity: qty,
               unit_id: 'default_unit',
               unit_conversion_factor: 1,
@@ -169,8 +192,10 @@ function OpeningBalanceContent() {
               notes: 'تسجيل رصيد أول المدة الافتتاحي',
               created_by: currentUser?.id || '',
               created_at: now,
-              sync_status: 'pending',
-            });
+              sync_status: 'pending' as const,
+            };
+            await db.inventory_transactions.add(tx);
+            await SyncQueueManager.enqueue('inventory_transactions', txId, 'insert', tx);
           }
         }
       });

@@ -17,39 +17,10 @@
 -- ═══════════════════════════════════════════════════════════════════
 
 -- =============================================================
--- 0. Helper: read the per-device transport token from headers
--- =============================================================
-create or replace function public.request_transport_token()
-returns text
-language sql
-stable
-as $$
-  select nullif(current_setting('request.headers', true)::jsonb ->> 'x-falcon-org-token', '')
-$$;
-
--- =============================================================
--- 1. RLS identity helper: current_org_id()
---    Resolution order:
---      1) authenticated JWT user_metadata.org_id
---      2) authenticated JWT uid lookup in public.users
---      3) unauthenticated device via organizations.transport_token
--- =============================================================
-create or replace function public.current_org_id()
-returns uuid
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select coalesce(
-    (auth.jwt() -> 'user_metadata' ->> 'org_id')::uuid,
-    (select org_id from public.users where id = auth.uid()),
-    (select id from public.organizations where transport_token = public.request_transport_token())
-  )
-$$;
-
--- =============================================================
--- 2. Schema additions (existing tables)
+-- 0. Schema additions (existing tables)
+--    MUST run before the RLS helper functions below, because the
+--    SQL-language functions are validated against the real schema
+--    at creation time (transport_token etc. must already exist).
 -- =============================================================
 
 alter table public.organizations
@@ -100,11 +71,43 @@ set transport_token = gen_random_uuid()::text
 where transport_token is null;
 
 -- =============================================================
+-- 1. Helper: read the per-device transport token from headers
+-- =============================================================
+create or replace function public.request_transport_token()
+returns text
+language sql
+stable
+as $$
+  select nullif(current_setting('request.headers', true)::jsonb ->> 'x-falcon-org-token', '')
+$$;
+
+-- =============================================================
+-- 2. RLS identity helper: current_org_id()
+--    Resolution order:
+--      1) authenticated JWT user_metadata.org_id
+--      2) authenticated JWT uid lookup in public.users
+--      3) unauthenticated device via organizations.transport_token
+-- =============================================================
+create or replace function public.current_org_id()
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    (auth.jwt() -> 'user_metadata' ->> 'org_id')::uuid,
+    (select org_id from public.users where id = auth.uid()),
+    (select id from public.organizations where transport_token = public.request_transport_token())
+  )
+$$;
+
+-- =============================================================
 -- 3. HR & Org-structure tables
 -- =============================================================
 
 create table if not exists public.departments (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   org_id uuid not null references public.organizations(id) on delete cascade,
   parent_id uuid references public.departments(id) on delete set null,
   manager_id uuid references public.users(id) on delete set null,
@@ -119,7 +122,7 @@ create table if not exists public.departments (
 create index if not exists idx_departments_org on public.departments(org_id, is_active);
 
 create table if not exists public.employee_attendance (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   org_id uuid not null references public.organizations(id) on delete cascade,
   branch_id uuid references public.branches(id) on delete set null,
   employee_id uuid not null references public.users(id) on delete cascade,
@@ -139,7 +142,7 @@ create index if not exists idx_attendance_org_date on public.employee_attendance
 create index if not exists idx_attendance_employee on public.employee_attendance(employee_id, date);
 
 create table if not exists public.employee_leaves (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   org_id uuid not null references public.organizations(id) on delete cascade,
   branch_id uuid references public.branches(id) on delete set null,
   employee_id uuid not null references public.users(id) on delete cascade,
@@ -161,7 +164,7 @@ create index if not exists idx_leaves_org_status on public.employee_leaves(org_i
 create index if not exists idx_leaves_employee on public.employee_leaves(employee_id);
 
 create table if not exists public.salary_statements (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   org_id uuid not null references public.organizations(id) on delete cascade,
   branch_id uuid references public.branches(id) on delete set null,
   employee_id uuid references public.users(id) on delete set null,
@@ -189,7 +192,7 @@ create index if not exists idx_salary_statements_org on public.salary_statements
 create index if not exists idx_salary_statements_emp on public.salary_statements(employee_id, month);
 
 create table if not exists public.employee_advances (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   org_id uuid not null references public.organizations(id) on delete cascade,
   branch_id uuid references public.branches(id) on delete set null,
   employee_id uuid not null references public.users(id) on delete cascade,
@@ -210,7 +213,7 @@ create index if not exists idx_advances_org on public.employee_advances(org_id, 
 create index if not exists idx_advances_employee on public.employee_advances(employee_id, status);
 
 create table if not exists public.employee_documents (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   org_id uuid not null references public.organizations(id) on delete cascade,
   employee_id uuid not null references public.users(id) on delete cascade,
   title text not null,
@@ -231,7 +234,7 @@ create index if not exists idx_emp_docs_employee on public.employee_documents(em
 -- =============================================================
 
 create table if not exists public.accounts (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   org_id uuid not null references public.organizations(id) on delete cascade,
   parent_id uuid references public.accounts(id) on delete set null,
   code text not null,
@@ -253,13 +256,13 @@ create index if not exists idx_accounts_org on public.accounts(org_id, type);
 create index if not exists idx_accounts_parent on public.accounts(parent_id);
 
 create table if not exists public.journal_entries (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   org_id uuid not null references public.organizations(id) on delete cascade,
   branch_id uuid references public.branches(id) on delete set null,
   entry_no text not null,
   entry_date timestamptz not null default now(),
   type text not null default 'general'
-    check (type in ('general', 'sales', 'purchases', 'expenses', 'opening', 'payroll', 'voucher', 'reversal')),
+    check (type in ('general', 'sales', 'purchases', 'expenses', 'opening', 'payroll', 'voucher', 'adjustment', 'reversal')),
   description text,
   reference_type text,
   reference_id uuid,
@@ -274,7 +277,7 @@ create index if not exists idx_journal_org_date on public.journal_entries(org_id
 create index if not exists idx_journal_ref on public.journal_entries(reference_type, reference_id);
 
 create table if not exists public.journal_entry_lines (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   entry_id uuid not null references public.journal_entries(id) on delete cascade,
   account_id uuid not null references public.accounts(id) on delete restrict,
   debit numeric(15,4) not null default 0,
@@ -296,12 +299,22 @@ declare
   v_debit numeric;
   v_credit numeric;
 begin
-  select
-    coalesce(sum(l.debit), 0),
-    coalesce(sum(l.credit), 0)
-  into v_debit, v_credit
-  from public.journal_entry_lines l
-  where l.entry_id = coalesce(new.entry_id, old.entry_id);
+  if tg_op = 'DELETE' then
+    select
+      coalesce(sum(l.debit), 0),
+      coalesce(sum(l.credit), 0)
+    into v_debit, v_credit
+    from public.journal_entry_lines l
+    where l.entry_id = old.entry_id
+      and l.id <> old.id;
+  else
+    select
+      coalesce(sum(l.debit), 0),
+      coalesce(sum(l.credit), 0)
+    into v_debit, v_credit
+    from public.journal_entry_lines l
+    where l.entry_id = coalesce(new.entry_id, old.entry_id);
+  end if;
 
   if abs(v_debit - v_credit) > 0.001 then
     raise exception 'Journal entry is not balanced (debit % <> credit %)', v_debit, v_credit;
@@ -377,8 +390,9 @@ begin
     'expenses', 'expense_categories', 'financial_vouchers',
     'product_batches', 'stock_levels', 'inventory_transactions',
     'stock_transfers', 'stock_transfer_items',
+    'cashier_shifts',
     'sales_invoices', 'sales_returns', 'purchase_invoices', 'purchase_returns',
-    'stocktake_sessions', 'stocktake_items',
+    'stocktake_sessions',
     'departments', 'employee_attendance', 'employee_leaves',
     'salary_statements', 'employee_advances', 'employee_documents',
     'accounts', 'journal_entries', 'activity_logs'
@@ -499,14 +513,82 @@ begin
 end;
 $$;
 
+select public.falcon_enable_rls('stocktake_items');
+do $$
+begin
+  drop policy if exists "t_stocktake_items_select" on public.stocktake_items;
+  create policy "t_stocktake_items_select" on public.stocktake_items
+    for select using (
+      exists (select 1 from public.stocktake_sessions ss
+              where ss.id = stocktake_items.session_id
+                and ss.org_id = public.current_org_id())
+    );
+  drop policy if exists "t_stocktake_items_insert" on public.stocktake_items;
+  create policy "t_stocktake_items_insert" on public.stocktake_items
+    for insert with check (
+      exists (select 1 from public.stocktake_sessions ss
+              where ss.id = stocktake_items.session_id
+                and ss.org_id = public.current_org_id())
+    );
+  drop policy if exists "t_stocktake_items_update" on public.stocktake_items;
+  create policy "t_stocktake_items_update" on public.stocktake_items
+    for update using (
+      exists (select 1 from public.stocktake_sessions ss
+              where ss.id = stocktake_items.session_id
+                and ss.org_id = public.current_org_id())
+    );
+  drop policy if exists "t_stocktake_items_delete" on public.stocktake_items;
+  create policy "t_stocktake_items_delete" on public.stocktake_items
+    for delete using (
+      exists (select 1 from public.stocktake_sessions ss
+              where ss.id = stocktake_items.session_id
+                and ss.org_id = public.current_org_id())
+    );
+end;
+$$;
+
+select public.falcon_enable_rls('product_units');
+do $$
+begin
+  drop policy if exists "t_product_units_select" on public.product_units;
+  create policy "t_product_units_select" on public.product_units
+    for select using (
+      exists (select 1 from public.products pr
+              where pr.id = product_units.product_id
+                and pr.org_id = public.current_org_id())
+    );
+  drop policy if exists "t_product_units_insert" on public.product_units;
+  create policy "t_product_units_insert" on public.product_units
+    for insert with check (
+      exists (select 1 from public.products pr
+              where pr.id = product_units.product_id
+                and pr.org_id = public.current_org_id())
+    );
+  drop policy if exists "t_product_units_update" on public.product_units;
+  create policy "t_product_units_update" on public.product_units
+    for update using (
+      exists (select 1 from public.products pr
+              where pr.id = product_units.product_id
+                and pr.org_id = public.current_org_id())
+    );
+  drop policy if exists "t_product_units_delete" on public.product_units;
+  create policy "t_product_units_delete" on public.product_units
+    for delete using (
+      exists (select 1 from public.products pr
+              where pr.id = product_units.product_id
+                and pr.org_id = public.current_org_id())
+    );
+end;
+$$;
+
 -- D) RPC: secure organization creation (bypasses RLS as SECURITY DEFINER).
 --    Used by the registration flow so a brand-new org can be created
 --    before any JWT / transport-token exists.
 create or replace function public.falcon_register_organization(
   p_id uuid,
   p_name text,
-  p_currency text default 'EGP',
-  p_transport_token text
+  p_transport_token text,
+  p_currency text default 'EGP'
 )
 returns uuid
 language plpgsql

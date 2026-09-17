@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSessionStore } from '@/core/state/useSessionStore';
 import { db } from '@/core/db/app_database';
+import { SyncQueueManager } from '@/core/sync/sync_queue_manager';
 import { formatNumber } from '@/lib/format';
 import type { Product } from '@/types';
 import { Archive, Search, RotateCcw, Box, CheckCircle2 } from 'lucide-react';
@@ -42,10 +43,15 @@ function ArchiveContent() {
 
   const handleRestore = async (prod: Product) => {
     try {
-      await db.products.update(prod.id, {
+      const restored: Product = {
+        ...prod,
         is_active: true,
         updated_at: new Date().toISOString(),
         sync_status: 'pending',
+      };
+      await db.transaction('rw', [db.products, db.sync_queue], async () => {
+        await db.products.put(restored);
+        await SyncQueueManager.enqueue('products', prod.id, 'update', restored);
       });
       setActionMessage(`تمت استعادة الصنف "${prod.name}" بنجاح إلى قائمة الأصناف النشطة`);
       await loadData();

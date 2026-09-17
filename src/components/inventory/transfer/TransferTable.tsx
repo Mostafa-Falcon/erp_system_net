@@ -101,7 +101,7 @@ export const TransferTable: React.FC<TransferTableProps> = ({
                       لا توجد بيانات
                     </span>
                     <span className="text-xs text-slate-400 max-w-sm">
-                      لم يتم العثور على سجلات مطابقة للبحث أو الفلترة. قم بإنشاء تحويل جديد بالضغط على زر "تحويل جديد".
+                      لم يتم العثور على سجلات مطابقة للبحث أو الفلترة. قم بإنشاء تحويل جديد بالضغط على زر &quot;تحويل جديد&quot;.
                     </span>
                   </div>
                 </td>

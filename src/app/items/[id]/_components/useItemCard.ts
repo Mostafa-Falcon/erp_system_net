@@ -303,8 +303,8 @@ export function useItemCard(productId: string) {
       result = result.filter((b) => b.batch_number.toLowerCase().includes(q));
     }
     return [...result].sort((a, b) => {
-      let valA: any = a[batchSortField];
-      let valB: any = b[batchSortField];
+      const valA: any = a[batchSortField];
+      const valB: any = b[batchSortField];
       if (valA < valB) return batchSortDir === 'asc' ? -1 : 1;
       if (valA > valB) return batchSortDir === 'asc' ? 1 : -1;
       return 0;
@@ -330,8 +330,8 @@ export function useItemCard(productId: string) {
       );
     }
     return [...result].sort((a, b) => {
-      let valA: any = a[subSortField];
-      let valB: any = b[subSortField];
+      const valA: any = a[subSortField];
+      const valB: any = b[subSortField];
       if (valA < valB) return subSortDir === 'asc' ? -1 : 1;
       if (valA > valB) return subSortDir === 'asc' ? 1 : -1;
       return 0;
@@ -356,8 +356,8 @@ export function useItemCard(productId: string) {
       );
     }
     return [...result].sort((a, b) => {
-      let valA: any = a[stSortField];
-      let valB: any = b[stSortField];
+      const valA: any = a[stSortField];
+      const valB: any = b[stSortField];
       if (valA < valB) return stSortDir === 'asc' ? -1 : 1;
       if (valA > valB) return stSortDir === 'asc' ? 1 : -1;
       return 0;

@@ -35,6 +35,7 @@ export interface EmployeeLeave {
   reason?: string;
   status: LeaveStatus;
   approved_by?: EntityId | null;
+  rejection_reason?: string | null;
   created_at: ISODateString;
   updated_at: ISODateString;
   sync_status?: 'synced' | 'pending' | 'failed';

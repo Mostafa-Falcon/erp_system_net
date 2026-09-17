@@ -30,10 +30,38 @@ export class ProductTypeRepository {
     return item;
   }
 
-  public static async deleteProductType(id: string): Promise<void> {
+  public static async updateProductType(
+    id: string,
+    updates: Partial<Pick<ProductTypeItem, 'name' | 'code' | 'is_active'>>,
+    orgId?: string
+  ): Promise<ProductTypeItem | null> {
+    const existing = await db.product_types.get(id);
+    if (!existing) return null;
+
+    const now = new Date().toISOString();
+    const updated: ProductTypeItem = {
+      ...existing,
+      ...updates,
+      org_id: existing.org_id || orgId || '',
+      updated_at: now,
+      sync_status: 'pending',
+    };
+    await db.transaction('rw', [db.product_types, db.sync_queue], async () => {
+      await db.product_types.put(updated);
+      await SyncQueueManager.enqueue('product_types', id, 'update', updated);
+    });
+    syncCoordinator.triggerSync().catch(console.error);
+    return updated;
+  }
+
+  public static async deleteProductType(id: string, orgId?: string): Promise<void> {
+    const existing = await db.product_types.get(id);
     await db.transaction('rw', [db.product_types, db.sync_queue], async () => {
       await db.product_types.delete(id);
-      await SyncQueueManager.enqueue('product_types', id, 'delete', { id });
+      await SyncQueueManager.enqueue('product_types', id, 'delete', {
+        id,
+        org_id: existing?.org_id || orgId || '',
+      });
     });
     syncCoordinator.triggerSync().catch(console.error);
   }

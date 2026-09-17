@@ -1,6 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '@/core/db/app_database';
-import { supabase, isSupabaseConfigured } from '@/core/supabase/supabase_client';
 import { SyncQueueManager } from '@/core/sync/sync_queue_manager';
 import type { User, UserRole } from '@/types';
 
@@ -63,15 +62,6 @@ export class EmployeeRepository {
       await SyncQueueManager.enqueue('users', userId, 'insert', newEmployee);
     });
 
-    // 2. Direct sync to Supabase if connected
-    if (isSupabaseConfigured()) {
-      try {
-        await supabase.from('users').upsert(newEmployee);
-      } catch (err) {
-        console.warn('Supabase employee sync queued:', err);
-      }
-    }
-
     return newEmployee;
   }
 
@@ -92,14 +82,6 @@ export class EmployeeRepository {
         await SyncQueueManager.enqueue('users', userId, 'update', updatedUser);
       }
     });
-
-    if (isSupabaseConfigured()) {
-      try {
-        await supabase.from('users').update(cleanUpdates).eq('id', userId);
-      } catch (err) {
-        console.warn('Supabase employee update queued:', err);
-      }
-    }
   }
 
   /**
@@ -119,13 +101,5 @@ export class EmployeeRepository {
       await db.users.delete(userId);
       await SyncQueueManager.enqueue('users', userId, 'delete', { id: userId });
     });
-
-    if (isSupabaseConfigured()) {
-      try {
-        await supabase.from('users').delete().eq('id', userId);
-      } catch (err) {
-        console.warn('Supabase employee delete queued:', err);
-      }
-    }
   }
 }

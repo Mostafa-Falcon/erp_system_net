@@ -130,6 +130,16 @@ export class RealtimeSyncListener {
           return;
         }
 
+        // حارس الدمج: لا نستبدل سجلاً محلياً عليه تغيير غير مُزامن (pending/in_flight/failed)
+        const existingLocal = await localTable.get(newRecord.id);
+        const localStatus = (existingLocal as { sync_status?: string } | undefined)?.sync_status;
+        if (
+          localStatus &&
+          (localStatus === 'pending' || localStatus === 'in_flight' || localStatus === 'failed')
+        ) {
+          return;
+        }
+
         let recordToStore = { ...newRecord, sync_status: 'synced' };
 
         // فك تشفير الخصائص الموسعة للأصناف
