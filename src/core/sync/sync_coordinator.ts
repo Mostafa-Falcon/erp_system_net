@@ -163,7 +163,8 @@ const CLOUD_COLUMN_MAP: Record<string, Set<string>> = {
     'id', 'org_id', 'branch_id', 'warehouse_id', 'supplier_id', 'invoice_number',
     'system_invoice_number', 'invoice_date', 'subtotal', 'discount_amount',
     'tax_amount', 'total', 'paid_amount', 'remaining_amount', 'payment_type',
-    'treasury_id', 'status', 'notes', 'created_by', 'created_at', 'updated_at',
+    'treasury_id', 'status', 'notes', 'is_deleted', 'deleted_at', 'deleted_by',
+    'delete_reason', 'created_by', 'created_at', 'updated_at',
   ]),
   purchase_invoice_items: new Set([
     'id', 'invoice_id', 'product_id', 'batch_number', 'expiry_date', 'unit_id',

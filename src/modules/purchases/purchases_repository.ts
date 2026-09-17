@@ -207,12 +207,17 @@ export class PurchasesRepository {
   /**
    * Get all purchase invoices for an organization (newest first)
    */
-  public static async getPurchaseInvoices(orgId: string): Promise<PurchaseInvoice[]> {
-    return await db.purchase_invoices
+  public static async getPurchaseInvoices(
+    orgId: string,
+    includeDeleted = false
+  ): Promise<PurchaseInvoice[]> {
+    const list = await db.purchase_invoices
       .where('org_id')
       .equals(orgId)
       .reverse()
       .sortBy('created_at');
+    if (includeDeleted) return list;
+    return list.filter((inv) => !inv.is_deleted && inv.status !== 'cancelled');
   }
 
   /**
@@ -238,6 +243,154 @@ export class PurchasesRepository {
       .equals(orgId)
       .reverse()
       .sortBy('created_at');
+  }
+
+  /**
+   * Updates the editable header fields of a purchase invoice (supplier invoice
+   * number and notes). Line items are immutable to preserve stock/financial
+   * integrity; to change quantities the invoice must be voided and re-created.
+   */
+  public static async updatePurchaseInvoice(params: {
+    invoiceId: string;
+    userId: string;
+    invoiceNumber?: string;
+    notes?: string;
+  }): Promise<PurchaseInvoice> {
+    const invoice = await db.purchase_invoices.get(params.invoiceId);
+    if (!invoice) throw new Error('فاتورة الشراء غير موجودة');
+    if (invoice.is_deleted || invoice.status === 'cancelled') {
+      throw new Error('لا يمكن تعديل فاتورة ملغاة أو محذوفة');
+    }
+
+    const now = new Date().toISOString();
+    const updated: PurchaseInvoice = {
+      ...invoice,
+      invoice_number: params.invoiceNumber !== undefined ? params.invoiceNumber : invoice.invoice_number,
+      notes: params.notes !== undefined ? params.notes : invoice.notes,
+      updated_at: now,
+      sync_status: 'pending',
+    };
+
+    await db.transaction('rw', [db.purchase_invoices, db.sync_queue], async () => {
+      await db.purchase_invoices.put(updated);
+      await SyncQueueManager.enqueue('purchase_invoices', invoice.id, 'update', updated);
+    });
+
+    return updated;
+  }
+
+  /**
+   * Voids a purchase invoice (soft delete) and reverts every side effect:
+   * stock quantities, treasury refund of the paid amount, supplier ledger
+   * credit and the accounting entry. Retention is preserved for auditing.
+   */
+  public static async deletePurchaseInvoice(params: {
+    invoiceId: string;
+    userId: string;
+    reason?: string;
+  }): Promise<PurchaseInvoice> {
+    const invoice = await db.purchase_invoices.get(params.invoiceId);
+    if (!invoice) throw new Error('فاتورة الشراء غير موجودة');
+    if (invoice.is_deleted || invoice.status === 'cancelled') {
+      throw new Error('تم حذف أو إلغاء هذه الفاتورة مسبقاً');
+    }
+
+    const linkedReturns = await db.purchase_returns
+      .where('original_invoice_id')
+      .equals(params.invoiceId)
+      .count();
+    if (linkedReturns > 0) {
+      throw new Error('لا يمكن إلغاء الفاتورة لوجود مرتجعات مرتبطة بها. ألغِ المرتجعات أولاً.');
+    }
+
+    const now = new Date().toISOString();
+    const items = await this.getPurchaseInvoiceItems(params.invoiceId);
+
+    const updatedInvoice: PurchaseInvoice = {
+      ...invoice,
+      status: 'cancelled',
+      is_deleted: true,
+      deleted_at: now,
+      deleted_by: params.userId,
+      delete_reason: params.reason || 'إلغاء فاتورة مشتريات',
+      updated_at: now,
+      sync_status: 'pending',
+    };
+
+    await db.transaction(
+      'rw',
+      [
+        db.purchase_invoices,
+        db.stock_levels,
+        db.inventory_transactions,
+        db.treasuries,
+        db.contacts,
+        db.contact_transactions,
+        db.sync_queue,
+      ],
+      async () => {
+        // 1. Mark invoice as void
+        await db.purchase_invoices.put(updatedInvoice);
+        await SyncQueueManager.enqueue('purchase_invoices', invoice.id, 'update', updatedInvoice);
+
+        // 2. Remove the received quantities from stock
+        for (const item of items) {
+          const result = await InventoryRepository.recordStockMovement({
+            orgId: invoice.org_id,
+            warehouseId: invoice.warehouse_id,
+            productId: item.product_id,
+            batchNumber: item.batch_number,
+            expiryDate: item.expiry_date,
+            transactionType: 'purchase_return',
+            quantity: -item.quantity,
+            unitId: item.unit_id,
+            conversionFactor: item.conversion_factor,
+            unitCost: item.unit_cost,
+            referenceType: 'purchase_invoice',
+            referenceId: invoice.id,
+            userId: params.userId,
+            notes: `إلغاء فاتورة مشتريات ${invoice.system_invoice_number}`,
+          });
+
+          if (!result.success) {
+            throw new Error(result.error || 'تعذر إلغاء الفاتورة لعدم كفاية المخزون.');
+          }
+        }
+
+        // 3. Refund the amount that was actually paid
+        if (invoice.paid_amount > 0 && invoice.treasury_id) {
+          await TreasuryRepository.adjustBalance(invoice.treasury_id, invoice.paid_amount);
+        }
+
+        // 4. Reverse the outstanding supplier credit
+        if (invoice.remaining_amount > 0) {
+          await ContactsRepository.adjustBalance({
+            orgId: invoice.org_id,
+            contactId: invoice.supplier_id,
+            referenceType: 'purchase_invoice',
+            referenceId: invoice.id,
+            debit: invoice.remaining_amount,
+            credit: 0,
+            notes: `إلغاء مديونية فاتورة مشتريات ${invoice.system_invoice_number}`,
+          });
+        }
+      }
+    );
+
+    // 5. Reverse the invoice journal entry
+    try {
+      await AccountingRepository.reverseDocument(
+        invoice.org_id,
+        'purchase_invoice',
+        invoice.id,
+        params.reason || 'إلغاء فاتورة مشتريات',
+        params.userId
+      );
+    } catch (accountingError) {
+      console.warn('[Accounting] Failed to reverse purchase invoice:', accountingError);
+    }
+
+    return updatedInvoice;
   }
 
   // ==========================================

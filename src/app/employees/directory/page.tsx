@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Icons } from '@/components/ui/Icons';
 import { useSessionStore } from '@/core/state/useSessionStore';
 import { EmployeeRepository, type CreateEmployeeDTO } from '@/modules/employees/employee_repository';
-import type { Branch, User, UserRole } from '@/types';
+import { DepartmentRepository } from '@/modules/employees/department_repository';
+import type { Branch, Department, User, UserRole } from '@/types';
 
 import {
   Select,
@@ -34,6 +35,7 @@ function EmployeesContent() {
 
   const [employees, setEmployees] = useState<User[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
@@ -45,6 +47,8 @@ function EmployeesContent() {
   const [ePhone, setEPhone] = useState('');
   const [eRole, setERole] = useState<UserRole>('cashier');
   const [eBranchId, setEBranchId] = useState('');
+  const [eDepartmentId, setEDepartmentId] = useState('');
+  const [eJobTitle, setEJobTitle] = useState('');
   const [ePinCode, setEPinCode] = useState('');
   const [formError, setFormError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -53,12 +57,14 @@ function EmployeesContent() {
     if (!orgId) return;
     try {
       const { db } = await import('@/core/db/app_database');
-      const [empList, branchList] = await Promise.all([
+      const [empList, branchList, deptList] = await Promise.all([
         EmployeeRepository.getEmployeesByOrg(orgId),
         db.branches.where('org_id').equals(orgId).toArray(),
+        DepartmentRepository.getAll(orgId),
       ]);
       setEmployees(empList);
       setBranches(branchList);
+      setDepartments(deptList);
     } catch (err) {
       console.error('Failed to load employees:', err);
     } finally {
@@ -73,6 +79,7 @@ function EmployeesContent() {
   }, [orgId]);
 
   const branchName = (id?: string) => branches.find((b) => b.id === id)?.name || '—';
+  const departmentName = (id?: string | null) => departments.find((d) => d.id === id)?.name;
 
   const filteredEmployees = useMemo(() => {
     return employees.filter((emp) => {
@@ -106,6 +113,8 @@ function EmployeesContent() {
     setEPhone(emp.phone || '');
     setERole(emp.role === 'super_admin' ? emp.role : emp.role);
     setEBranchId(emp.branch_id || '');
+    setEDepartmentId(emp.department_id || '');
+    setEJobTitle(emp.job_title || '');
     setEPinCode('');
   };
 
@@ -122,6 +131,8 @@ function EmployeesContent() {
         full_name: eFullName.trim(),
         email: eEmail.trim() || undefined,
         phone: ePhone.trim() || undefined,
+        department_id: eDepartmentId || null,
+        job_title: eJobTitle.trim() || undefined,
       };
       if (editTarget.role !== 'super_admin') {
         updates.role = eRole;
@@ -258,7 +269,14 @@ function EmployeesContent() {
                           <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black flex items-center justify-center text-xs">
                             {emp.full_name.charAt(0)}
                           </div>
-                          <span className="text-slate-900 dark:text-white">{emp.full_name}</span>
+                          <div className="flex flex-col">
+                            <span className="text-slate-900 dark:text-white">{emp.full_name}</span>
+                            {(emp.job_title || departmentName(emp.department_id)) && (
+                              <span className="text-[10px] text-slate-400 font-bold">
+                                {[emp.job_title, departmentName(emp.department_id)].filter(Boolean).join(' • ')}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="py-3">{getRoleBadge(emp.role)}</td>
@@ -376,6 +394,28 @@ function EmployeesContent() {
                   </SelectContent>
                 </Select>
               )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">القسم / الإدارة</Label>
+              <Select value={eDepartmentId} onValueChange={setEDepartmentId}>
+                <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+                  <SelectValue placeholder="اختر القسم" />
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+                  {departments.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">المسمى الوظيفي</Label>
+              <Input type="text" value={eJobTitle} onChange={(e) => setEJobTitle(e.target.value)} className="h-10 bg-slate-50 dark:bg-slate-900 text-sm" />
             </div>
           </div>
 

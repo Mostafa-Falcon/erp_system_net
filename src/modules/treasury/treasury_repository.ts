@@ -787,4 +787,173 @@ export class TreasuryRepository {
 
     return { voucherId, newBalance: newContactBalance };
   }
+
+  /**
+   * Reverses a financial voucher (receipt/payment): restores the treasury
+   * balance, undoes the contact balance/transaction when present, reverts any
+   * open-shift running totals and posts the counter journal entry.
+   */
+  public static async reverseVoucher(
+    voucherId: string,
+    reason: string,
+    userId: string
+  ): Promise<{ success: boolean; error?: string }> {
+    const voucher = await db.financial_vouchers.get(voucherId);
+    if (!voucher) return { success: false, error: 'السند غير موجود.' };
+    if (voucher.is_reversed) return { success: false, error: 'تم عكس هذا السند بالفعل.' };
+
+    const now = new Date().toISOString();
+    const delta = voucher.type === 'receipt' ? -voucher.amount : voucher.amount;
+
+    try {
+      await db.transaction(
+        'rw',
+        [
+          db.financial_vouchers,
+          db.treasuries,
+          db.contacts,
+          db.contact_transactions,
+          db.cashier_shifts,
+          db.sync_queue,
+        ],
+        async () => {
+          const treasury = await db.treasuries.get(voucher.treasury_id);
+          if (treasury) {
+            await this.adjustBalance(voucher.treasury_id, delta);
+          }
+
+          if (voucher.shift_id) {
+            const shift = await db.cashier_shifts.get(voucher.shift_id);
+            if (shift && shift.status === 'open') {
+              const updatedShift = {
+                ...shift,
+                expected_closing_balance: shift.expected_closing_balance + delta,
+                sync_status: 'pending' as const,
+              };
+              await db.cashier_shifts.put(updatedShift);
+              await SyncQueueManager.enqueue('cashier_shifts', shift.id, 'update', updatedShift);
+            }
+          }
+
+          if (voucher.contact_id) {
+            const contact = await db.contacts.get(voucher.contact_id);
+            if (contact) {
+              const reverseSettled = voucher.amount;
+              const newContactBalance =
+                voucher.type === 'receipt'
+                  ? contact.current_balance + reverseSettled
+                  : contact.current_balance - reverseSettled;
+              const updatedContact = {
+                ...contact,
+                current_balance: newContactBalance,
+                updated_at: now,
+                sync_status: 'pending' as const,
+              };
+              await db.contacts.put(updatedContact);
+              await SyncQueueManager.enqueue('contacts', contact.id, 'update', updatedContact);
+
+              const transId = uuidv4();
+              const trans = {
+                id: transId,
+                org_id: voucher.org_id,
+                contact_id: contact.id,
+                reference_type:
+                  voucher.type === 'receipt'
+                    ? ('payment_voucher' as const)
+                    : ('receipt_voucher' as const),
+                reference_id: voucherId,
+                debit: voucher.type === 'receipt' ? reverseSettled : 0,
+                credit: voucher.type === 'receipt' ? 0 : reverseSettled,
+                balance_after: newContactBalance,
+                notes: `عكس سند ${voucher.voucher_no} — ${reason}`,
+                created_at: now,
+                sync_status: 'pending' as const,
+              };
+              await db.contact_transactions.add(trans);
+              await SyncQueueManager.enqueue('contact_transactions', transId, 'insert', trans);
+            }
+          }
+
+          const updatedVoucher: FinancialVoucher = {
+            ...voucher,
+            is_reversed: true,
+            reversal_reason: reason,
+            sync_status: 'pending',
+          };
+          await db.financial_vouchers.put(updatedVoucher);
+          await SyncQueueManager.enqueue('financial_vouchers', voucherId, 'update', updatedVoucher);
+        }
+      );
+
+      try {
+        await AccountingRepository.reverseDocument(voucher.org_id, 'voucher', voucherId, reason, userId);
+      } catch (accountingError) {
+        console.warn('[Accounting] Failed to reverse voucher entry:', accountingError);
+      }
+
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'خطأ أثناء عكس السند.' };
+    }
+  }
+
+  /**
+   * Reverses an operational expense: returns the amount to the treasury,
+   * reverts any open-shift totals, soft-deletes the record and posts the
+   * counter journal entry.
+   */
+  public static async reverseExpense(
+    expenseId: string,
+    reason: string,
+    userId: string
+  ): Promise<{ success: boolean; error?: string }> {
+    const expense = await db.expenses.get(expenseId);
+    if (!expense) return { success: false, error: 'المصروف غير موجود.' };
+    if (expense.is_deleted) return { success: false, error: 'تم عكس هذا المصروف بالفعل.' };
+
+    const now = new Date().toISOString();
+
+    try {
+      await db.transaction(
+        'rw',
+        [db.expenses, db.treasuries, db.cashier_shifts, db.sync_queue],
+        async () => {
+          await this.adjustBalance(expense.treasury_id, expense.amount);
+
+          if (expense.shift_id) {
+            const shift = await db.cashier_shifts.get(expense.shift_id);
+            if (shift && shift.status === 'open') {
+              const updatedShift = {
+                ...shift,
+                total_expenses: Math.max(0, (shift.total_expenses || 0) - expense.amount),
+                expected_closing_balance: shift.expected_closing_balance + expense.amount,
+                sync_status: 'pending' as const,
+              };
+              await db.cashier_shifts.put(updatedShift);
+              await SyncQueueManager.enqueue('cashier_shifts', shift.id, 'update', updatedShift);
+            }
+          }
+
+          const updatedExpense: Expense = {
+            ...expense,
+            is_deleted: true,
+            deleted_at: now,
+            sync_status: 'pending',
+          };
+          await db.expenses.put(updatedExpense);
+          await SyncQueueManager.enqueue('expenses', expenseId, 'update', updatedExpense);
+        }
+      );
+
+      try {
+        await AccountingRepository.reverseDocument(expense.org_id, 'expense', expenseId, reason, userId);
+      } catch (accountingError) {
+        console.warn('[Accounting] Failed to reverse expense entry:', accountingError);
+      }
+
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'خطأ أثناء عكس المصروف.' };
+    }
+  }
 }

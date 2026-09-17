@@ -60,6 +60,7 @@ export function SalesReturnForm({
   const [customerId, setCustomerId] = useState(presetCustomerId || '');
   const [warehouseId, setWarehouseId] = useState(presetWarehouseId || '');
   const [treasuryId, setTreasuryId] = useState('');
+  const [refundType, setRefundType] = useState<'cash' | 'credit'>('cash');
   const [reason, setReason] = useState('');
   const [lines, setLines] = useState<Line[]>([]);
   const [sourceInfo, setSourceInfo] = useState<{ title: string; invoice?: SalesInvoice } | null>(null);
@@ -176,8 +177,16 @@ export function SalesReturnForm({
   const save = async () => {
     setFormError('');
     if (!currentUser) return;
-    if (!warehouseId || !treasuryId) {
-      setFormError('اختر المخزن والخزينة المُرجع إليها.');
+    if (!warehouseId) {
+      setFormError('اختر المخزن المُرجع إليه.');
+      return;
+    }
+    if (refundType === 'cash' && !treasuryId) {
+      setFormError('اختر الخزينة التي سيُسترد منها المبلغ.');
+      return;
+    }
+    if (refundType === 'credit' && !customerId) {
+      setFormError('اختر العميل لإضافة المبلغ كرصيد له.');
       return;
     }
     if (lines.length === 0) {
@@ -223,6 +232,7 @@ export function SalesReturnForm({
         treasuryId,
         userId: currentUser.id,
         reason: reason.trim() || undefined,
+        refundType,
       });
       onSaved(returnDoc.id);
     } catch (err) {
@@ -247,7 +257,7 @@ export function SalesReturnForm({
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <div>
             <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">العميل</span>
             <Select value={customerId || 'cash'} onValueChange={(val) => setCustomerId(val === 'cash' ? '' : val)}>
@@ -282,9 +292,21 @@ export function SalesReturnForm({
             </Select>
           </div>
           <div>
-            <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">الخزينة (استرداد)</span>
-            <Select value={treasuryId} onValueChange={setTreasuryId}>
+            <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">طريقة الرد</span>
+            <Select value={refundType} onValueChange={(val) => setRefundType(val as 'cash' | 'credit')}>
               <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+                <SelectValue placeholder="اختر طريقة الرد" />
+              </SelectTrigger>
+              <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+                <SelectItem value="cash" className="">استرداد نقدي من الخزينة</SelectItem>
+                <SelectItem value="credit" className="">رصيد دائن للعميل</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">الخزينة (استرداد)</span>
+            <Select value={treasuryId} onValueChange={setTreasuryId} disabled={refundType === 'credit'}>
+              <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold disabled:opacity-50">
                 <SelectValue placeholder="اختر الخزينة" />
               </SelectTrigger>
               <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
@@ -297,6 +319,12 @@ export function SalesReturnForm({
             </Select>
           </div>
         </div>
+
+        {refundType === 'credit' && (
+          <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
+            سيُضاف إجمالي المرتجع كرصيد دائن لحساب العميل (يُخصم من أي مديونية قائمة أو يبقى رصيداً له).
+          </p>
+        )}
 
         <div>
           <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">سبب الإرجاع</span>

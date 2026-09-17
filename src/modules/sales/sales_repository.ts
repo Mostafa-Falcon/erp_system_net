@@ -432,13 +432,22 @@ export class SalesRepository {
     treasuryId: string;
     userId: string;
     reason?: string;
+    /** 'cash' refunds from the treasury, 'credit' raises store credit for the customer. */
+    refundType?: 'cash' | 'credit';
   }): Promise<SalesReturn> {
     const now = new Date().toISOString();
     const returnId = uuidv4();
     const count = await db.sales_returns.where('branch_id').equals(params.branchId).count();
     const returnNumber = `RET-${String(count + 1).padStart(6, '0')}`;
 
+    const refundType = params.refundType || 'cash';
+    if (refundType === 'credit' && !params.customerId) {
+      throw new Error('لا يمكن إرجاع المبلغ كرصيد بدون تحديد العميل.');
+    }
+
     const total = params.items.reduce((acc, item) => acc + item.quantity * item.unitPrice, 0);
+    const cashRefund = refundType === 'cash' ? total : 0;
+    const creditRefund = refundType === 'credit' ? total : 0;
 
     const returnDoc: SalesReturn = {
       id: returnId,
@@ -451,7 +460,7 @@ export class SalesRepository {
       return_date: now,
       customer_id: params.customerId,
       total,
-      refunded_amount: total,
+      refunded_amount: cashRefund,
       treasury_id: params.treasuryId,
       reason: params.reason,
       created_by: params.userId,
@@ -466,6 +475,8 @@ export class SalesRepository {
         db.stock_levels,
         db.inventory_transactions,
         db.treasuries,
+        db.contacts,
+        db.contact_transactions,
         db.cashier_shifts,
         db.sync_queue,
       ],
@@ -490,11 +501,23 @@ export class SalesRepository {
           });
         }
 
-        // 2. Refund from treasury
-        await TreasuryRepository.adjustBalance(params.treasuryId, -total);
+        // 2. Refund either from treasury (cash) or as store credit for the customer
+        if (cashRefund > 0) {
+          await TreasuryRepository.adjustBalance(params.treasuryId, -cashRefund);
+        } else if (creditRefund > 0 && params.customerId) {
+          await ContactsRepository.adjustBalance({
+            orgId: params.orgId,
+            contactId: params.customerId,
+            referenceType: 'sale_return',
+            referenceId: returnId,
+            debit: 0,
+            credit: creditRefund,
+            notes: `رصيد مرتجع مبيعات رقم ${returnNumber}`,
+          });
+        }
 
         // 3. Update shift
-        if (params.shiftId) {
+        if (cashRefund > 0 && params.shiftId) {
           const shift = await db.cashier_shifts.get(params.shiftId);
           if (shift && shift.status === 'open') {
             const updatedShift: CashierShift = {
@@ -520,8 +543,8 @@ export class SalesRepository {
         date: now,
         netReturn: total,
         taxAmount: 0,
-        refundedAmount: total,
-        creditAmount: 0,
+        refundedAmount: cashRefund,
+        creditAmount: creditRefund,
         cogs: params.items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0),
         treasuryId: params.treasuryId,
         userId: params.userId,

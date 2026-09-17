@@ -4,6 +4,23 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   RotateCcw,
   Search,
@@ -11,13 +28,16 @@ import {
   FileText,
   FileSpreadsheet,
   Columns,
-  ChevronDown,
   Info,
   Eye,
   Lock,
   Plus,
   SlidersHorizontal,
-  Crown
+  Crown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react';
 import { useSessionStore } from '@/core/state/useSessionStore';
 import { SalesRepository } from '@/modules/sales/sales_repository';
@@ -63,7 +83,6 @@ export function ShiftsManager() {
     if (!orgId) return;
     try {
       setIsLoading(true);
-      const { v4: uuidv4 } = await import('uuid');
 
       let effectiveBranchId = branchId || resolvedBranchId;
       if (!effectiveBranchId && orgId) {
@@ -97,61 +116,56 @@ export function ShiftsManager() {
       setTreasuries(tres);
       setUsers(usrs);
 
-      // Keep activeShift in sync
-      const myOpen = sft.find((s) => s.user_id === currentUser?.id && s.status === 'open');
-      setActiveShift(myOpen || null);
+      if (currentUser?.id) {
+        const currentOpen = await SalesRepository.getCurrentOpenShift(
+          currentUser.id,
+          effectiveBranchId,
+          orgId
+        );
+        setActiveShift(currentOpen || null);
+      }
     } catch (err) {
-      console.error('Load shifts error:', err);
-      toast.error('حدث خطأ أثناء تحميل بيانات الورديات');
+      console.error(err);
+      toast.error('حدث خطأ أثناء تحميل سجل الورديات');
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!orgId) return;
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId, branchId]);
 
-  const getUser = (id?: string | null) => users.find((user) => user.id === id);
-  const getUserName = (id?: string | null) => {
-    if (!id) return '—';
-    const u = getUser(id);
-    return u?.full_name || u?.username || '—';
+  // Helpers
+  const getUserName = (userId: string) => {
+    const u = users.find((x) => x.id === userId);
+    return u?.full_name || u?.username || 'مستخدم غير معروف';
   };
 
-  const isUserOwnerOrAdmin = (id?: string | null) => {
-    const u = getUser(id);
+  const isUserOwnerOrAdmin = (userId: string) => {
+    const u = users.find((x) => x.id === userId);
     return u?.role === 'admin' || u?.role === 'super_admin' || u?.role === 'manager';
   };
 
-  // Date formatter identical to the screenshots: "أمس، 10:37 م" / "15 سبتمبر 2026، 11:38 ص"
-  const formatShiftDateTime = (dateIso?: string | null): string => {
-    if (!dateIso) return '---';
-    const d = new Date(dateIso);
-    const now = new Date();
-    const isToday = d.toDateString() === now.toDateString();
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const isYesterday = d.toDateString() === yesterday.toDateString();
-
-    const timeStr = d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true });
-
-    if (isToday) return `اليوم، ${timeStr}`;
-    if (isYesterday) return `أمس، ${timeStr}`;
-
-    const months = [
-      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
-    ];
-    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}، ${timeStr}`;
+  const formatShiftDate = (dateStr?: string | null) => {
+    if (!dateStr) return '—';
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleString('ar-EG', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return dateStr;
+    }
   };
 
   // Filtered shifts
   const filteredShifts = useMemo(() => {
     return shifts.filter((s) => {
-      // Filter by type
       if (filterType === 'open' && s.status !== 'open') return false;
       if (filterType === 'closed' && s.status !== 'closed') return false;
       if (filterType === 'today') {
@@ -168,7 +182,6 @@ export function ShiftsManager() {
         if (!s.difference || s.difference === 0) return false;
       }
 
-      // Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         const numMatch = String(s.shift_number).includes(q);
@@ -189,10 +202,7 @@ export function ShiftsManager() {
 
   return (
     <div className="space-y-4 select-none" dir="rtl">
-      
-      {/* ==============================================================
-          1. TOP HEADER (سجل ورديات الكاشير)
-         ============================================================== */}
+      {/* Top Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
           سجل ورديات الكاشير
@@ -203,7 +213,7 @@ export function ShiftsManager() {
             type="button"
             onClick={() => setIsOpenShiftModalOpen(true)}
             size="sm"
-            className="h-9 px-3.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+            className="h-9 px-3.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>فتح وردية جديدة</span>
@@ -211,37 +221,37 @@ export function ShiftsManager() {
         </div>
       </div>
 
-      {/* ==============================================================
-          2. FILTER & SEARCH BAR (قائمة منسدلة + حقل بحث واسع زي الصورة)
-         ============================================================== */}
+      {/* Filter & Search Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-        {/* Dropdown Filter: كل الورديات */}
-        <div className="w-full sm:w-48 shrink-0">
-          <select
+        <div className="w-full sm:w-56 shrink-0">
+          <Select
             value={filterType}
-            onChange={(e) => {
-              setFilterType(e.target.value as any);
+            onValueChange={(val: any) => {
+              setFilterType(val);
               setCurrentPage(1);
             }}
-            className="w-full h-11 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111726] text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer shadow-2xs"
           >
-            <option value="all">كل الورديات</option>
-            <option value="open">الورديات المفتوحة</option>
-            <option value="closed">الورديات المغلقة</option>
-            <option value="today">ورديات اليوم</option>
-            {isOwnerOrAdmin && (
-              <>
-                <option value="owner">ورديات صاحب المنشأة</option>
-                <option value="employee">ورديات الموظفين</option>
-              </>
-            )}
-            <option value="diff">ورديات بها عجز أو زيادة</option>
-          </select>
+            <SelectTrigger className="h-10 text-xs font-bold rounded-xl bg-white dark:bg-[#111726]">
+              <SelectValue placeholder="تصفية الورديات" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">كل الورديات</SelectItem>
+              <SelectItem value="open">الورديات المفتوحة</SelectItem>
+              <SelectItem value="closed">الورديات المغلقة</SelectItem>
+              <SelectItem value="today">ورديات اليوم</SelectItem>
+              {isOwnerOrAdmin && (
+                <>
+                  <SelectItem value="owner">ورديات صاحب المنشأة</SelectItem>
+                  <SelectItem value="employee">ورديات الموظفين</SelectItem>
+                </>
+              )}
+              <SelectItem value="diff">ورديات بها عجز أو زيادة</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Large Search Input */}
         <div className="flex-1 relative">
-          <input
+          <Input
             type="text"
             value={searchQuery}
             onChange={(e) => {
@@ -249,83 +259,92 @@ export function ShiftsManager() {
               setCurrentPage(1);
             }}
             placeholder="بحث باسم الكاشير أو رقم الوردية..."
-            className="w-full h-11 pr-4 pl-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111726] text-xs font-bold text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-slate-300 shadow-2xs"
+            className="h-10 text-xs font-semibold rounded-xl pl-9"
           />
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
         </div>
       </div>
 
-      {/* ==============================================================
-          3. TABLE CONTAINER (مطابق تماماً لتصميم المنظومة بالصور)
-         ============================================================== */}
-      <div className="bg-white dark:bg-[#111726] border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-2xs overflow-hidden">
-        
-        {/* Table Toolbar Row */}
+      {/* Main Table Card */}
+      <Card className="rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs bg-white dark:bg-[#111726] overflow-hidden">
+        {/* Table Toolbar */}
         <div className="p-3.5 border-b border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
-          {/* Left tools in LTR / Right in RTL: Icons */}
           <div className="flex items-center gap-2">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="icon"
               onClick={() => window.print()}
               title="طباعة"
-              className="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+              className="w-8 h-8 rounded-lg"
             >
-              <Printer className="w-4 h-4" />
-            </button>
+              <Printer className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+            </Button>
 
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="icon"
               onClick={() => toast.info('جاري تصدير PDF')}
               title="تصدير PDF"
-              className="w-8 h-8 rounded-lg border border-pink-200 dark:border-pink-900/50 text-pink-600 bg-pink-50/50 dark:bg-pink-950/40 hover:bg-pink-100 flex items-center justify-center transition-colors cursor-pointer"
+              className="w-8 h-8 rounded-lg border-pink-200 dark:border-pink-900/50 text-pink-600 bg-pink-50/50 dark:bg-pink-950/40 hover:bg-pink-100"
             >
               <FileText className="w-4 h-4" />
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="icon"
               onClick={() => toast.info('جاري تصدير Excel')}
               title="تصدير Excel"
-              className="w-8 h-8 rounded-lg border border-emerald-200 dark:border-emerald-900/50 text-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/40 hover:bg-emerald-100 flex items-center justify-center transition-colors cursor-pointer"
+              className="w-8 h-8 rounded-lg border-emerald-200 dark:border-emerald-900/50 text-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/40 hover:bg-emerald-100"
             >
               <FileSpreadsheet className="w-4 h-4" />
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="icon"
               title="خيارات العرض"
-              className="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+              className="w-8 h-8 rounded-lg"
             >
-              <SlidersHorizontal className="w-4 h-4" />
-            </button>
+              <SlidersHorizontal className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+            </Button>
           </div>
 
-          {/* Columns customization & Page size selector */}
           <div className="flex items-center gap-3">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => toast.info('تخصيص الأعمدة متاح')}
-              className="h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="h-8 px-3 rounded-lg text-xs font-bold flex items-center gap-1.5"
             >
               <Columns className="w-3.5 h-3.5" />
               <span>تخصيص الأعمدة</span>
-            </button>
+            </Button>
 
             <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400">
               <span>عرض</span>
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
+              <Select
+                value={String(pageSize)}
+                onValueChange={(val) => {
+                  setPageSize(Number(val));
                   setCurrentPage(1);
                 }}
-                className="h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#131b2e] text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
               >
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
+                <SelectTrigger className="h-8 w-20 rounded-lg text-xs font-bold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
               <span>إدخالات</span>
             </div>
           </div>
@@ -341,175 +360,113 @@ export function ShiftsManager() {
             لا توجد ورديات مسجلة مطابقة للبحث.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-right text-xs">
-              <thead className="bg-slate-50/70 dark:bg-slate-900/50 border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-bold text-slate-500">
-                <tr>
-                  <th className="py-3 px-3 text-right">
-                    <span className="inline-flex items-center gap-1 cursor-pointer hover:text-slate-800">
-                      #
-                      <span className="text-[10px] text-slate-400">↕</span>
-                    </span>
-                  </th>
-                  <th className="py-3 px-3 text-right">
-                    <span className="inline-flex items-center gap-1 cursor-pointer hover:text-slate-800">
-                      الكاشير
-                      <span className="text-[10px] text-slate-400">↕</span>
-                    </span>
-                  </th>
-                  <th className="py-3 px-3 text-right">
-                    <span className="inline-flex items-center gap-1 cursor-pointer hover:text-slate-800">
-                      تاريخ الفتح
-                      <span className="text-[10px] text-slate-400">↕</span>
-                    </span>
-                  </th>
-                  <th className="py-3 px-3 text-right">
-                    <span className="inline-flex items-center gap-1 cursor-pointer hover:text-slate-800">
-                      رصيد الفتح
-                      <span className="text-[10px] text-slate-400">↕</span>
-                    </span>
-                  </th>
-                  <th className="py-3 px-3 text-right">
-                    <span className="inline-flex items-center gap-1 cursor-pointer hover:text-slate-800">
-                      تاريخ الإغلاق
-                      <span className="text-[10px] text-slate-400">↕</span>
-                    </span>
-                  </th>
-                  <th className="py-3 px-3 text-right">
-                    <span className="inline-flex items-center gap-1 cursor-pointer hover:text-slate-800">
-                      رصيد الإغلاق
-                      <span className="text-[10px] text-slate-400">↕</span>
-                    </span>
-                  </th>
-                  <th className="py-3 px-3 text-center">
-                    <span className="inline-flex items-center gap-1 cursor-pointer hover:text-slate-800">
-                      الحالة
-                      <span className="text-[10px] text-slate-400">↕</span>
-                    </span>
-                  </th>
-                  <th className="py-3 px-3 text-center">
-                    <span className="inline-flex items-center gap-1 cursor-pointer hover:text-slate-800">
-                      الإجراءات
-                      <span className="text-[10px] text-slate-400">↕</span>
-                    </span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 font-bold">
+          <div className="overflow-x-auto min-h-[300px]">
+            <Table className="text-right text-xs">
+              <TableHeader className="bg-slate-50/70 dark:bg-slate-900/50">
+                <TableRow className="border-b border-slate-200/80 dark:border-slate-800">
+                  <TableHead className="py-3 px-3 font-bold text-slate-600 dark:text-slate-300 text-right">#</TableHead>
+                  <TableHead className="py-3 px-3 font-bold text-slate-600 dark:text-slate-300 text-right">الكاشير</TableHead>
+                  <TableHead className="py-3 px-3 font-bold text-slate-600 dark:text-slate-300 text-right">تاريخ الفتح</TableHead>
+                  <TableHead className="py-3 px-3 font-bold text-slate-600 dark:text-slate-300 text-right">رصيد الفتح</TableHead>
+                  <TableHead className="py-3 px-3 font-bold text-slate-600 dark:text-slate-300 text-right">تاريخ الإغلاق</TableHead>
+                  <TableHead className="py-3 px-3 font-bold text-slate-600 dark:text-slate-300 text-right">رصيد الإغلاق</TableHead>
+                  <TableHead className="py-3 px-3 font-bold text-slate-600 dark:text-slate-300 text-center">الحالة</TableHead>
+                  <TableHead className="py-3 px-3 font-bold text-slate-600 dark:text-slate-300 text-center">الإجراءات</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="divide-y divide-slate-100 dark:divide-slate-800/80 font-bold">
                 {paginatedShifts.map((s) => {
                   const isOpen = s.status === 'open';
-                  const canCloseShift = isOpen && (isOwnerOrAdmin || s.user_id === currentUser?.id);
+                  const isOwner = isUserOwnerOrAdmin(s.user_id);
+                  const isCurrentUsersShift = s.user_id === currentUser?.id;
 
                   return (
-                    <tr
-                      key={s.id}
-                      className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
-                    >
-                      {/* # رقم الوردية */}
-                      <td className="py-3.5 px-3 font-mono font-black text-slate-900 dark:text-white">
+                    <TableRow key={s.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                      <TableCell className="py-3.5 px-3 font-mono font-black text-pink-600 dark:text-pink-400">
                         {s.shift_number}
-                      </td>
+                      </TableCell>
 
-                      {/* الكاشير */}
-                      <td className="py-3.5 px-3">
+                      <TableCell className="py-3.5 px-3">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-slate-900 dark:text-white">
-                            {getUserName(s.user_id)}
-                          </span>
-                          {isUserOwnerOrAdmin(s.user_id) && (
-                            <span title="صاحب المنشأة / الإدارة" className="text-amber-500">
-                              <Crown className="w-3 h-3" />
-                            </span>
+                          <span className="text-slate-800 dark:text-slate-200">{getUserName(s.user_id)}</span>
+                          {isOwner && (
+                            <Badge variant="outline" className="px-1.5 py-0 h-4 text-[9px] bg-amber-50 dark:bg-amber-950/40 text-amber-600 border-amber-200">
+                              <Crown className="w-2.5 h-2.5 ml-0.5 inline" /> مسؤول
+                            </Badge>
                           )}
                         </div>
-                      </td>
+                      </TableCell>
 
-                      {/* تاريخ الفتح */}
-                      <td className="py-3.5 px-3 font-mono text-slate-600 dark:text-slate-400">
-                        {formatShiftDateTime(s.opened_at)}
-                      </td>
+                      <TableCell className="py-3.5 px-3 font-mono text-slate-600 dark:text-slate-400 text-[11px]">
+                        {formatShiftDate(s.opened_at)}
+                      </TableCell>
 
-                      {/* رصيد الفتح */}
-                      <td className="py-3.5 px-3 font-mono font-bold text-slate-900 dark:text-white">
+                      <TableCell className="py-3.5 px-3 font-mono font-bold text-slate-800 dark:text-slate-200">
                         {formatNumber(s.opening_balance)} ج.م
-                      </td>
+                      </TableCell>
 
-                      {/* تاريخ الإغلاق */}
-                      <td className="py-3.5 px-3 font-mono text-slate-600 dark:text-slate-400">
-                        {isOpen ? '---' : formatShiftDateTime(s.closed_at)}
-                      </td>
+                      <TableCell className="py-3.5 px-3 font-mono text-slate-600 dark:text-slate-400 text-[11px]">
+                        {formatShiftDate(s.closed_at)}
+                      </TableCell>
 
-                      {/* رصيد الإغلاق */}
-                      <td className="py-3.5 px-3 font-mono font-bold text-slate-900 dark:text-white">
-                        {isOpen
-                          ? '---'
-                          : `${formatNumber(s.actual_closing_balance !== null && s.actual_closing_balance !== undefined ? s.actual_closing_balance : s.expected_closing_balance)} ج.م`}
-                      </td>
+                      <TableCell className="py-3.5 px-3 font-mono">
+                        {isOpen ? (
+                          <span className="text-slate-400 font-semibold">—</span>
+                        ) : (
+                          <span className="font-bold text-slate-900 dark:text-white">
+                            {formatNumber(s.actual_closing_balance ?? 0)} ج.م
+                          </span>
+                        )}
+                      </TableCell>
 
-                      {/* الحالة */}
-                      <td className="py-3.5 px-3 text-center">
+                      <TableCell className="py-3.5 px-3 text-center">
                         <Badge
-                          className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                          variant="secondary"
+                          className={`text-[10px] font-bold ${
                             isOpen
-                              ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
-                              : 'bg-rose-50 text-rose-600 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800'
+                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
                           }`}
                         >
-                          {isOpen ? 'مفتوحة' : 'مغلقة'}
+                          {isOpen ? 'نشطة ومفتوحة' : 'مغلقة ومقفلة'}
                         </Badge>
-                      </td>
+                      </TableCell>
 
-                      {/* الإجراءات */}
-                      <td className="py-3.5 px-3 text-center">
-                        <div className="inline-flex items-center gap-1.5">
-                          {/* زر عرض التفاصيل مع Tooltip مطابق للصورة 2 */}
-                          <div className="relative group">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (s.status === 'open') {
-                                  router.push(`/sales/shifts/close?id=${s.id}`);
-                                } else {
-                                  setSelectedShiftForDetail(s);
-                                }
-                              }}
-                              className="w-7 h-7 rounded-full text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/60 inline-flex items-center justify-center transition-colors cursor-pointer"
+                      <TableCell className="py-3.5 px-3 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setSelectedShiftForDetail(s)}
+                            title="عرض تفاصيل الوردية"
+                            className="w-7 h-7 rounded-lg text-slate-500 hover:text-pink-600"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </Button>
+
+                          {isOpen && (isOwnerOrAdmin || isCurrentUsersShift) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setSelectedShiftForClose(s)}
+                              title="إغلاق الوردية وتصفية النقدية"
+                              className="w-7 h-7 rounded-lg text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/40"
                             >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <span className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 hidden group-hover:block bg-slate-800 text-white text-[10px] font-bold py-1 px-2 rounded-md shadow-md whitespace-nowrap z-30 pointer-events-none">
-                              عرض التفاصيل
-                            </span>
-                          </div>
-
-                          {/* زر إغلاق الوردية لصاحب المنشأة أو الكاشير */}
-                          {canCloseShift && (
-                            <div className="relative group">
-                              <button
-                                type="button"
-                                onClick={() => router.push(`/sales/shifts/close?id=${s.id}`)}
-                                className="w-7 h-7 rounded-full text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/60 inline-flex items-center justify-center transition-colors cursor-pointer"
-                              >
-                                <Lock className="w-3.5 h-3.5" />
-                              </button>
-                              <span className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 hidden group-hover:block bg-slate-800 text-white text-[10px] font-bold py-1 px-2 rounded-md shadow-md whitespace-nowrap z-30 pointer-events-none">
-                                إغلاق وتدقيق الوردية
-                              </span>
-                            </div>
+                              <Lock className="w-3.5 h-3.5" />
+                            </Button>
                           )}
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
 
-        {/* Table Footer: Pagination matching Screenshot 1 */}
+        {/* Table Footer: Pagination */}
         <div className="p-3.5 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
-          {/* Right info text */}
           <div className="flex items-center gap-1.5">
             <Info className="w-3.5 h-3.5 text-slate-400" />
             <span>
@@ -518,53 +475,58 @@ export function ShiftsManager() {
             </span>
           </div>
 
-          {/* Left navigation controls with pink active page indicator */}
           <div className="flex items-center gap-1">
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="icon"
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(1)}
-              className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 cursor-pointer font-mono"
+              className="w-8 h-8 rounded-lg cursor-pointer"
+              title="الصفحة الأولى"
             >
-              |&lt;
-            </button>
-            <button
-              type="button"
+              <ChevronsRight className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
               disabled={currentPage === 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 cursor-pointer font-mono"
+              className="w-8 h-8 rounded-lg cursor-pointer"
+              title="السابق"
             >
-              &lt;
-            </button>
-            <span className="px-3 py-1 rounded-lg bg-pink-50 border border-pink-200 text-pink-600 font-bold font-mono">
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+            <Badge
+              variant="secondary"
+              className="px-3 h-8 flex items-center justify-center rounded-lg bg-pink-50 dark:bg-pink-950/40 border border-pink-200 dark:border-pink-900/50 text-pink-600 font-bold font-mono"
+            >
               {currentPage} / {totalPages}
-            </span>
-            <button
-              type="button"
+            </Badge>
+            <Button
+              variant="outline"
+              size="icon"
               disabled={currentPage >= totalPages}
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 cursor-pointer font-mono"
+              className="w-8 h-8 rounded-lg cursor-pointer"
+              title="التالي"
             >
-              &gt;
-            </button>
-            <button
-              type="button"
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
               disabled={currentPage >= totalPages}
               onClick={() => setCurrentPage(totalPages)}
-              className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 cursor-pointer font-mono"
+              className="w-8 h-8 rounded-lg cursor-pointer"
+              title="الصفحة الأخيرة"
             >
-              &gt;|
-            </button>
+              <ChevronsLeft className="w-4 h-4" />
+            </Button>
           </div>
         </div>
+      </Card>
 
-      </div>
-
-      {/* ==============================================================
-          4. MODALS (تفاصيل الوردية، إغلاق الوردية، فتح وردية جديدة)
-         ============================================================== */}
-      
-      {/* تفاصيل الوردية */}
+      {/* Modals */}
       <ShiftDetailModal
         shift={selectedShiftForDetail}
         isOpen={Boolean(selectedShiftForDetail)}
@@ -573,7 +535,6 @@ export function ShiftsManager() {
         treasuries={treasuries}
       />
 
-      {/* إغلاق الوردية */}
       <AdminCloseShiftModal
         shift={selectedShiftForClose}
         isOpen={Boolean(selectedShiftForClose)}
@@ -587,7 +548,6 @@ export function ShiftsManager() {
         }}
       />
 
-      {/* فتح وردية جديدة */}
       <OpenShiftModal
         isOpen={isOpenShiftModalOpen}
         onClose={() => setIsOpenShiftModalOpen(false)}
@@ -602,7 +562,6 @@ export function ShiftsManager() {
           loadData();
         }}
       />
-
     </div>
   );
 }

@@ -13,6 +13,9 @@ interface UsePosCartParams {
   scaleConfig: ScaleConfig;
   setIsShiftModalOpen: (open: boolean) => void;
   orgId: string;
+  enableTax?: boolean;
+  vatRate?: number;
+  isTaxInclusive?: boolean;
 }
 
 export function usePosCart({
@@ -24,6 +27,9 @@ export function usePosCart({
   scaleConfig,
   setIsShiftModalOpen,
   orgId,
+  enableTax = false,
+  vatRate = 0,
+  isTaxInclusive = false,
 }: UsePosCartParams) {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -185,6 +191,12 @@ export function usePosCart({
       itemPrice = product.wholesale_price * factor;
     }
 
+    // Tax rate is strictly 0 if enableTax is false (tax is optional!).
+    // If enableTax is true and product is taxable, use product's tax_rate or organization default vatRate.
+    const resolvedTaxRate = enableTax && product.is_taxable !== false
+      ? (product.tax_rate !== undefined && product.tax_rate !== null ? product.tax_rate : vatRate)
+      : 0;
+
     setCart((prev) => [
       ...prev,
       {
@@ -197,7 +209,7 @@ export function usePosCart({
         price: itemPrice,
         discount: 0,
         cost: product.purchase_price,
-        taxRate: product.tax_rate || 0,
+        taxRate: resolvedTaxRate,
       },
     ]);
 
@@ -566,7 +578,14 @@ export function usePosCart({
   const subtotal = useMemo(() => cart.reduce((sum, l) => sum + lineSubtotal(l), 0), [cart]);
   const itemDiscounts = useMemo(() => cart.reduce((sum, l) => sum + l.discount, 0), [cart]);
   const totalDiscount = itemDiscounts + globalDiscount;
-  const total = Math.max(0, subtotal - totalDiscount) + shippingFee;
+  const totalTax = useMemo(() => {
+    if (!enableTax) return 0;
+    return cart.reduce((sum, l) => {
+      const taxable = lineTotal(l);
+      return sum + (taxable * (l.taxRate || 0)) / 100;
+    }, 0);
+  }, [cart, enableTax]);
+  const total = Math.max(0, subtotal - totalDiscount) + totalTax + shippingFee;
 
   return {
     cart,
@@ -618,6 +637,7 @@ export function usePosCart({
     subtotal,
     itemDiscounts,
     totalDiscount,
+    totalTax,
     total,
   };
 }

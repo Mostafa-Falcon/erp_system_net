@@ -53,7 +53,9 @@ export default function SettingsPage() {
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [taxNumber, setTaxNumber] = useState('');
+  const [enableTax, setEnableTax] = useState(false);
   const [vatRate, setVatRate] = useState('14');
+  const [isTaxInclusive, setIsTaxInclusive] = useState(false);
   const [currency, setCurrency] = useState('EGP');
 
   // Preferences state
@@ -87,10 +89,14 @@ export default function SettingsPage() {
         const soundSetting = appSettings.find((s) => s.id === 'enable_sounds');
         const expiredSetting = appSettings.find((s) => s.id === 'allow_expired_sales');
         const vatSetting = appSettings.find((s) => s.id === 'vat_rate');
+        const enableTaxSetting = appSettings.find((s) => s.id === 'enable_tax');
+        const taxInclusiveSetting = appSettings.find((s) => s.id === 'is_tax_inclusive');
 
         setEnableSounds(soundSetting ? soundSetting.value === 'true' : true);
         setAllowExpiredSales(expiredSetting ? expiredSetting.value === 'true' : false);
         setVatRate(vatSetting?.value || '14');
+        setEnableTax(enableTaxSetting ? enableTaxSetting.value === 'true' : false);
+        setIsTaxInclusive(taxInclusiveSetting ? taxInclusiveSetting.value === 'true' : false);
 
         // Check local storage for dark mode state
         const savedTheme = localStorage.getItem('falcon_theme');
@@ -133,6 +139,8 @@ export default function SettingsPage() {
       await Promise.all([
         SettingsRepository.setSetting(orgId, 'enable_sounds', String(enableSounds), 'تفعيل الأصوات والتنبيهات الصوتية'),
         SettingsRepository.setSetting(orgId, 'allow_expired_sales', String(allowExpiredSales), 'السماح ببيع المنتجات منتهية الصلاحية'),
+        SettingsRepository.setSetting(orgId, 'enable_tax', String(enableTax), 'تفعيل ضريبة القيمة المضافة (اختيارية)'),
+        SettingsRepository.setSetting(orgId, 'is_tax_inclusive', String(isTaxInclusive), 'هل الأسعار المعروضة شاملة الضريبة'),
         SettingsRepository.setSetting(orgId, 'vat_rate', vatRate, 'نسبة ضريبة القيمة المضافة الافتراضية (%)')
       ]);
 
@@ -519,39 +527,89 @@ export default function SettingsPage() {
               <div>
                 <h3 className="text-xs font-black text-slate-900 dark:text-white">الإعدادات المالية والضرائب</h3>
                 <p className="text-[10px] font-semibold text-slate-400 mt-0.5">
-                  ضبط العملة الافتراضية ونسب الضرائب المطبقة في النظام
+                  الضريبة اختيارية في المنظومة، يمكنك تفعيلها أو تعطيلها وتحديد نسبتها
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-black text-slate-700 dark:text-slate-300">العملة الافتراضية</label>
-                <Select value={currency} onValueChange={setCurrency}>
-                  <SelectTrigger className="h-10 bg-slate-50/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="EGP">جنيه مصري (EGP)</SelectItem>
-                    <SelectItem value="SAR">ريال سعودي (SAR)</SelectItem>
-                    <SelectItem value="USD">دولار أمريكي (USD)</SelectItem>
-                    <SelectItem value="AED">درهم إماراتي (AED)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black text-slate-700 dark:text-slate-300">العملة الافتراضية</label>
+                  <Select value={currency} onValueChange={setCurrency}>
+                    <SelectTrigger className="h-10 bg-slate-50/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="EGP">جنيه مصري (EGP)</SelectItem>
+                      <SelectItem value="SAR">ريال سعودي (SAR)</SelectItem>
+                      <SelectItem value="USD">دولار أمريكي (USD)</SelectItem>
+                      <SelectItem value="AED">درهم إماراتي (AED)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-black text-slate-700 dark:text-slate-300">نسبة الضريبة (%)</label>
-                <div className="relative group">
-                  <Input
-                    type="number"
-                    value={vatRate}
-                    onChange={(e) => setVatRate(e.target.value)}
-                    className="h-10 bg-slate-50/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 rounded-xl pr-3 text-xs font-bold"
-                  />
-                  <Percent className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-black text-slate-900 dark:text-white block">تفعيل ضريبة القيمة المضافة (اختيارية)</span>
+                    <span className="text-[10px] text-slate-400 block">
+                      {enableTax ? 'الضريبة مفعلة لعمليات البيع والشراء' : 'الضريبة معطلة حالياً (0%)'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEnableTax(!enableTax)}
+                    className={`w-11 h-6 rounded-full transition-colors relative shrink-0 cursor-pointer ${
+                      enableTax ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-xs transition-all ${
+                        enableTax ? 'right-0.5' : 'right-[22px]'
+                      }`}
+                    />
+                  </button>
                 </div>
               </div>
+
+              {enableTax && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800 animate-in fade-in duration-150">
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-black text-slate-700 dark:text-slate-300">نسبة الضريبة الافتراضية (%)</label>
+                    <div className="relative group">
+                      <Input
+                        type="number"
+                        value={vatRate}
+                        onChange={(e) => setVatRate(e.target.value)}
+                        className="h-10 bg-slate-50/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 rounded-xl pr-3 text-xs font-bold"
+                      />
+                      <Percent className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <div className="space-y-0.5">
+                      <span className="text-xs font-black text-slate-900 dark:text-white block">الأسعار تشمل الضريبة</span>
+                      <span className="text-[10px] text-slate-400 block">
+                        {isTaxInclusive ? 'الأسعار المسجلة بالأصناف شاملة للضريبة' : 'تضاف الضريبة فوق سعر الصنف'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsTaxInclusive(!isTaxInclusive)}
+                      className={`w-11 h-6 rounded-full transition-colors relative shrink-0 cursor-pointer ${
+                        isTaxInclusive ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-xs transition-all ${
+                          isTaxInclusive ? 'right-0.5' : 'right-[22px]'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

@@ -70,13 +70,19 @@ export function PosInvoiceReturnModal({
   treasuries,
   onReturnProcessed,
 }: PosInvoiceReturnModalProps) {
+  const [reason, setReason] = useState<string>('');
+  const [refundType, setRefundType] = useState<'cash' | 'credit'>('cash');
   const [lines, setLines] = useState<ReturnLine[]>([]);
-  const [reason, setReason] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
 
   useEffect(() => {
-    if (!invoice || !isOpen) return;
+    if (!invoice || !isOpen) {
+      setLines([]);
+      setReason('');
+      setRefundType('cash');
+      return;
+    }
 
     let isMounted = true;
     const loadItems = async () => {
@@ -179,6 +185,7 @@ export function PosInvoiceReturnModal({
         treasuryId: targetTreasuryId,
         userId: currentUser.id,
         reason: reason.trim() || `مرتجع من فاتورة #${invoice.invoice_number}`,
+        refundType,
       });
 
       toast.success(
@@ -301,6 +308,40 @@ export function PosInvoiceReturnModal({
                 </table>
               </div>
             </div>
+
+            {/* Customer Credit vs Cash Refund Toggle */}
+            {invoice.customer_id && (
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <span className="text-xs font-black text-slate-800 dark:text-slate-200 block">
+                    طريقة الرد للعميل
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    رد المبلغ نقداً من الخزينة أو إضافته كرصيد دائن لحساب العميل
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={refundType === 'cash' ? 'default' : 'outline'}
+                    onClick={() => setRefundType('cash')}
+                    className={`text-xs h-8 ${refundType === 'cash' ? 'bg-amber-600 hover:bg-amber-700 text-white' : ''}`}
+                  >
+                    استرداد نقدي
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={refundType === 'credit' ? 'default' : 'outline'}
+                    onClick={() => setRefundType('credit')}
+                    className={`text-xs h-8 ${refundType === 'credit' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`}
+                  >
+                    رصيد دائن للعميل
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Reason & Return Summary */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">

@@ -67,6 +67,9 @@ export function POS() {
     users,
     isLoading,
     scaleConfig,
+    enableTax,
+    vatRate,
+    isTaxInclusive,
     loadData,
   } = usePosData();
 
@@ -218,6 +221,7 @@ export function POS() {
     lastAddedKey,
     subtotal,
     totalDiscount,
+    totalTax,
     total,
   } = usePosCart({
     products,
@@ -228,6 +232,9 @@ export function POS() {
     scaleConfig,
     setIsShiftModalOpen,
     orgId,
+    enableTax,
+    vatRate,
+    isTaxInclusive,
   });
 
   // Focus search input on mount
@@ -600,6 +607,7 @@ export function POS() {
         subtotal={subtotal}
         totalDiscount={totalDiscount}
         shippingFee={shippingFee}
+        totalTax={totalTax}
         total={total}
         isReturnMode={Boolean(activeReturnInvoice)}
         onOpenDiscountsModal={() => setIsDiscountsModalOpen(true)}

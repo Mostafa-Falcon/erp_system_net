@@ -56,7 +56,7 @@ import {
   DropdownMenuLabel
 } from '@/components/ui/dropdown-menu';
 import { useSessionStore } from '@/core/state/useSessionStore';
-import { LeaveRepository } from '@/modules/employees/leave_repository';
+import { LeaveRepository, type LeaveBalance } from '@/modules/employees/leave_repository';
 import { EmployeeRepository } from '@/modules/employees/employee_repository';
 import type { EmployeeLeave, User as Employee, LeaveType, LeaveStatus } from '@/types';
 import { format } from 'date-fns';
@@ -77,6 +77,7 @@ export default function LeavesPage() {
 
   const [leaves, setLeaves] = useState<EmployeeLeave[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [balances, setBalances] = useState<Record<string, LeaveBalance>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -100,6 +101,11 @@ export default function LeavesPage() {
       ]);
       setLeaves(leaveList.sort((a, b) => b.created_at.localeCompare(a.created_at)));
       setEmployees(empList);
+      const year = new Date().getFullYear();
+      const balanceEntries = await Promise.all(
+        empList.map(async (emp) => [emp.id, await LeaveRepository.getBalance(emp.id, year)] as const)
+      );
+      setBalances(Object.fromEntries(balanceEntries));
     } catch (err) {
       toast.error('خطأ في تحميل البيانات');
     } finally {
@@ -168,7 +174,7 @@ export default function LeavesPage() {
       toast.success(`تم ${status === 'approved' ? 'الموافقة على' : 'رفض'} الطلب`);
       loadData();
     } catch (err) {
-      toast.error('خطأ في التحديث');
+      toast.error(err instanceof Error ? err.message : 'خطأ في التحديث');
     }
   };
 
@@ -378,6 +384,7 @@ export default function LeavesPage() {
                          <TableHead className="py-4 px-6 text-center text-[11px] font-black text-slate-500 uppercase tracking-widest h-14">نوع الإجازة</TableHead>
                          <TableHead className="py-4 px-6 text-center text-[11px] font-black text-slate-500 uppercase tracking-widest h-14">الفترة الزمنية</TableHead>
                          <TableHead className="py-4 px-6 text-center text-[11px] font-black text-slate-500 uppercase tracking-widest h-14">الأيام</TableHead>
+                         <TableHead className="py-4 px-6 text-center text-[11px] font-black text-slate-500 uppercase tracking-widest h-14">الرصيد السنوي</TableHead>
                          <TableHead className="py-4 px-6 text-center text-[11px] font-black text-slate-500 uppercase tracking-widest h-14">الحالة</TableHead>
                          <TableHead className="py-4 px-6 text-center text-[11px] font-black text-slate-500 uppercase tracking-widest h-14">القرار الإداري</TableHead>
                       </TableRow>
@@ -385,7 +392,7 @@ export default function LeavesPage() {
                    <TableBody>
                       {isLoading ? (
                          <TableRow>
-                            <TableCell colSpan={6} className="py-24 text-center">
+                            <TableCell colSpan={7} className="py-24 text-center">
                                <div className="flex flex-col items-center gap-4">
                                   <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
                                   <span className="text-sm font-bold text-slate-400">جاري تحميل سجلات الإجازات...</span>
@@ -394,7 +401,7 @@ export default function LeavesPage() {
                          </TableRow>
                       ) : filteredLeaves.length === 0 ? (
                          <TableRow>
-                            <TableCell colSpan={6} className="py-32 text-center">
+                            <TableCell colSpan={7} className="py-32 text-center">
                                <div className="flex flex-col items-center gap-5">
                                   <div className="w-20 h-20 bg-slate-50 dark:bg-slate-900 rounded-3xl flex items-center justify-center text-slate-200 border border-slate-100 dark:border-slate-800">
                                      <Palmtree className="w-10 h-10" />
@@ -438,10 +445,25 @@ export default function LeavesPage() {
                                      </div>
                                   </TableCell>
                                   <TableCell className="py-4 px-6 text-center">
-                                     <span className="text-xs font-black text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1 rounded-lg">{l.days_count} يوم</span>
-                                  </TableCell>
-                                  <TableCell className="py-4 px-6 text-center">
-                                     <StatusBadge status={l.status} />
+                                      <span className="text-xs font-black text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1 rounded-lg">{l.days_count} يوم</span>
+                                   </TableCell>
+                                   <TableCell className="py-4 px-6 text-center">
+                                      {(() => {
+                                         const balance = balances[l.employee_id];
+                                         if (!balance) return <span className="text-[11px] font-bold text-slate-300">—</span>;
+                                         const low = balance.remaining <= 0;
+                                         return (
+                                            <div className="flex flex-col items-center">
+                                               <span className={cn('text-xs font-black font-mono', low ? 'text-red-500' : 'text-emerald-600')}>
+                                                  {balance.remaining} / {balance.entitled}
+                                               </span>
+                                               <span className="text-[9px] font-bold text-slate-400">متبقي / مستحق</span>
+                                            </div>
+                                         );
+                                      })()}
+                                   </TableCell>
+                                   <TableCell className="py-4 px-6 text-center">
+                                      <StatusBadge status={l.status} />
                                   </TableCell>
                                   <TableCell className="py-4 px-6 text-center">
                                      {l.status === 'pending' ? (

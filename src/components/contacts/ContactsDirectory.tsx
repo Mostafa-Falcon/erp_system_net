@@ -33,6 +33,22 @@ import {
   Scale
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useSessionStore } from '@/core/state/useSessionStore';
 import { ContactsRepository } from '@/modules/contacts/contacts_repository';
 import { formatNumber } from '@/lib/format';
@@ -485,39 +501,39 @@ function DirectoryContent({ kind }: { kind: DirectoryKind }) {
 
           {/* Directory Table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-right border-collapse">
-              <thead>
-                <tr className="bg-slate-50/70 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  <th className="py-3.5 px-5">اسم الجهة</th>
-                  <th className="py-3.5 px-4 w-28">الكود</th>
-                  <th className="py-3.5 px-4">الهاتف والتواصل</th>
-                  <th className="py-3.5 px-4 text-left">حد الائتمان</th>
-                  <th className="py-3.5 px-4 text-left">الرصيد الحالي</th>
-                  <th className="py-3.5 px-4 text-center w-24">الحالة</th>
-                  <th className="py-3.5 px-5 text-center w-28">إجراءات</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs font-bold">
+            <Table className="w-full text-right">
+              <TableHeader className="bg-slate-50/70 dark:bg-slate-900/50">
+                <TableRow>
+                  <TableHead className="py-3.5 px-5 text-xs font-black">اسم الجهة</TableHead>
+                  <TableHead className="py-3.5 px-4 w-28 text-xs font-black">الكود</TableHead>
+                  <TableHead className="py-3.5 px-4 text-xs font-black">الهاتف والتواصل</TableHead>
+                  <TableHead className="py-3.5 px-4 text-left text-xs font-black">حد الائتمان</TableHead>
+                  <TableHead className="py-3.5 px-4 text-left text-xs font-black">الرصيد الحالي</TableHead>
+                  <TableHead className="py-3.5 px-4 text-center w-24 text-xs font-black">الحالة</TableHead>
+                  <TableHead className="py-3.5 px-5 text-center w-28 text-xs font-black">إجراءات</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {isLoading ? (
-                  <tr>
-                    <td colSpan={7} className="py-16 text-center text-slate-400 font-bold">
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-16 text-center text-muted-foreground font-bold">
                       <div className="flex flex-col items-center justify-center gap-2">
-                        <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
+                        <RefreshCw className="w-6 h-6 animate-spin text-primary" />
                         <span>جاري تحميل البيانات...</span>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ) : filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-16 text-center">
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-16 text-center">
                       <div className="max-w-sm mx-auto flex flex-col items-center justify-center">
-                        <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800/80 flex items-center justify-center text-slate-400 mb-3">
+                        <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground mb-3">
                           <Building2 className="w-8 h-8 opacity-70" />
                         </div>
-                        <h4 className="text-sm font-black text-slate-800 dark:text-white mb-1">
+                        <h4 className="text-sm font-black text-foreground mb-1">
                           {hasActiveFilters ? 'لا توجد نتائج مطابقة للبحث' : 'لا توجد جهات مسجلة بعد'}
                         </h4>
-                        <p className="text-xs text-slate-400 mb-4 text-center">
+                        <p className="text-xs text-muted-foreground mb-4 text-center">
                           {hasActiveFilters
                             ? 'جرب تعديل كلمات البحث أو مسح الفلاتر لعرض كافة البيانات.'
                             : 'ابدأ بإضافة أول جهة تعامل لمتابعة الحسابات والأرصدة بكل سهولة.'}
@@ -533,14 +549,14 @@ function DirectoryContent({ kind }: { kind: DirectoryKind }) {
                         ) : (
                           <Button
                             onClick={() => router.push(meta.addUrl)}
-                            className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl gap-1.5"
+                            className="h-9 px-4 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold rounded-xl gap-1.5"
                           >
                             <Plus className="w-4 h-4" /> {meta.addLabel}
                           </Button>
                         )}
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   paginatedContacts.map((c) => {
                     const isDebit = c.current_balance > 0;
@@ -548,15 +564,15 @@ function DirectoryContent({ kind }: { kind: DirectoryKind }) {
                     const isZero = c.current_balance === 0;
 
                     return (
-                      <tr
+                      <TableRow
                         key={c.id}
                         className={cn(
-                          "hover:bg-slate-50/70 dark:hover:bg-slate-900/40 transition-colors group",
-                          !c.is_active && "opacity-60 bg-slate-50/30 dark:bg-slate-950/20"
+                          "hover:bg-muted/40 transition-colors group",
+                          !c.is_active && "opacity-60 bg-muted/20"
                         )}
                       >
                         {/* Name & Avatar */}
-                        <td className="py-3.5 px-5">
+                        <TableCell className="py-3.5 px-5">
                           <div className="flex items-center gap-3">
                             <div
                               className={cn(
@@ -571,7 +587,7 @@ function DirectoryContent({ kind }: { kind: DirectoryKind }) {
                               {(c.name || '—').charAt(0)}
                             </div>
                             <div className="flex flex-col">
-                              <span className="font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                              <span className="font-black text-foreground group-hover:text-primary transition-colors">
                                 {c.name}
                               </span>
                               {c.type === 'both' && kind !== 'both' && (
@@ -581,124 +597,126 @@ function DirectoryContent({ kind }: { kind: DirectoryKind }) {
                               )}
                             </div>
                           </div>
-                        </td>
+                        </TableCell>
 
                         {/* Code */}
-                        <td className="py-3.5 px-4">
-                          <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono text-[11px]">
+                        <TableCell className="py-3.5 px-4">
+                          <span className="inline-block px-2 py-0.5 rounded-md bg-muted text-muted-foreground font-mono text-[11px] font-bold">
                             {c.code || '—'}
                           </span>
-                        </td>
+                        </TableCell>
 
                         {/* Phone */}
-                        <td className="py-3.5 px-4">
+                        <TableCell className="py-3.5 px-4">
                           {c.phone || c.mobile ? (
                             <a
                               href={`tel:${c.phone || c.mobile}`}
-                              className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-blue-600 font-mono text-xs direction-ltr"
+                              className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-primary font-mono text-xs font-bold"
                               dir="ltr"
                             >
-                              <Phone className="w-3 h-3 text-slate-400" />
+                              <Phone className="w-3 h-3 text-muted-foreground" />
                               <span>{c.phone || c.mobile}</span>
                             </a>
                           ) : (
-                            <span className="text-slate-400">—</span>
+                            <span className="text-muted-foreground/50">—</span>
                           )}
-                        </td>
+                        </TableCell>
 
                         {/* Credit Limit */}
-                        <td className="py-3.5 px-4 text-left font-bold text-slate-600 dark:text-slate-400">
+                        <TableCell className="py-3.5 px-4 text-left font-bold text-muted-foreground text-xs">
                           {c.credit_limit > 0 ? (
-                            <span>{formatNumber(c.credit_limit)} <span className="text-[10px] text-slate-400">ج.م</span></span>
+                            <span>{formatNumber(c.credit_limit)} <span className="text-[10px]">ج.م</span></span>
                           ) : (
-                            <span className="text-slate-300 dark:text-slate-600 font-normal">بلا حد</span>
+                            <span className="text-muted-foreground/40 font-normal">بلا حد</span>
                           )}
-                        </td>
+                        </TableCell>
 
                         {/* Balance */}
-                        <td className="py-3.5 px-4 text-left">
+                        <TableCell className="py-3.5 px-4 text-left">
                           <div className="inline-flex flex-col items-end">
                             <span
                               className={cn(
-                                "font-black text-sm",
-                                isDebit && "text-rose-600 dark:text-rose-400",
+                                "font-black text-sm font-mono",
+                                isDebit && "text-destructive",
                                 isCredit && "text-emerald-600 dark:text-emerald-400",
-                                isZero && "text-slate-400 dark:text-slate-500"
+                                isZero && "text-muted-foreground"
                               )}
                             >
                               {formatNumber(Math.abs(c.current_balance))} <span className="text-[10px] font-bold">ج.م</span>
                             </span>
-                            <span
+                            <Badge
+                              variant="outline"
                               className={cn(
-                                "text-[9px] font-bold px-1.5 py-0.2 rounded mt-0.5",
-                                isDebit && "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
-                                isCredit && "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
-                                isZero && "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                                "text-[9px] font-bold px-1.5 py-0 mt-0.5",
+                                isDebit && "border-destructive/30 text-destructive bg-destructive/10",
+                                isCredit && "border-emerald-300 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-300",
+                                isZero && "text-muted-foreground"
                               )}
                             >
                               {isDebit ? 'مدين (لنا)' : isCredit ? 'دائن (علينا)' : 'متزن'}
-                            </span>
+                            </Badge>
                           </div>
-                        </td>
+                        </TableCell>
 
                         {/* Status */}
-                        <td className="py-3.5 px-4 text-center">
-                          <span
-                            className={cn(
-                              "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black",
-                              c.is_active
-                                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                                : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-                            )}
+                        <TableCell className="py-3.5 px-4 text-center">
+                          <Badge
+                            variant={c.is_active ? "default" : "secondary"}
+                            className="text-[10px] font-black"
                           >
-                            <span className={cn("w-1.5 h-1.5 rounded-full", c.is_active ? "bg-emerald-500" : "bg-slate-400")} />
                             {c.is_active ? 'نشط' : 'معطل'}
-                          </span>
-                        </td>
+                          </Badge>
+                        </TableCell>
 
                         {/* Actions */}
-                        <td className="py-3.5 px-5 text-center">
+                        <TableCell className="py-3.5 px-5 text-center">
                           <div className="flex items-center justify-center gap-1">
-                            <button
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => {
                                 const baseUrl = kind === 'both' ? '/contacts/both' : kind === 'customer' ? '/contacts/customers' : '/contacts/suppliers';
                                 router.push(`${baseUrl}?id=${c.id}`);
                               }}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors cursor-pointer"
+                              className="w-8 h-8 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10"
                               title="كشف حساب المعاملات"
                             >
                               <Eye className="w-4 h-4" />
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => router.push(`/contacts/new?edit=${c.id}`)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors cursor-pointer"
+                              className="w-8 h-8 rounded-lg text-muted-foreground hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
                               title="تعديل البيانات"
                             >
                               <Edit className="w-4 h-4" />
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={async () => {
                                 await ContactsRepository.setActive(c.id, !c.is_active);
                                 await loadData();
                               }}
                               className={cn(
-                                "p-1.5 rounded-lg cursor-pointer transition-colors",
+                                "w-8 h-8 rounded-lg",
                                 c.is_active
-                                  ? "text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                                  : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                                  ? "text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                  : "text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
                               )}
                               title={c.is_active ? 'تعطيل الحساب' : 'تفعيل الحساب'}
                             >
                               {c.is_active ? <X className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-                            </button>
+                            </Button>
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
 
           {/* Table Footer: Real Pagination & Controls */}
@@ -783,147 +801,206 @@ function DirectoryContent({ kind }: { kind: DirectoryKind }) {
 
       </div>
 
-      {/* Detail Modal (Statement & Invoices) */}
-      {detailId && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto" onClick={closeDetail}>
-          <div className="bg-white dark:bg-[#131b2e] rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-4xl p-6 animate-in fade-in zoom-in-95 duration-200 my-8" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100 dark:border-slate-800" dir="rtl">
-              <div className="flex items-center gap-3.5">
-                <div className={cn("w-11 h-11 rounded-2xl flex items-center justify-center shadow-inner", kind === 'customer' ? "bg-blue-50 text-blue-600" : kind === 'supplier' ? "bg-emerald-50 text-emerald-600" : "bg-purple-50 text-purple-600")}>
-                  <Building2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black text-slate-900 dark:text-white">
-                    {detailContact?.name || 'تفاصيل الجهة'}
-                  </h3>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[10px] font-black bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md text-slate-500 font-mono">{detailContact?.code || '—'}</span>
-                    <span className="text-[10px] font-bold text-slate-400">
-                      {detailContact?.type === 'both' ? 'عميل ومورد' : detailContact?.type === 'customer' ? 'عميل' : 'مورد'}
-                    </span>
-                  </div>
+      {/* Detail Dialog (Statement & Invoices) */}
+      <Dialog open={!!detailId} onOpenChange={(open) => !open && closeDetail()}>
+        <DialogContent className="max-w-4xl rounded-3xl p-6 max-h-[90vh] overflow-y-auto" dir="rtl">
+          <DialogHeader className="flex flex-row items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-3.5">
+              <div
+                className={cn(
+                  "w-11 h-11 rounded-2xl flex items-center justify-center shadow-inner",
+                  kind === 'customer'
+                    ? "bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                    : kind === 'supplier'
+                    ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400"
+                    : "bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400"
+                )}
+              >
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-black text-foreground text-right">
+                  {detailContact?.name || 'تفاصيل الجهة'}
+                </DialogTitle>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-[10px] font-black bg-muted px-2 py-0.5 rounded-md text-muted-foreground font-mono">
+                    {detailContact?.code || '—'}
+                  </span>
+                  <Badge variant="outline" className="text-[10px] font-bold">
+                    {detailContact?.type === 'both' ? 'عميل ومورد' : detailContact?.type === 'customer' ? 'عميل' : 'مورد'}
+                  </Badge>
                 </div>
               </div>
-              <button onClick={closeDetail} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600 flex items-center justify-center hover:bg-slate-200 transition-colors cursor-pointer">
-                <X className="w-4 h-4" />
-              </button>
             </div>
+          </DialogHeader>
 
-            {detailLoading || !detailContact ? (
-              <div className="py-24 text-center text-slate-400 text-xs font-bold">جاري تحميل الحساب والمعاملات...</div>
-            ) : (
-              <div className="space-y-6" dir="rtl">
-
-                {/* Balance Cards inside Modal */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                  <div className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-4">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">الرصيد المالي الحالي</span>
-                    <div className={`text-xl font-black ${detailContact.current_balance > 0 ? 'text-rose-600' : detailContact.current_balance < 0 ? 'text-emerald-600' : 'text-slate-500'}`}>
+          {detailLoading || !detailContact ? (
+            <div className="py-24 text-center text-muted-foreground text-xs font-bold">
+              جاري تحميل الحساب والمعاملات...
+            </div>
+          ) : (
+            <div className="space-y-6 pt-2">
+              {/* Balance Cards inside Modal */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <Card className="rounded-2xl border-slate-100 dark:border-slate-800 shadow-none bg-muted/30">
+                  <CardContent className="p-4">
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider block mb-1">
+                      الرصيد المالي الحالي
+                    </span>
+                    <div
+                      className={cn(
+                        "text-xl font-black font-mono",
+                        detailContact.current_balance > 0
+                          ? 'text-destructive'
+                          : detailContact.current_balance < 0
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-muted-foreground'
+                      )}
+                    >
                       {formatNumber(detailContact.current_balance)} <span className="text-[10px] font-bold">ج.م</span>
                     </div>
-                  </div>
-                  <div className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-4">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">الحد الائتماني</span>
-                    <div className="text-xl font-black text-slate-800 dark:text-slate-100">
-                      {formatNumber(detailContact.credit_limit)} <span className="text-[10px] font-bold text-slate-400">ج.م</span>
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-2xl border-slate-100 dark:border-slate-800 shadow-none bg-muted/30">
+                  <CardContent className="p-4">
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider block mb-1">
+                      الحد الائتماني
+                    </span>
+                    <div className="text-xl font-black text-foreground font-mono">
+                      {formatNumber(detailContact.credit_limit)} <span className="text-[10px] font-bold text-muted-foreground">ج.م</span>
                     </div>
-                  </div>
-                  <div className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-4">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-2xl border-slate-100 dark:border-slate-800 shadow-none bg-muted/30">
+                  <CardContent className="p-4">
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider block mb-1">
                       {kind === 'customer' ? 'فواتير البيع' : 'فواتير الشراء'}
                     </span>
-                    <div className="text-xl font-black text-blue-600">{formatNumber(invoices.length)}</div>
-                  </div>
-                  <div className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-4">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">إجمالي التعاملات</span>
-                    <div className="text-xl font-black text-emerald-600">
+                    <div className="text-xl font-black text-primary font-mono">{formatNumber(invoices.length)}</div>
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-2xl border-slate-100 dark:border-slate-800 shadow-none bg-muted/30">
+                  <CardContent className="p-4">
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider block mb-1">
+                      إجمالي التعاملات
+                    </span>
+                    <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
                       {formatNumber(invoices.reduce((a, i) => a + i.total, 0))} <span className="text-[10px] font-bold">ج.م</span>
                     </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {detailContact.address && (
+                <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground bg-muted/40 rounded-xl px-4 py-3 border border-border">
+                  <Building2 className="w-4 h-4 text-muted-foreground" /> {detailContact.address}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Invoices List */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-black text-foreground flex items-center gap-2">
+                    <FileDown className="w-4 h-4 text-primary" />
+                    {kind === 'customer' ? 'سجل فواتير المبيعات' : 'سجل فواتير المشتريات'}
+                  </h4>
+                  <div className="overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-slate-800">
+                    <Table className="w-full text-right text-xs">
+                      <TableHeader className="bg-slate-50 dark:bg-slate-900/60">
+                        <TableRow>
+                          <TableHead className="py-3 px-4 text-xs font-black">رقم الفاتورة</TableHead>
+                          <TableHead className="py-3 px-4 text-xs font-black">التاريخ</TableHead>
+                          <TableHead className="py-3 px-4 text-left text-xs font-black">القيمة</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {invoices.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={3} className="py-10 text-center text-muted-foreground font-bold">
+                              لا توجد فواتير بعد.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          invoices.map((i) => (
+                            <TableRow key={i.id} className="hover:bg-muted/40 transition-colors">
+                              <TableCell className="py-3 px-4 font-black text-primary">{i.number}</TableCell>
+                              <TableCell className="py-3 px-4 text-muted-foreground font-mono">
+                                {new Date(i.date).toLocaleDateString('en-GB')}
+                              </TableCell>
+                              <TableCell className="py-3 px-4 text-left font-black font-mono text-foreground">
+                                {formatNumber(i.total)}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
 
-                {detailContact.address && (
-                  <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-900/50 rounded-xl px-4 py-3 border border-slate-100 dark:border-slate-800">
-                    <Building2 className="w-4 h-4 text-slate-400" /> {detailContact.address}
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Invoices List */}
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
-                      <FileDown className="w-4 h-4 text-blue-500" />
-                      {kind === 'customer' ? 'سجل فواتير المبيعات' : 'سجل فواتير المشتريات'}
-                    </h4>
-                    <div className="overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-slate-800">
-                      <table className="w-full text-right text-xs">
-                        <thead>
-                          <tr className="bg-slate-50 dark:bg-slate-900/60 text-[10px] font-black text-slate-400">
-                            <th className="py-3 px-4">رقم الفاتورة</th>
-                            <th className="py-3 px-4">التاريخ</th>
-                            <th className="py-3 px-4 text-left">القيمة</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 font-bold">
-                          {invoices.length === 0 ? (
-                            <tr><td colSpan={3} className="py-10 text-center text-slate-400">لا توجد فواتير بعد.</td></tr>
-                          ) : (
-                            invoices.map((i) => (
-                              <tr key={i.id} className="hover:bg-slate-50/50 transition-colors cursor-pointer">
-                                <td className="py-3 px-4 text-blue-600">{i.number}</td>
-                                <td className="py-3 px-4 text-slate-500 font-mono">{new Date(i.date).toLocaleDateString('en-GB')}</td>
-                                <td className="py-3 px-4 text-left text-slate-900 dark:text-white">{formatNumber(i.total)}</td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Account Statement */}
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
-                      <Activity className="w-4 h-4 text-emerald-500" />
-                      كشف الحساب المصغر
-                    </h4>
-                    <div className="overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-slate-800">
-                      <table className="w-full text-right text-xs">
-                        <thead>
-                          <tr className="bg-slate-50 dark:bg-slate-900/60 text-[10px] font-black text-slate-400">
-                            <th className="py-3 px-4">التاريخ</th>
-                            <th className="py-3 px-4">البيان</th>
-                            <th className="py-3 px-4 text-left">الرصيد المتراكم</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 font-bold">
-                          {statement.length === 0 ? (
-                            <tr><td colSpan={3} className="py-10 text-center text-slate-400">لا توجد حركات حساب بعد.</td></tr>
-                          ) : (
-                            statement.map((s) => (
-                              <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">
-                                <td className="py-3 px-4 text-slate-500 font-mono">{new Date(s.created_at).toLocaleDateString('en-GB')}</td>
-                                <td className="py-3 px-4">
-                                  <div className="text-slate-800 dark:text-slate-200 truncate max-w-[150px]">{s.notes || s.reference_type}</div>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    {s.debit > 0 && <span className="text-[9px] text-rose-600 bg-rose-50 dark:bg-rose-950/40 px-1.5 py-0.5 rounded font-mono">مدين: {formatNumber(s.debit)}</span>}
-                                    {s.credit > 0 && <span className="text-[9px] text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded font-mono">دائن: {formatNumber(s.credit)}</span>}
-                                  </div>
-                                </td>
-                                <td className="py-3 px-4 text-left text-slate-900 dark:text-white" dir="ltr">{formatNumber(s.balance_after)}</td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
+                {/* Account Statement */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-black text-foreground flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-emerald-500" />
+                    كشف الحساب المصغر
+                  </h4>
+                  <div className="overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-slate-800">
+                    <Table className="w-full text-right text-xs">
+                      <TableHeader className="bg-slate-50 dark:bg-slate-900/60">
+                        <TableRow>
+                          <TableHead className="py-3 px-4 text-xs font-black">التاريخ</TableHead>
+                          <TableHead className="py-3 px-4 text-xs font-black">البيان</TableHead>
+                          <TableHead className="py-3 px-4 text-left text-xs font-black">الرصيد</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {statement.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={3} className="py-10 text-center text-muted-foreground font-bold">
+                              لا توجد حركات حساب بعد.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          statement.map((s) => (
+                            <TableRow key={s.id} className="hover:bg-muted/40 transition-colors">
+                              <TableCell className="py-3 px-4 text-muted-foreground font-mono">
+                                {new Date(s.created_at).toLocaleDateString('en-GB')}
+                              </TableCell>
+                              <TableCell className="py-3 px-4">
+                                <div className="text-foreground font-medium truncate max-w-[150px]">
+                                  {s.notes || s.reference_type}
+                                </div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  {s.debit > 0 && (
+                                    <span className="text-[9px] text-destructive bg-destructive/10 px-1.5 py-0.5 rounded font-mono font-bold">
+                                      مدين: {formatNumber(s.debit)}
+                                    </span>
+                                  )}
+                                  {s.credit > 0 && (
+                                    <span className="text-[9px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded font-mono font-bold">
+                                      دائن: {formatNumber(s.credit)}
+                                    </span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="py-3 px-4 text-left font-black font-mono text-foreground" dir="ltr">
+                                {formatNumber(s.balance_after)}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
               </div>
-            )}
-          </div>
-        </div>
-      )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }

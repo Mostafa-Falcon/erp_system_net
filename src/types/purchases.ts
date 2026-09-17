@@ -26,6 +26,10 @@ export interface PurchaseInvoice {
   treasury_id?: EntityId | null;
   status: InvoiceStatus;
   notes?: string;
+  is_deleted?: boolean;
+  deleted_at?: ISODateString | null;
+  deleted_by?: EntityId | null;
+  delete_reason?: string | null;
   created_by: EntityId;
   created_at: ISODateString;
   updated_at: ISODateString;

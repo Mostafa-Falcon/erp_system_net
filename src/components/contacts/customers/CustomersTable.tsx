@@ -8,6 +8,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { formatNumber } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { Contact } from '@/types';
@@ -34,8 +44,8 @@ export function CustomersTable({
 }: CustomersTableProps) {
   if (isLoading) {
     return (
-      <div className="py-20 text-center text-slate-400">
-        <RefreshCw className="w-7 h-7 animate-spin mx-auto mb-3 text-pink-600" />
+      <div className="py-20 text-center text-muted-foreground">
+        <RefreshCw className="w-7 h-7 animate-spin mx-auto mb-3 text-primary" />
         <span className="text-xs font-bold">جاري تحميل سجل العملاء...</span>
       </div>
     );
@@ -43,146 +53,154 @@ export function CustomersTable({
 
   if (customers.length === 0) {
     return (
-      <div className="py-20 text-center text-slate-400">
+      <div className="py-20 text-center text-muted-foreground">
         <Users className="w-14 h-14 mx-auto mb-3 opacity-25" />
-        <p className="font-black text-slate-700 dark:text-slate-300 text-sm">لا يوجد عملاء مطابقين لخيارات البحث</p>
-        <p className="text-xs text-slate-400 mt-1">جرب مسح الفلتر أو إضافة عميل جديد للبدء.</p>
+        <p className="font-black text-foreground text-sm">لا يوجد عملاء مطابقين لخيارات البحث</p>
+        <p className="text-xs text-muted-foreground mt-1">جرب مسح الفلتر أو إضافة عميل جديد للبدء.</p>
       </div>
     );
   }
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-right border-collapse">
-        <thead>
-          <tr className="bg-slate-50/60 dark:bg-slate-900/40 border-b border-slate-100 dark:border-slate-800 text-[11px] font-black text-slate-400 uppercase tracking-wider">
-            {columns.code && <th className="py-4 px-5">معرف الاتصال</th>}
-            {columns.name && <th className="py-4 px-4">اسم العميل / المشروع</th>}
-            {columns.phone && <th className="py-4 px-4">رقم الهاتف</th>}
-            {columns.purchases && <th className="py-4 px-4 text-left">المجموع (المسحوبات)</th>}
-            {columns.balance && <th className="py-4 px-4 text-left">الرصيد الحالي</th>}
-            {columns.lastActivity && <th className="py-4 px-4 text-center">آخر حركة / تاريخ</th>}
-            <th className="py-4 px-5 text-center w-16">إجراءات</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs font-bold">
+      <Table className="w-full text-right">
+        <TableHeader className="bg-slate-50/70 dark:bg-slate-900/50">
+          <TableRow>
+            {columns.code && <TableHead className="py-3.5 px-4 text-xs font-black">معرف الاتصال</TableHead>}
+            {columns.name && <TableHead className="py-3.5 px-4 text-xs font-black">اسم العميل / المنشأة</TableHead>}
+            {columns.phone && <TableHead className="py-3.5 px-4 text-xs font-black">رقم الهاتف</TableHead>}
+            {columns.purchases && <TableHead className="py-3.5 px-4 text-left text-xs font-black">المسحوبات</TableHead>}
+            {columns.balance && <TableHead className="py-3.5 px-4 text-left text-xs font-black">الرصيد الحالي</TableHead>}
+            {columns.lastActivity && <TableHead className="py-3.5 px-4 text-center text-xs font-black">تاريخ الإضافة</TableHead>}
+            <TableHead className="py-3.5 px-4 text-center w-16 text-xs font-black">إجراءات</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {customers.map((c) => {
             const totalPurchased = salesTotals[c.id] || 0;
             const isDebit = c.current_balance > 0;
             const isCredit = c.current_balance < 0;
 
             return (
-              <tr
+              <TableRow
                 key={c.id}
                 className={cn(
-                  "hover:bg-pink-50/20 dark:hover:bg-pink-950/10 transition-colors group",
-                  !c.is_active && "opacity-50 bg-slate-50/40 dark:bg-slate-900/30"
+                  'hover:bg-muted/40 transition-colors group',
+                  !c.is_active && 'opacity-50 bg-muted/20'
                 )}
               >
                 {/* معرف الاتصال */}
                 {columns.code && (
-                  <td className="py-4 px-5 font-mono text-slate-400 text-xs">
+                  <TableCell className="py-3.5 px-4 font-mono text-muted-foreground text-xs font-bold">
                     {c.code || '—'}
-                  </td>
+                  </TableCell>
                 )}
 
-                {/* اسم العميل / المشروع */}
+                {/* اسم العميل */}
                 {columns.name && (
-                  <td className="py-4 px-4">
+                  <TableCell className="py-3.5 px-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 flex items-center justify-center font-black text-xs shrink-0">
+                      <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black text-xs shrink-0">
                         {c.name.charAt(0)}
                       </div>
                       <div className="flex flex-col">
                         <button
+                          type="button"
                           onClick={() => onViewDetails(c)}
-                          className="font-black text-slate-900 dark:text-white hover:text-pink-600 transition-colors text-right cursor-pointer"
+                          className="font-black text-foreground hover:text-primary transition-colors text-right cursor-pointer text-xs"
                         >
                           {c.name}
                         </button>
-                        <span className="text-[10px] text-slate-400 mt-0.5">
-                          تصنيف عام {c.type === 'both' && '• عميل ومورد'}
-                        </span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] text-muted-foreground">تصنيف عام</span>
+                          {c.type === 'both' && (
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-black text-indigo-600 dark:text-indigo-400">
+                              عميل ومورد
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </td>
+                  </TableCell>
                 )}
 
                 {/* رقم الهاتف */}
                 {columns.phone && (
-                  <td className="py-4 px-4 font-mono text-slate-600 dark:text-slate-300" dir="ltr">
+                  <TableCell className="py-3.5 px-4 font-mono text-muted-foreground text-xs" dir="ltr">
                     {c.phone || c.mobile ? (
-                      <a href={`tel:${c.phone || c.mobile}`} className="hover:text-blue-600 transition-colors">
+                      <a href={`tel:${c.phone || c.mobile}`} className="hover:text-primary transition-colors font-bold">
                         {c.phone || c.mobile}
                       </a>
                     ) : (
-                      <span className="text-slate-300">—</span>
+                      <span className="text-muted-foreground/50">—</span>
                     )}
-                  </td>
+                  </TableCell>
                 )}
 
-                {/* المجموع (المسحوبات) */}
+                {/* المسحوبات */}
                 {columns.purchases && (
-                  <td className="py-4 px-4 text-left font-black font-mono text-slate-700 dark:text-slate-300">
-                    {formatNumber(totalPurchased)} ج.م
-                  </td>
+                  <TableCell className="py-3.5 px-4 text-left font-black font-mono text-xs text-foreground">
+                    {formatNumber(totalPurchased)} <span className="text-[10px] font-sans font-normal text-muted-foreground">ج.م</span>
+                  </TableCell>
                 )}
 
                 {/* الرصيد الحالي */}
                 {columns.balance && (
-                  <td className="py-4 px-4 text-left font-black font-mono">
+                  <TableCell className="py-3.5 px-4 text-left font-black font-mono text-xs">
                     <span
                       className={cn(
-                        "text-sm",
-                        isDebit && "text-rose-600 dark:text-rose-400",
-                        isCredit && "text-emerald-600 dark:text-emerald-400",
-                        c.current_balance === 0 && "text-emerald-600 dark:text-emerald-400"
+                        isDebit && 'text-destructive',
+                        isCredit && 'text-emerald-600 dark:text-emerald-400',
+                        c.current_balance === 0 && 'text-muted-foreground'
                       )}
                     >
-                      {formatNumber(c.current_balance)} ج.م
+                      {formatNumber(c.current_balance)}{' '}
+                      <span className="text-[10px] font-sans font-normal opacity-70">ج.م</span>
                     </span>
-                  </td>
+                  </TableCell>
                 )}
 
-                {/* تاريخ الإضافة / آخر حركة */}
+                {/* تاريخ الإضافة */}
                 {columns.lastActivity && (
-                  <td className="py-4 px-4 text-center font-mono text-slate-400 text-[11px]">
+                  <TableCell className="py-3.5 px-4 text-center font-mono text-muted-foreground text-xs">
                     {new Date(c.created_at).toLocaleDateString('en-CA')}
-                  </td>
+                  </TableCell>
                 )}
 
-                {/* إجراءات (القائمة المنسدلة ثلاث نقاط) */}
-                <td className="py-4 px-5 text-center">
+                {/* إجراءات */}
+                <TableCell className="py-3.5 px-4 text-center">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer mx-auto">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground mx-auto"
+                      >
                         <MoreVertical className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-40 rounded-2xl p-1.5 shadow-xl border-slate-200 dark:border-slate-800">
+                    <DropdownMenuContent align="end" className="w-40 rounded-xl p-1 shadow-lg">
                       <DropdownMenuItem
                         onClick={() => onViewDetails(c)}
-                        className="flex items-center gap-2.5 py-2 px-3 text-xs font-bold rounded-xl cursor-pointer hover:bg-blue-50 text-blue-600 dark:hover:bg-blue-950/40"
+                        className="flex items-center gap-2.5 py-2 px-3 text-xs font-bold rounded-lg cursor-pointer"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-4 h-4 text-primary" />
                         <span>التفاصيل</span>
                       </DropdownMenuItem>
 
                       <DropdownMenuItem
                         onClick={() => onEdit(c)}
-                        className="flex items-center gap-2.5 py-2 px-3 text-xs font-bold rounded-xl cursor-pointer hover:bg-slate-50 text-slate-700 dark:text-slate-300"
+                        className="flex items-center gap-2.5 py-2 px-3 text-xs font-bold rounded-lg cursor-pointer"
                       >
-                        <Edit className="w-4 h-4" />
+                        <Edit className="w-4 h-4 text-muted-foreground" />
                         <span>تعديل</span>
                       </DropdownMenuItem>
 
                       <DropdownMenuItem
                         onClick={() => onToggleActive(c)}
                         className={cn(
-                          "flex items-center gap-2.5 py-2 px-3 text-xs font-bold rounded-xl cursor-pointer",
-                          c.is_active
-                            ? "text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
-                            : "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                          'flex items-center gap-2.5 py-2 px-3 text-xs font-bold rounded-lg cursor-pointer',
+                          c.is_active ? 'text-destructive' : 'text-emerald-600 dark:text-emerald-400'
                         )}
                       >
                         {c.is_active ? <Trash2 className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
@@ -190,12 +208,12 @@ export function CustomersTable({
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             );
           })}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

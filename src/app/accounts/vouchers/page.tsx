@@ -30,7 +30,8 @@ import {
   MessageSquare,
   ChevronRight,
   ChevronLeft,
-  FilterX
+  FilterX,
+  RotateCcw
 } from 'lucide-react';
 import type { Contact, FinancialVoucher, Treasury, User as AppUser } from '@/types';
 
@@ -50,6 +51,16 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 function VouchersContent() {
   const { currentUser } = useSessionStore();
@@ -75,6 +86,7 @@ function VouchersContent() {
   const [vDescription, setVDescription] = useState('');
   const [vTransactionType, setVTransactionType] = useState('partial'); // Example type
   const [isBusy, setIsBusy] = useState(false);
+  const [reversingId, setReversingId] = useState<string | null>(null);
 
   const loadData = async () => {
     if (!orgId) return;
@@ -120,8 +132,9 @@ function VouchersContent() {
   }, [vouchers, searchQuery, typeFilter, contacts]);
 
   const stats = useMemo(() => {
-    const receipts = filteredVouchers.filter(v => v.type === 'receipt').reduce((a, v) => a + v.amount, 0);
-    const payments = filteredVouchers.filter(v => v.type === 'payment').reduce((a, v) => a + v.amount, 0);
+    const active = filteredVouchers.filter(v => !v.is_reversed);
+    const receipts = active.filter(v => v.type === 'receipt').reduce((a, v) => a + v.amount, 0);
+    const payments = active.filter(v => v.type === 'payment').reduce((a, v) => a + v.amount, 0);
     return {
       totalReceipts: receipts,
       totalPayments: payments,
@@ -129,6 +142,28 @@ function VouchersContent() {
       count: filteredVouchers.length
     };
   }, [filteredVouchers]);
+
+  const handleReverse = async (voucher: FinancialVoucher) => {
+    if (!currentUser) return;
+    const reason = window.prompt('اكتب سبب عكس السند:');
+    if (reason === null) return;
+    if (!reason.trim()) {
+      toast.error('سبب العكس مطلوب.');
+      return;
+    }
+    setReversingId(voucher.id);
+    try {
+      const result = await TreasuryRepository.reverseVoucher(voucher.id, reason.trim(), currentUser.id);
+      if (!result.success) {
+        toast.error(result.error || 'تعذر عكس السند.');
+        return;
+      }
+      toast.success('تم عكس السند وترحيل القيد العكسي.');
+      await loadData();
+    } finally {
+      setReversingId(null);
+    }
+  };
 
   const handleCreateVoucher = async () => {
     if (!currentUser) return;
@@ -249,22 +284,46 @@ function VouchersContent() {
           {/* Main Toolbar */}
           <div className="p-4 bg-slate-50/30 dark:bg-slate-900/30 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <button onClick={loadData} className="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:bg-slate-50 flex items-center justify-center transition-colors shadow-xs cursor-pointer">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={loadData}
+                className="w-9 h-9 rounded-xl cursor-pointer"
+                title="تحديث"
+              >
                 <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-              </button>
-              <button className="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:bg-slate-50 flex items-center justify-center transition-colors shadow-xs cursor-pointer">
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => window.print()}
+                className="w-9 h-9 rounded-xl cursor-pointer"
+                title="طباعة"
+              >
                 <Printer className="w-4 h-4" />
-              </button>
-              <button className="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:bg-slate-50 flex items-center justify-center transition-colors shadow-xs cursor-pointer">
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => toast.info('جاري تصدير PDF')}
+                className="w-9 h-9 rounded-xl cursor-pointer"
+                title="تصدير PDF"
+              >
                 <FileText className="w-4 h-4 text-blue-500" />
-              </button>
-              <button className="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:bg-slate-50 flex items-center justify-center transition-colors shadow-xs cursor-pointer">
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => toast.info('جاري تصدير Excel')}
+                className="w-9 h-9 rounded-xl cursor-pointer"
+                title="تصدير Excel"
+              >
                 <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-              </button>
+              </Button>
 
               <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-2" />
 
-              <Button variant="outline" className="h-10 border-slate-200 dark:border-slate-800 text-xs font-bold gap-1.5 rounded-xl">
+              <Button variant="outline" className="h-9 border-slate-200 dark:border-slate-800 text-xs font-bold gap-1.5 rounded-xl">
                 <SlidersHorizontal className="w-4 h-4" /> تخصيص الأعمدة
               </Button>
             </div>
@@ -275,35 +334,41 @@ function VouchersContent() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="بحث سريع في الجدول..."
-                className="h-10 pr-9 w-64 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold"
+                className="h-10 pr-9 w-64 rounded-xl text-xs font-bold"
               />
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 bg-pink-50 text-pink-600 px-1.5 py-0.5 rounded text-[10px] font-black">
+              <Badge
+                variant="secondary"
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-pink-50 text-pink-600 px-1.5 py-0.5 rounded text-[10px] font-black"
+              >
                 {filteredVouchers.length}
-              </span>
+              </Badge>
             </div>
           </div>
 
           {/* ==================== DATA GRID ==================== */}
           <div className="overflow-x-auto">
-            <table className="w-full text-right border-collapse">
-              <thead>
-                <tr className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 text-[11px] font-black text-slate-400 uppercase tracking-wider">
-                  <th className="py-4 px-4">رقم السند</th>
-                  <th className="py-4 px-4 text-center">التاريخ</th>
-                  <th className="py-4 px-4">الجهة / الطرف</th>
-                  <th className="py-4 px-4 text-center">طريقة الدفع</th>
-                  <th className="py-4 px-4 text-left">المبلغ</th>
-                  <th className="py-4 px-4 text-center">بواسطة</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 text-xs font-bold">
+            <Table className="w-full text-right">
+              <TableHeader className="bg-slate-50/50 dark:bg-slate-900/50">
+                <TableRow className="border-b border-slate-100 dark:border-slate-800 text-[11px] font-black text-slate-400">
+                  <TableHead className="py-3.5 px-4 text-right">رقم السند</TableHead>
+                  <TableHead className="py-3.5 px-4 text-center">التاريخ</TableHead>
+                  <TableHead className="py-3.5 px-4 text-right">الجهة / الطرف</TableHead>
+                  <TableHead className="py-3.5 px-4 text-center">طريقة الدفع</TableHead>
+                  <TableHead className="py-3.5 px-4 text-left">المبلغ</TableHead>
+                  <TableHead className="py-3.5 px-4 text-center">الحالة</TableHead>
+                  <TableHead className="py-3.5 px-4 text-center w-20">إجراءات</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="divide-y divide-slate-50 dark:divide-slate-800/50 text-xs font-bold">
                 {filteredVouchers.map((v) => (
-                  <tr key={v.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors group">
-                    <td className="py-4 px-4 text-slate-900 dark:text-white font-black">#{v.voucher_no.slice(-3)}</td>
-                    <td className="py-4 px-4 text-center text-slate-500 font-medium font-mono">
+                  <TableRow key={v.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors">
+                    <TableCell className="py-3.5 px-4 text-slate-900 dark:text-white font-black font-mono">
+                      #{v.voucher_no.slice(-3)}
+                    </TableCell>
+                    <TableCell className="py-3.5 px-4 text-center text-slate-500 font-medium font-mono">
                       {new Date(v.created_at).toLocaleDateString('en-GB')}
-                    </td>
-                    <td className="py-4 px-4">
+                    </TableCell>
+                    <TableCell className="py-3.5 px-4">
                       <div className="flex items-center gap-2">
                         <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
                           v.type === 'receipt' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
@@ -312,23 +377,51 @@ function VouchersContent() {
                         </div>
                         <span className="text-slate-600 dark:text-slate-400">{contactName(v.contact_id)}</span>
                       </div>
-                    </td>
-                    <td className="py-4 px-4 text-center">
-                      <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-emerald-50 text-emerald-600">نقداً</span>
-                    </td>
-                    <td className="py-4 px-4 text-left text-[#10b981] font-black text-sm">
+                    </TableCell>
+                    <TableCell className="py-3.5 px-4 text-center">
+                      <Badge variant="secondary" className="text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                        نقداً
+                      </Badge>
+                    </TableCell>
+                    <TableCell className={`py-3.5 px-4 text-left font-black text-sm font-mono ${v.is_reversed ? 'text-slate-300 line-through' : 'text-[#10b981]'}`}>
                       {formatNumber(v.amount)} <span className="text-[10px] opacity-70">ج.م</span>
-                    </td>
-                    <td className="py-4 px-4 text-center text-slate-400 font-medium">—</td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="py-3.5 px-4 text-center">
+                      {v.is_reversed ? (
+                        <Badge variant="outline" className="text-slate-500 bg-slate-100 dark:bg-slate-800 text-[10px]">
+                          معكوس
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 text-[10px]">
+                          سارٍ
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-3.5 px-4 text-center">
+                      {!v.is_reversed && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleReverse(v)}
+                          disabled={reversingId === v.id}
+                          title="عكس السند"
+                          className="w-7 h-7 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer"
+                        >
+                          <RotateCcw className={`w-3.5 h-3.5 ${reversingId === v.id ? 'animate-spin' : ''}`} />
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
                 ))}
                 {filteredVouchers.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="py-20 text-center text-slate-400 font-black">لا توجد سندات متاحة للعرض.</td>
-                  </tr>
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-16 text-center text-slate-400 font-bold">
+                      لا توجد سندات متاحة للعرض.
+                    </TableCell>
+                  </TableRow>
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
 
           {/* Footer Bar */}
@@ -373,17 +466,21 @@ function VouchersContent() {
                 <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">
                   اسم {activeModalType === 'receipt' ? 'العميل' : 'المورد'} / الجهة
                 </Label>
-                <div className="relative group">
-                  <Input
-                    placeholder="مثال: مؤسسة الأمل / شركة المتحدة"
-                    value={vContactId}
-                    onChange={(e) => setVContactId(e.target.value)}
-                    className="h-11 bg-slate-50/50 border-slate-200 focus:bg-white rounded-xl text-xs font-bold"
-                  />
-                  {/* For simplicity we're using a text input for contact name in this UI,
-                      but in real app it would be a searchable dropdown */}
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                </div>
+                <Select value={vContactId || 'none'} onValueChange={(val) => setVContactId(val === 'none' ? '' : val)}>
+                  <SelectTrigger className="h-11 rounded-xl bg-slate-50/50 border-slate-200 text-xs font-bold">
+                    <SelectValue placeholder="بدون جهة (نقدي)" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl shadow-xl max-h-72">
+                    <SelectItem value="none">
+                      <div className="flex items-center gap-2"><User className="w-4 h-4 text-slate-400" /> بدون جهة (نقدي)</div>
+                    </SelectItem>
+                    {contacts.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Amount & Transaction Type */}

@@ -36,6 +36,9 @@ export function usePosData() {
   const [users, setUsers] = useState<UserType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [scaleConfig, setScaleConfig] = useState<ScaleConfig>(DEFAULT_SCALE_CONFIG);
+  const [enableTax, setEnableTax] = useState(false);
+  const [vatRate, setVatRate] = useState(14);
+  const [isTaxInclusive, setIsTaxInclusive] = useState(false);
 
   const loadData = async () => {
     if (!orgId) return;
@@ -55,7 +58,7 @@ export function usePosData() {
         }
       }
 
-      const [whs, tres, custs, prods, unts, pUnits, levels, bchs, usrs, currentBranch] = await Promise.all([
+      const [whs, tres, custs, prods, unts, pUnits, levels, bchs, usrs, currentBranch, appSettings] = await Promise.all([
         effectiveBranchId
           ? db.warehouses.where('org_id').equals(orgId).and((w) => w.is_active && w.branch_id === effectiveBranchId).toArray()
           : db.warehouses.where('org_id').equals(orgId).and((w) => w.is_active).toArray(),
@@ -68,7 +71,16 @@ export function usePosData() {
         db.product_batches.toArray(),
         db.users.where('org_id').equals(orgId).toArray(),
         effectiveBranchId ? db.branches.get(effectiveBranchId) : Promise.resolve(undefined),
+        db.app_settings.where('org_id').equals(orgId).toArray(),
       ]);
+
+      const enableTaxSetting = appSettings.find((s) => s.id === 'enable_tax');
+      const vatRateSetting = appSettings.find((s) => s.id === 'vat_rate');
+      const taxIncSetting = appSettings.find((s) => s.id === 'is_tax_inclusive');
+
+      setEnableTax(enableTaxSetting ? enableTaxSetting.value === 'true' : false);
+      setVatRate(vatRateSetting ? parseFloat(vatRateSetting.value) || 14 : 14);
+      setIsTaxInclusive(taxIncSetting ? taxIncSetting.value === 'true' : false);
 
       const umap: Record<string, Unit> = {};
       for (const u of unts) umap[u.id] = u;
@@ -248,6 +260,9 @@ export function usePosData() {
     users,
     isLoading,
     scaleConfig,
+    enableTax,
+    vatRate,
+    isTaxInclusive,
     loadData,
   };
 }

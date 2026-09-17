@@ -41,7 +41,8 @@ import {
 } from 'lucide-react';
 import { useSessionStore } from '@/core/state/useSessionStore';
 import { EmployeeRepository, type CreateEmployeeDTO } from '@/modules/employees/employee_repository';
-import type { Branch, UserRole } from '@/types';
+import { DepartmentRepository } from '@/modules/employees/department_repository';
+import type { Branch, Department, UserRole } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { formatNumber } from '@/lib/format';
@@ -52,11 +53,15 @@ export default function AddEmployeePage() {
   const orgId = currentUser?.org_id || '';
 
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   // Form State
   const [fullName, setFullName] = useState('');
-  const [department, setDepartment] = useState('');
+  const [departmentId, setDepartmentId] = useState('');
+  const [jobTitle, setJobTitle] = useState('');
+  const [hireDate, setHireDate] = useState(new Date().toISOString().split('T')[0]);
+  const [annualLeaveDays, setAnnualLeaveDays] = useState('21');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<UserRole>('supervisor');
   const [branchId, setBranchId] = useState('');
@@ -86,7 +91,12 @@ export default function AddEmployeePage() {
       setBranches(list);
       if (list.length > 0) setBranchId(list.find(b => b.is_main)?.id || list[0].id);
     };
+    const loadDepartments = async () => {
+      const list = await DepartmentRepository.getAll(orgId);
+      setDepartments(list.filter((d) => d.is_active));
+    };
     loadBranches();
+    loadDepartments();
   }, [orgId]);
 
   const togglePermission = (perm: string) => {
@@ -141,6 +151,10 @@ export default function AddEmployeePage() {
         role: role,
         pin_code: pinCode,
         password: allowLogin ? password : undefined,
+        department_id: departmentId || null,
+        job_title: jobTitle,
+        hire_date: hireDate,
+        annual_leave_days: Number(annualLeaveDays) || 21,
         basic_salary: Number(basicSalary) || 0,
         salary_cycle: salaryCycle as any,
         deductions: Number(deductions) || 0,
@@ -211,16 +225,27 @@ export default function AddEmployeePage() {
 
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <Label className="text-xs font-black text-slate-700 dark:text-slate-300">القسم / التخصص</Label>
-                        <div className="relative group/input">
-                          <Input
-                            value={department}
-                            onChange={e => setDepartment(e.target.value)}
-                            placeholder="مثال: المبيعات، الحسابات، التوصيل..."
-                            className="h-12 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 pr-11 text-sm font-bold rounded-xl focus:bg-white dark:focus:bg-slate-900 transition-colors shadow-xs"
-                          />
-                          <Briefcase className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within/input:text-blue-500 transition-colors" />
-                        </div>
+                        <Label className="text-xs font-black text-slate-700 dark:text-slate-300">القسم / الإدارة</Label>
+                        <Select value={departmentId} onValueChange={setDepartmentId}>
+                          <SelectTrigger className="h-12 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 rounded-xl text-sm font-black focus:bg-white dark:focus:bg-slate-900 shadow-xs">
+                            <SelectValue placeholder="اختر القسم" />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl shadow-xl border-slate-200 dark:border-slate-800">
+                            {departments.length === 0 ? (
+                              <div className="px-3 py-2 text-[11px] font-bold text-slate-400">
+                                لا توجد أقسام — أضفها من الهيكل والأقسام
+                              </div>
+                            ) : (
+                              departments.map((d) => (
+                                <SelectItem key={d.id} value={d.id} className="py-2.5">
+                                  <div className="flex items-center gap-2.5">
+                                    <Briefcase className="w-4 h-4 text-slate-400" /> {d.name}
+                                  </div>
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-2">
                         <Label className="text-xs font-black text-slate-700 dark:text-slate-300">رقم الهاتف / الواتساب <span className="text-red-500">*</span></Label>
@@ -267,6 +292,47 @@ export default function AddEmployeePage() {
                             ))}
                           </SelectContent>
                         </Select>
+                      </div>
+                   </div>
+
+                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="space-y-2">
+                        <Label className="text-xs font-black text-slate-700 dark:text-slate-300">المسمى الوظيفي</Label>
+                        <div className="relative group/input">
+                          <Input
+                            value={jobTitle}
+                            onChange={e => setJobTitle(e.target.value)}
+                            placeholder="مثال: محاسب أول، بائع..."
+                            className="h-12 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 pr-11 text-sm font-bold rounded-xl focus:bg-white dark:focus:bg-slate-900 transition-colors shadow-xs"
+                          />
+                          <Briefcase className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within/input:text-blue-500 transition-colors" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-black text-slate-700 dark:text-slate-300">تاريخ التعيين</Label>
+                        <div className="relative group/input">
+                          <Input
+                            type="date"
+                            value={hireDate}
+                            onChange={e => setHireDate(e.target.value)}
+                            className="h-12 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 pr-11 text-sm font-bold rounded-xl focus:bg-white dark:focus:bg-slate-900 transition-colors shadow-xs"
+                          />
+                          <Clock className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within/input:text-blue-500 transition-colors" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-black text-slate-700 dark:text-slate-300">رصيد الإجازات السنوية (يوم)</Label>
+                        <div className="relative group/input">
+                          <Input
+                            type="number"
+                            value={annualLeaveDays}
+                            onChange={e => setAnnualLeaveDays(e.target.value)}
+                            placeholder="21"
+                            className="h-12 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 pr-11 text-base font-black rounded-xl focus:bg-white dark:focus:bg-slate-900 shadow-xs font-mono text-left"
+                            dir="ltr"
+                          />
+                          <Clock className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within/input:text-blue-500 transition-colors" />
+                        </div>
                       </div>
                    </div>
 

@@ -6,6 +6,7 @@ interface PosTotalsBarProps {
   subtotal: number;
   totalDiscount: number;
   shippingFee?: number;
+  totalTax?: number;
   total: number;
   isReturnMode?: boolean;
   onOpenDiscountsModal?: () => void;
@@ -16,6 +17,7 @@ export function PosTotalsBar({
   subtotal,
   totalDiscount,
   shippingFee = 0,
+  totalTax = 0,
   total,
   isReturnMode = false,
   onOpenDiscountsModal,
@@ -52,6 +54,16 @@ export function PosTotalsBar({
             {totalDiscount.toFixed(2)} <span className="text-xs font-normal text-slate-400">ج.م</span>
           </span>
         </button>
+
+        {/* ضريبة القيمة المضافة إن وجدت */}
+        {totalTax > 0 && (
+          <div className="flex items-baseline gap-2">
+            <span className="text-xs font-semibold text-slate-400">ضريبة:</span>
+            <span className="text-base font-black text-slate-300 font-mono">
+              +{totalTax.toFixed(2)} <span className="text-xs font-normal text-slate-400">ج.م</span>
+            </span>
+          </div>
+        )}
 
         {/* مصاريف الشحن إن وجدت */}
         {shippingFee > 0 && (

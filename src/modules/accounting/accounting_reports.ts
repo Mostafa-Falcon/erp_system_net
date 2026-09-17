@@ -381,10 +381,255 @@ export async function getAccountStatement(
   return { rows: result.rows, opening: result.opening, closing };
 }
 
-export default {
+export interface CashFlowCategory {
+  title: string;
+  items: { description: string; amount: number }[];
+  total: number;
+}
+
+export interface CashFlowStatement {
+  operating: CashFlowCategory;
+  investing: CashFlowCategory;
+  financing: CashFlowCategory;
+  openingCash: number;
+  netCashFlow: number;
+  closingCash: number;
+}
+
+export interface AgingBucket {
+  contactId: string;
+  contactName: string;
+  contactPhone?: string;
+  current0_30: number;
+  days31_60: number;
+  days61_90: number;
+  days90Plus: number;
+  totalBalance: number;
+}
+
+export interface AgingReport {
+  type: 'receivables' | 'payables';
+  rows: AgingBucket[];
+  totals: {
+    current0_30: number;
+    days31_60: number;
+    days61_90: number;
+    days90Plus: number;
+    totalBalance: number;
+  };
+}
+
+/** Cash Flow Statement (قائمة التدفقات النقدية) */
+export async function getCashFlowStatement(
+  orgId: string,
+  from?: string | null,
+  to?: string | null
+): Promise<CashFlowStatement> {
+  const accounts = await db.accounts.where('org_id').equals(orgId).toArray();
+  const accMap = new Map(accounts.map((a) => [a.id, a]));
+
+  // Cash and Bank account IDs
+  const cashAccounts = accounts.filter(
+    (a) => a.code.startsWith('111') || a.code.startsWith('112') || a.name.includes('خزينة') || a.name.includes('بنك') || a.name.includes('نقد')
+  );
+  const cashAccountIds = new Set(cashAccounts.map((a) => a.id));
+
+  const ledger = await loadLedger(orgId);
+
+  let openingCash = 0;
+  const opItems: { description: string; amount: number }[] = [];
+  const invItems: { description: string; amount: number }[] = [];
+  const finItems: { description: string; amount: number }[] = [];
+
+  for (const { entry, lines } of ledger) {
+    const cashLines = lines.filter((l) => cashAccountIds.has(l.account_id));
+    if (cashLines.length === 0) continue;
+
+    const netCashDelta = cashLines.reduce((sum, l) => sum + (l.debit - l.credit), 0);
+
+    if (from && entry.entry_date < from) {
+      openingCash += netCashDelta;
+      continue;
+    }
+    if (to && entry.entry_date > to) continue;
+
+    // Find the counterparty lines (non-cash lines)
+    const otherLines = lines.filter((l) => !cashAccountIds.has(l.account_id));
+
+    for (const other of otherLines) {
+      const otherAcc = accMap.get(other.account_id);
+      if (!otherAcc) continue;
+
+      const impact = other.credit - other.debit;
+      if (Math.abs(impact) < 0.001) continue;
+
+      const code = otherAcc.code;
+      if (code.startsWith('12')) {
+        invItems.push({
+          description: other.description || otherAcc.name || 'شراء وبيع أصول استثمارية',
+          amount: impact,
+        });
+      } else if (code.startsWith('3')) {
+        finItems.push({
+          description: other.description || otherAcc.name || 'حركات رأس المال والتمويل',
+          amount: impact,
+        });
+      } else {
+        opItems.push({
+          description: other.description || otherAcc.name || 'أنشطة وعمليات تشغيلية',
+          amount: impact,
+        });
+      }
+    }
+  }
+
+  const aggregate = (items: { description: string; amount: number }[]) => {
+    const map = new Map<string, number>();
+    for (const it of items) {
+      map.set(it.description, (map.get(it.description) || 0) + it.amount);
+    }
+    const res: { description: string; amount: number }[] = [];
+    for (const [desc, amt] of map.entries()) {
+      if (Math.abs(amt) > 0.001) {
+        res.push({ description: desc, amount: Math.round(amt * 100) / 100 });
+      }
+    }
+    const total = res.reduce((sum, r) => sum + r.amount, 0);
+    return { items: res, total: Math.round(total * 100) / 100 };
+  };
+
+  const operating = { title: 'صافي التدفقات النقدية من الأنشطة التشغيلية', ...aggregate(opItems) };
+  const investing = { title: 'صافي التدفقات النقدية من الأنشطة الاستثمارية', ...aggregate(invItems) };
+  const financing = { title: 'صافي التدفقات النقدية من الأنشطة التمويلية', ...aggregate(finItems) };
+
+  const netCashFlow = Math.round((operating.total + investing.total + financing.total) * 100) / 100;
+  openingCash = Math.round(openingCash * 100) / 100;
+  const closingCash = Math.round((openingCash + netCashFlow) * 100) / 100;
+
+  return {
+    operating,
+    investing,
+    financing,
+    openingCash,
+    netCashFlow,
+    closingCash,
+  };
+}
+
+/** AR / AP Aging Report (أعمار الديون للعملاء والموردين) */
+export async function getAgingReport(
+  orgId: string,
+  type: 'receivables' | 'payables'
+): Promise<AgingReport> {
+  const isCustomer = type === 'receivables';
+  const targetContactType = isCustomer ? ['customer', 'both'] : ['supplier', 'both'];
+
+  const contacts = await db.contacts
+    .where('org_id')
+    .equals(orgId)
+    .filter((c) => targetContactType.includes(c.type) && c.is_active)
+    .toArray();
+
+  const now = new Date();
+  const rows: AgingBucket[] = [];
+
+  for (const contact of contacts) {
+    let b0_30 = 0;
+    let b31_60 = 0;
+    let b61_90 = 0;
+    let b90Plus = 0;
+
+    if (isCustomer) {
+      const invoices = await db.sales_invoices
+        .where('customer_id')
+        .equals(contact.id)
+        .filter((inv) => !inv.is_deleted && inv.status !== 'cancelled' && (inv.remaining_amount || 0) > 0)
+        .toArray();
+
+      for (const inv of invoices) {
+        const rem = inv.remaining_amount || 0;
+        const invDate = new Date(inv.created_at || inv.updated_at);
+        const ageDays = Math.max(0, Math.floor((now.getTime() - invDate.getTime()) / (1000 * 60 * 60 * 24)));
+
+        if (ageDays <= 30) b0_30 += rem;
+        else if (ageDays <= 60) b31_60 += rem;
+        else if (ageDays <= 90) b61_90 += rem;
+        else b90Plus += rem;
+      }
+    } else {
+      const invoices = await db.purchase_invoices
+        .where('supplier_id')
+        .equals(contact.id)
+        .filter((inv) => !inv.is_deleted && inv.status !== 'cancelled' && (inv.remaining_amount || 0) > 0)
+        .toArray();
+
+      for (const inv of invoices) {
+        const rem = inv.remaining_amount || 0;
+        const invDate = new Date(inv.created_at || inv.updated_at);
+        const ageDays = Math.max(0, Math.floor((now.getTime() - invDate.getTime()) / (1000 * 60 * 60 * 24)));
+
+        if (ageDays <= 30) b0_30 += rem;
+        else if (ageDays <= 60) b31_60 += rem;
+        else if (ageDays <= 90) b61_90 += rem;
+        else b90Plus += rem;
+      }
+    }
+
+    const calculatedTotal = b0_30 + b31_60 + b61_90 + b90Plus;
+    const finalTotal = calculatedTotal > 0 ? calculatedTotal : Math.max(0, contact.current_balance || 0);
+
+    if (calculatedTotal === 0 && finalTotal > 0) {
+      b0_30 = finalTotal;
+    }
+
+    if (finalTotal > 0) {
+      rows.push({
+        contactId: contact.id,
+        contactName: contact.name,
+        contactPhone: contact.phone || undefined,
+        current0_30: Math.round(b0_30 * 100) / 100,
+        days31_60: Math.round(b31_60 * 100) / 100,
+        days61_90: Math.round(b61_90 * 100) / 100,
+        days90Plus: Math.round(b90Plus * 100) / 100,
+        totalBalance: Math.round(finalTotal * 100) / 100,
+      });
+    }
+  }
+
+  rows.sort((a, b) => b.totalBalance - a.totalBalance);
+
+  const totals = rows.reduce(
+    (acc, r) => ({
+      current0_30: acc.current0_30 + r.current0_30,
+      days31_60: acc.days31_60 + r.days31_60,
+      days61_90: acc.days61_90 + r.days61_90,
+      days90Plus: acc.days90Plus + r.days90Plus,
+      totalBalance: acc.totalBalance + r.totalBalance,
+    }),
+    { current0_30: 0, days31_60: 0, days61_90: 0, days90Plus: 0, totalBalance: 0 }
+  );
+
+  return {
+    type,
+    rows,
+    totals: {
+      current0_30: Math.round(totals.current0_30 * 100) / 100,
+      days31_60: Math.round(totals.days31_60 * 100) / 100,
+      days61_90: Math.round(totals.days61_90 * 100) / 100,
+      days90Plus: Math.round(totals.days90Plus * 100) / 100,
+      totalBalance: Math.round(totals.totalBalance * 100) / 100,
+    },
+  };
+}
+
+const reports = {
   getTrialBalance,
   getIncomeStatement,
   getBalanceSheet,
   getGeneralLedger,
   getAccountStatement,
+  getCashFlowStatement,
+  getAgingReport,
 };
+
+export default reports;
