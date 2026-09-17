@@ -12,7 +12,7 @@ import { AuthBrandingPanel } from '@/components/auth/AuthBrandingPanel';
 import { AuthRepository } from '@/modules/auth/auth_repository';
 import { useSessionStore } from '@/core/state/useSessionStore';
 import { toast } from 'sonner';
-import { Layers, Eye, EyeOff, Lock, User, Sun, Moon } from 'lucide-react';
+import { Layers, Eye, EyeOff, Lock, User, Sun, Moon, LogIn } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -212,15 +212,18 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-11 sm:h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-sm sm:text-base rounded-xl shadow-lg shadow-primary/25 transition-all mt-4 active:scale-[0.99] cursor-pointer"
+                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base rounded-xl shadow-lg shadow-blue-500/25 transition-all mt-4 active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>جاري التحقق...</span>
+                    <span>جاري التحقق من الحساب...</span>
                   </div>
                 ) : (
-                  'تسجيل الدخول'
+                  <>
+                    <LogIn className="w-4 h-4 ml-1.5" />
+                    <span>تسجيل الدخول</span>
+                  </>
                 )}
               </Button>
             </form>

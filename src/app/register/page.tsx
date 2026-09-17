@@ -18,7 +18,7 @@ import { useSessionStore } from '@/core/state/useSessionStore';
 import type { Organization, Branch, User, Warehouse, Treasury } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Sun, Moon, Layers } from 'lucide-react';
+import { Sun, Moon, Layers, UserPlus } from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -511,18 +511,18 @@ export default function RegisterPage() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-11 sm:h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-sm sm:text-base rounded-xl shadow-lg shadow-primary/25 transition-all mt-4 cursor-pointer"
+                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base rounded-xl shadow-lg shadow-blue-500/25 transition-all mt-4 active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">
-                    <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                    </svg>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     <span>جاري إنشاء الحساب والمنشأة...</span>
                   </div>
                 ) : (
-                  'إنشاء الحساب'
+                  <>
+                    <UserPlus className="w-4 h-4 ml-1.5" />
+                    <span>إنشاء الحساب</span>
+                  </>
                 )}
               </Button>
             </form>
