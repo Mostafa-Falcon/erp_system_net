@@ -338,7 +338,7 @@ export function SalesReturnForm({
             <span className="text-red-500"><Icons.ReturnArrow /></span>
             أصناف المرتجع
           </h3>
-          <Button onClick={addLine} className="h-9 px-3 bg-[#558b2f] hover:bg-[#436d25] text-white rounded-lg text-xs font-bold flex items-center gap-1.5">
+          <Button onClick={addLine} className="h-9 px-3 rounded-lg text-xs font-bold flex items-center gap-1.5">
             <Icons.Plus /> إضافة صنف
           </Button>
         </div>
@@ -410,7 +410,7 @@ export function SalesReturnForm({
           <div className="text-sm font-black text-slate-900 dark:text-white">
             إجمالي المرتجع: <span className="text-red-500">{formatNumber(total)}</span>
           </div>
-          <Button onClick={save} disabled={isSaving} className="h-11 px-6 bg-[#558b2f] hover:bg-[#436d25] text-white rounded-xl text-sm font-black flex items-center gap-2">
+          <Button onClick={save} disabled={isSaving} className="h-11 px-6 rounded-xl text-sm font-black flex items-center gap-2">
             {isSaving ? 'جارِ التنفيذ...' : 'تنفيذ المرتجع'} <Icons.Check />
           </Button>
         </div>

@@ -287,7 +287,7 @@ export function PurchaseReturnForm({
                 onClick={() => setRefundType('treasury')}
                 className={(
                   'h-10 flex-1 rounded-lg border text-xs font-bold transition-colors ' +
-                  (refundType === 'treasury' ? 'bg-[#558b2f] border-[#558b2f] text-white' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300')
+                  (refundType === 'treasury' ? 'bg-primary border-primary text-primary-foreground' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300')
                 )}
               >
                 استرداد نقدي
@@ -296,7 +296,7 @@ export function PurchaseReturnForm({
                 onClick={() => setRefundType('credit')}
                 className={(
                   'h-10 flex-1 rounded-lg border text-xs font-bold transition-colors ' +
-                  (refundType === 'credit' ? 'bg-[#558b2f] border-[#558b2f] text-white' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300')
+                  (refundType === 'credit' ? 'bg-primary border-primary text-primary-foreground' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300')
                 )}
               >
                 خصم من ذمم المورد
@@ -336,7 +336,7 @@ export function PurchaseReturnForm({
             <span className="text-red-500"><Icons.ReturnArrow /></span>
             أصناف المرتجع
           </h3>
-          <Button onClick={addLine} className="h-9 px-3 bg-[#558b2f] hover:bg-[#436d25] text-white rounded-lg text-xs font-bold flex items-center gap-1.5">
+          <Button onClick={addLine} className="h-9 px-3 rounded-lg text-xs font-bold flex items-center gap-1.5">
             <Icons.Plus /> إضافة صنف
           </Button>
         </div>
@@ -408,7 +408,7 @@ export function PurchaseReturnForm({
           <div className="text-sm font-black text-slate-900 dark:text-white">
             إجمالي المرتجع: <span className="text-red-500">{formatNumber(total)}</span>
           </div>
-          <Button onClick={save} disabled={isSaving} className="h-11 px-6 bg-[#558b2f] hover:bg-[#436d25] text-white rounded-xl text-sm font-black flex items-center gap-2">
+          <Button onClick={save} disabled={isSaving} className="h-11 px-6 rounded-xl text-sm font-black flex items-center gap-2">
             {isSaving ? 'جارِ التنفيذ...' : 'تنفيذ المرتجع'} <Icons.Check />
           </Button>
         </div>

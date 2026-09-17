@@ -275,7 +275,7 @@ export function PurchaseInvoiceForm({ onSaved }: { onSaved: (invoiceId: string) 
               onClick={() => setPaymentType('cash')}
               className={(
                 'h-10 flex-1 rounded-lg border text-xs font-bold transition-colors ' +
-                (paymentType === 'cash' ? 'bg-[#558b2f] border-[#558b2f] text-white' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300')
+                (paymentType === 'cash' ? 'bg-primary border-primary text-primary-foreground' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300')
               )}
             >
               نقدي
@@ -284,7 +284,7 @@ export function PurchaseInvoiceForm({ onSaved }: { onSaved: (invoiceId: string) 
               onClick={() => setPaymentType('credit')}
               className={(
                 'h-10 flex-1 rounded-lg border text-xs font-bold transition-colors ' +
-                (paymentType === 'credit' ? 'bg-[#558b2f] border-[#558b2f] text-white' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300')
+                (paymentType === 'credit' ? 'bg-primary border-primary text-primary-foreground' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300')
               )}
             >
               آجل
@@ -319,10 +319,10 @@ export function PurchaseInvoiceForm({ onSaved }: { onSaved: (invoiceId: string) 
       <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
-            <span className="text-[#558b2f]"><Icons.Receipt /></span>
+            <span className="text-primary"><Icons.Receipt /></span>
             أصناف الفاتورة
           </h3>
-          <Button onClick={addLine} className="h-9 px-3 bg-[#558b2f] hover:bg-[#436d25] text-white rounded-lg text-xs font-bold flex items-center gap-1.5">
+          <Button onClick={addLine} className="h-9 px-3 rounded-lg text-xs font-bold flex items-center gap-1.5">
             <Icons.Plus /> إضافة صنف
           </Button>
         </div>
@@ -400,7 +400,7 @@ export function PurchaseInvoiceForm({ onSaved }: { onSaved: (invoiceId: string) 
                     <Input type="number" min={0} step="any" value={line.taxRate} onChange={(e) => updateLine(idx, { taxRate: e.target.value })} className="h-9 bg-white dark:bg-slate-800 text-xs" />
                   </div>
                   <div className="flex items-end justify-between gap-1">
-                    <div className="text-xs font-black text-[#558b2f] pt-1 whitespace-nowrap">{formatNumber(lineTotals(line))}</div>
+                    <div className="text-xs font-black text-primary pt-1 whitespace-nowrap">{formatNumber(lineTotals(line))}</div>
                     <button onClick={() => removeLine(idx)} className="text-red-500 hover:text-red-700">
                       <Icons.X />
                     </button>
@@ -421,12 +421,12 @@ export function PurchaseInvoiceForm({ onSaved }: { onSaved: (invoiceId: string) 
             <div className="flex justify-between py-1"><span>الإجمالي قبل الضريبة</span><span>{formatNumber(subtotal)}</span></div>
             <div className="flex justify-between py-1"><span>الضريبة</span><span>{formatNumber(taxTotal)}</span></div>
             <div className="flex justify-between py-1"><span>الخصم</span><span>{formatNumber(Number(discount) || 0)}</span></div>
-            <div className="flex justify-between py-1 text-base font-black text-[#558b2f] border-t border-slate-200 dark:border-slate-700 mt-1 pt-2">
+            <div className="flex justify-between py-1 text-base font-black text-primary border-t border-slate-200 dark:border-slate-700 mt-1 pt-2">
               <span>الإجمالي</span><span>{formatNumber(total)}</span>
             </div>
           </div>
           <div className="md:col-span-2 flex items-end justify-end">
-            <Button onClick={save} disabled={isSaving} className="h-11 px-6 bg-[#558b2f] hover:bg-[#436d25] text-white rounded-xl text-sm font-black flex items-center gap-2">
+            <Button onClick={save} disabled={isSaving} className="h-11 px-6 rounded-xl text-sm font-black flex items-center gap-2">
               {isSaving ? 'جارٍ الحفظ...' : 'حفظ الفاتورة'} <Icons.Check />
             </Button>
           </div>

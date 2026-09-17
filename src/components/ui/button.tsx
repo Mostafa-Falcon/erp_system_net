@@ -7,13 +7,13 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-[#558b2f] text-white hover:bg-[#436d25] shadow-sm',
-        destructive: 'bg-red-500 text-white hover:bg-red-600 shadow-sm',
-        outline: 'border border-input bg-background hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200',
-        secondary: 'bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-50',
-        ghost: 'hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-50',
-        link: 'text-[#558b2f] underline-offset-4 hover:underline',
-        brand: 'bg-[#558b2f] hover:bg-[#436d25] text-white font-bold shadow-md hover:shadow-lg transition-all',
+        default: 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm',
+        destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm',
+        outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground text-slate-800 dark:text-slate-200',
+        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+        ghost: 'hover:bg-accent hover:text-accent-foreground',
+        link: 'text-primary underline-offset-4 hover:underline',
+        brand: 'bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-md hover:shadow-lg transition-all',
       },
       size: {
         default: 'h-11 px-5 py-2',

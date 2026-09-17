@@ -451,7 +451,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen }) => {
           </div>
           <span className={cn(
             "w-4 h-4 transition-colors flex items-center justify-center",
-            isBranchMenuOpen ? "text-[#2563eb]" : "text-slate-400 group-hover:text-[#558b2f]"
+            isBranchMenuOpen ? "text-primary" : "text-slate-400 group-hover:text-primary"
           )}>
             <Icons.SwitchArrows />
           </span>

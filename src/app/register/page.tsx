@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
@@ -18,6 +18,7 @@ import { useSessionStore } from '@/core/state/useSessionStore';
 import type { Organization, Branch, User, Warehouse, Treasury } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { Sun, Moon, Layers } from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -31,6 +32,32 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isDark = document.documentElement.classList.contains('dark') || 
+        window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setIsDarkMode(isDark);
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      }
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    if (typeof window !== 'undefined') {
+      const newDark = !isDarkMode;
+      setIsDarkMode(newDark);
+      if (newDark) {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('falcon_theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('falcon_theme', 'light');
+      }
+    }
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -250,30 +277,21 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#f4f6f8] select-none overflow-x-hidden">
+    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-slate-50 dark:bg-[#070b18] select-none overflow-x-hidden transition-colors duration-300">
       {/* 1. Mobile & Tablet Top Branding Banner (< lg) */}
-      <div className="lg:hidden w-full bg-gradient-to-b from-[#0c2e1c] via-[#092316] to-[#05180e] text-white px-6 py-7 flex flex-col items-center text-center shadow-lg relative overflow-hidden">
-        <div className="absolute -top-16 -right-16 w-44 h-44 rounded-full bg-[#16a34a] opacity-15 blur-[60px] pointer-events-none" />
+      <div className="lg:hidden w-full bg-gradient-to-br from-[#0a1026] via-[#0f1738] to-[#070b1a] text-white px-6 py-8 flex flex-col items-center text-center shadow-lg relative overflow-hidden">
+        <div className="absolute -top-16 -right-16 w-44 h-44 rounded-full bg-blue-600/20 blur-[60px] pointer-events-none" />
 
         {/* Compact Emblem */}
-        <div className="w-16 h-16 rounded-full bg-[#123924] border-3 border-[#1e4e32] shadow-xl flex items-center justify-center p-1.5 mb-2.5 z-10">
-          <div className="w-full h-full rounded-full bg-gradient-to-br from-[#6bc639] via-[#3aa639] to-[#168138] flex items-center justify-center shadow-inner">
-            <div className="relative w-7 h-8 bg-white rounded-xs shadow flex items-center justify-center pl-1">
-              <div className="absolute left-0.5 top-1 flex flex-col gap-1">
-                <span className="w-1 h-1 rounded-full bg-[#1b5e20]" />
-                <span className="w-1 h-1 rounded-full bg-[#1b5e20]" />
-                <span className="w-1 h-1 rounded-full bg-[#1b5e20]" />
-              </div>
-              <span className="text-[#1b5e20] font-black text-sm leading-none mr-0.5">$</span>
-            </div>
-          </div>
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-600 to-cyan-500 flex items-center justify-center shadow-lg p-3 mb-3 z-10">
+          <Layers className="w-8 h-8 text-white stroke-[2.2]" />
         </div>
 
-        <h1 className="text-xl font-black text-white tracking-tight z-10">
-          منظومة الإدارة الشاملة
+        <h1 className="text-2xl font-black text-white tracking-tight z-10">
+          Falcon ERP
         </h1>
-        <p className="text-xs font-semibold text-emerald-200/80 z-10 mt-0.5">
-          نظام الإدارة والمحاسبة المتكامل
+        <p className="text-xs font-semibold text-blue-200/90 z-10 mt-1">
+          منظومة الإدارة المالية والمخزنية المتكاملة
         </p>
       </div>
 
@@ -283,20 +301,37 @@ export default function RegisterPage() {
       </div>
 
       {/* 3. Form Side (Left on Desktop, Below Banner on Mobile) */}
-      <div className="w-full lg:w-[50%] xl:w-[48%] min-h-screen flex flex-col justify-center items-center p-4 sm:p-8 lg:p-12 overflow-y-auto">
-        <Card className="w-full max-w-[430px] border-slate-200/80 dark:border-slate-800 shadow-xl dark:bg-[#131b2e] my-auto">
+      <div className="w-full lg:w-[50%] xl:w-[48%] min-h-screen flex flex-col justify-center items-center p-4 sm:p-8 lg:p-12 relative overflow-y-auto">
+        {/* Top bar controls */}
+        <div className="w-full max-w-[440px] flex items-center justify-between mb-4">
+          <span className="text-xs font-bold text-muted-foreground">Falcon System Registration</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            className="w-9 h-9 rounded-xl text-muted-foreground hover:text-foreground"
+            title={isDarkMode ? 'التبديل إلى الوضع الفاتح' : 'التبديل إلى الوضع الداكن'}
+          >
+            {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+          </Button>
+        </div>
+
+        <Card className="w-full max-w-[440px] border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#0f172a] shadow-2xl shadow-slate-200/50 dark:shadow-black/60 rounded-3xl my-auto">
           {/* shadcn Tabs Switcher */}
           <div className="p-6 pb-0">
             <Tabs defaultValue="register" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-2 bg-slate-100 dark:bg-slate-900/90 p-1 rounded-2xl h-11">
                 <TabsTrigger
                   value="login"
                   onClick={() => router.push('/login')}
-                  className="cursor-pointer"
+                  className="rounded-xl text-xs font-black cursor-pointer text-slate-600 dark:text-slate-400 hover:text-foreground"
                 >
                   تسجيل الدخول
                 </TabsTrigger>
-                <TabsTrigger value="register" className="cursor-default">
+                <TabsTrigger
+                  value="register"
+                  className="rounded-xl text-xs font-black cursor-default data-[state=active]:bg-white dark:data-[state=active]:bg-[#1e293b] data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                >
                   إنشاء حساب منشأة
                 </TabsTrigger>
               </TabsList>
@@ -315,188 +350,188 @@ export default function RegisterPage() {
           <CardContent className="space-y-4">
             {/* Register Form */}
             <form onSubmit={handleRegister} className="space-y-4">
-            {/* Full Name */}
-            <div>
-              <Label htmlFor="fullName" className="block text-slate-700 font-bold text-xs sm:text-sm mb-2 text-right">
-                الاسم الكامل
-              </Label>
-              <Input
-                id="fullName"
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="أدخل اسمك بالكامل"
-                required
-                className="h-11 sm:h-12 bg-[#f0f4f8] border-slate-200 rounded-xl focus-visible:ring-[#558b2f] text-sm"
-                icon={
-                  /* ID Card / Badge Icon */
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="3" width="20" height="14" rx="2" />
-                    <line x1="8" y1="21" x2="16" y2="21" />
-                    <line x1="12" y1="17" x2="12" y2="21" />
-                    <circle cx="8" cy="9" r="2" />
-                    <path d="M12 13h4" />
-                    <path d="M12 9h4" />
-                  </svg>
-                }
-              />
-            </div>
+              {/* Full Name */}
+              <div>
+                <Label htmlFor="fullName" className="block text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm mb-2 text-right">
+                  الاسم الكامل
+                </Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="أدخل اسمك بالكامل"
+                  required
+                  className="h-11 sm:h-12 bg-slate-50 dark:bg-[#090e1a] border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-primary/30 text-sm"
+                  icon={
+                    /* ID Card / Badge Icon */
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="3" width="20" height="14" rx="2" />
+                      <line x1="8" y1="21" x2="16" y2="21" />
+                      <line x1="12" y1="17" x2="12" y2="21" />
+                      <circle cx="8" cy="9" r="2" />
+                      <path d="M12 13h4" />
+                      <path d="M12 9h4" />
+                    </svg>
+                  }
+                />
+              </div>
 
-            {/* Email Address */}
-            <div>
-              <Label htmlFor="email" className="block text-slate-700 font-bold text-xs sm:text-sm mb-2 text-right">
-                البريد الإلكتروني
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="example@domain.com"
-                required
-                className="h-11 sm:h-12 bg-[#f0f4f8] border-slate-200 rounded-xl focus-visible:ring-[#558b2f] text-sm"
-                icon={
-                  /* Mail / Envelope Icon */
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="4" width="20" height="16" rx="2" />
-                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                  </svg>
-                }
-              />
-            </div>
+              {/* Email Address */}
+              <div>
+                <Label htmlFor="email" className="block text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm mb-2 text-right">
+                  البريد الإلكتروني
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="example@domain.com"
+                  required
+                  className="h-11 sm:h-12 bg-slate-50 dark:bg-[#090e1a] border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-primary/30 text-sm"
+                  icon={
+                    /* Mail / Envelope Icon */
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="4" width="20" height="16" rx="2" />
+                      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                    </svg>
+                  }
+                />
+              </div>
 
-            {/* Activity Type */}
-            <div>
-              <Label htmlFor="activityType" className="block text-slate-700 font-bold text-xs sm:text-sm mb-2 text-right">
-                نوع النشاط التجاري
-              </Label>
-              <Select value={activityType} onValueChange={setActivityType}>
-                <SelectTrigger className="h-11 sm:h-12 bg-[#f0f4f8] border-slate-200 rounded-xl focus-visible:ring-[#558b2f] text-sm font-semibold">
-                  <SelectValue placeholder="اختر نوع النشاط" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="retail">تجارة عامة وتجزئة وجملة</SelectItem>
-                  <SelectItem value="supermarket">سوبرماركت ومواد غذائية</SelectItem>
-                  <SelectItem value="clothing">ملابس وأحذية وأزياء</SelectItem>
-                  <SelectItem value="electronics">أجهزة وإلكترونيات وكمبيوتر</SelectItem>
-                  <SelectItem value="hardware">حدايد وبويات وقطع غيار</SelectItem>
-                  <SelectItem value="pharmacy">صيدلية ومستلزمات طبية</SelectItem>
-                  <SelectItem value="services">خدمات ومطاعم وكافيهات</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              {/* Activity Type */}
+              <div>
+                <Label htmlFor="activityType" className="block text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm mb-2 text-right">
+                  نوع النشاط التجاري
+                </Label>
+                <Select value={activityType} onValueChange={setActivityType}>
+                  <SelectTrigger className="h-11 sm:h-12 bg-slate-50 dark:bg-[#090e1a] border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-primary/30 text-sm font-semibold">
+                    <SelectValue placeholder="اختر نوع النشاط" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="retail">تجارة عامة وتجزئة وجملة</SelectItem>
+                    <SelectItem value="supermarket">سوبرماركت ومواد غذائية</SelectItem>
+                    <SelectItem value="clothing">ملابس وأحذية وأزياء</SelectItem>
+                    <SelectItem value="electronics">أجهزة وإلكترونيات وكمبيوتر</SelectItem>
+                    <SelectItem value="hardware">حدايد وبويات وقطع غيار</SelectItem>
+                    <SelectItem value="pharmacy">صيدلية ومستلزمات طبية</SelectItem>
+                    <SelectItem value="services">خدمات ومطاعم وكافيهات</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {/* Password */}
-            <div>
-              <Label htmlFor="password" className="block text-slate-700 font-bold text-xs sm:text-sm mb-2 text-right">
-                كلمة المرور
-              </Label>
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                className="h-11 sm:h-12 bg-[#f0f4f8] border-slate-200 rounded-xl focus-visible:ring-[#558b2f] text-sm"
-                icon={
-                  /* Lock Icon */
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                  </svg>
-                }
-                trailingIcon={
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="cursor-pointer text-slate-400 hover:text-slate-600 focus:outline-none"
-                    title={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
-                  >
-                    {showPassword ? (
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                        <line x1="1" y1="1" x2="23" y2="23" />
-                      </svg>
-                    ) : (
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    )}
-                  </button>
-                }
-              />
-            </div>
+              {/* Password */}
+              <div>
+                <Label htmlFor="password" className="block text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm mb-2 text-right">
+                  كلمة المرور
+                </Label>
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="h-11 sm:h-12 bg-slate-50 dark:bg-[#090e1a] border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-primary/30 text-sm"
+                  icon={
+                    /* Lock Icon */
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                  }
+                  trailingIcon={
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="cursor-pointer text-slate-400 hover:text-slate-600 focus:outline-none"
+                      title={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+                    >
+                      {showPassword ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                          <line x1="1" y1="1" x2="23" y2="23" />
+                        </svg>
+                      ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
+                    </button>
+                  }
+                />
+              </div>
 
-            {/* Confirm Password */}
-            <div>
-              <Label htmlFor="confirmPassword" className="block text-slate-700 font-bold text-xs sm:text-sm mb-2 text-right">
-                تأكيد كلمة المرور
-              </Label>
-              <Input
-                id="confirmPassword"
-                type={showConfirmPassword ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                className="h-11 sm:h-12 bg-[#f0f4f8] border-slate-200 rounded-xl focus-visible:ring-[#558b2f] text-sm"
-                icon={
-                  /* Repeat / History / Refresh Icon */
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                    <path d="M3 3v5h5" />
-                  </svg>
-                }
-                trailingIcon={
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="cursor-pointer text-slate-400 hover:text-slate-600 focus:outline-none"
-                    title={showConfirmPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
-                  >
-                    {showConfirmPassword ? (
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                        <line x1="1" y1="1" x2="23" y2="23" />
-                      </svg>
-                    ) : (
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    )}
-                  </button>
-                }
-              />
-            </div>
+              {/* Confirm Password */}
+              <div>
+                <Label htmlFor="confirmPassword" className="block text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm mb-2 text-right">
+                  تأكيد كلمة المرور
+                </Label>
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="h-11 sm:h-12 bg-slate-50 dark:bg-[#090e1a] border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-primary/30 text-sm"
+                  icon={
+                    /* Repeat / History / Refresh Icon */
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                      <path d="M3 3v5h5" />
+                    </svg>
+                  }
+                  trailingIcon={
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="cursor-pointer text-slate-400 hover:text-slate-600 focus:outline-none"
+                      title={showConfirmPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+                    >
+                      {showConfirmPassword ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                          <line x1="1" y1="1" x2="23" y2="23" />
+                        </svg>
+                      ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
+                    </button>
+                  }
+                />
+              </div>
 
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="w-full h-11 sm:h-12 bg-[#558b2f] hover:bg-[#436d25] text-white font-bold text-sm sm:text-base rounded-xl shadow-sm transition-all mt-4 cursor-pointer"
-            >
-              {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                  <span>جاري إنشاء الحساب والمنشأة...</span>
-                </div>
-              ) : (
-                'إنشاء الحساب'
-              )}
-            </Button>
+              {/* Submit Button */}
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-11 sm:h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-sm sm:text-base rounded-xl shadow-lg shadow-primary/25 transition-all mt-4 cursor-pointer"
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    <span>جاري إنشاء الحساب والمنشأة...</span>
+                  </div>
+                ) : (
+                  'إنشاء الحساب'
+                )}
+              </Button>
             </form>
           </CardContent>
 
-          <CardFooter className="flex justify-center border-t border-slate-100 dark:border-slate-800 pt-4 pb-4">
+          <CardFooter className="flex justify-center border-t border-slate-100 dark:border-slate-800/80 pt-4 pb-4">
             <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
               لديك حساب بالفعل؟{' '}
-              <Link href="/login" className="text-[#558b2f] font-bold hover:underline mr-1">
+              <Link href="/login" className="text-primary font-bold hover:underline mr-1">
                 تسجيل الدخول
               </Link>
             </p>
