@@ -36,11 +36,15 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const isDark = document.documentElement.classList.contains('dark') || 
-        window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const savedTheme = localStorage.getItem('falcon_theme');
+      const isDark = savedTheme === 'dark';
       setIsDarkMode(isDark);
       if (isDark) {
         document.documentElement.classList.add('dark');
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.setAttribute('data-theme', 'light');
       }
     }
   }, []);
@@ -51,11 +55,14 @@ export default function RegisterPage() {
       setIsDarkMode(newDark);
       if (newDark) {
         document.documentElement.classList.add('dark');
+        document.documentElement.setAttribute('data-theme', 'dark');
         localStorage.setItem('falcon_theme', 'dark');
       } else {
         document.documentElement.classList.remove('dark');
+        document.documentElement.setAttribute('data-theme', 'light');
         localStorage.setItem('falcon_theme', 'light');
       }
+      window.dispatchEvent(new Event('falcon_theme_change'));
     }
   };
 

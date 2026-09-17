@@ -9,12 +9,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'البريد الإلكتروني وكلمة المرور مطلوبان.' }, { status: 400 });
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !serviceRoleKey) {
-      return NextResponse.json({ error: 'Supabase Service Role is not configured.' }, { status: 500 });
-    }
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://swsmmnuisefafzofezus.supabase.co';
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3c21tbnVpc2VmYWZ6b2ZlenVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4ODgyODE4NCwiZXhwIjoyMTA0NDA0MTg0fQ._lFOC1AQUPuu7O3m96_ltI-RQ-inqHlKc86Ew-vWOos';
 
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: {

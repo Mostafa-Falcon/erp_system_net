@@ -1,14 +1,17 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-erp-tenant.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+const DEFAULT_SUPABASE_URL = 'https://swsmmnuisefafzofezus.supabase.co';
+const DEFAULT_ANON_KEY = 'sb_publishable_14pgd771yVdG3GSAvNd8Ag_A8HWsB41';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_ANON_KEY;
 
 export const isSupabaseConfigured = (): boolean => {
   return (
-    !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    process.env.NEXT_PUBLIC_SUPABASE_URL !== 'https://placeholder-erp-tenant.supabase.co' &&
-    !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== 'placeholder-anon-key'
+    !!supabaseUrl &&
+    supabaseUrl !== 'https://placeholder-erp-tenant.supabase.co' &&
+    !!supabaseAnonKey &&
+    supabaseAnonKey !== 'placeholder-anon-key'
   );
 };
 

@@ -24,11 +24,18 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  // Initialize theme from HTML class or localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const isDark = document.documentElement.classList.contains('dark');
+      const savedTheme = localStorage.getItem('falcon_theme');
+      const isDark = savedTheme === 'dark';
       setIsDarkMode(isDark);
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
     }
   }, []);
 
@@ -38,12 +45,13 @@ export default function LoginPage() {
     if (next) {
       document.documentElement.classList.add('dark');
       document.documentElement.setAttribute('data-theme', 'dark');
-      localStorage.setItem('theme', 'dark');
+      localStorage.setItem('falcon_theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
       document.documentElement.setAttribute('data-theme', 'light');
-      localStorage.setItem('theme', 'light');
+      localStorage.setItem('falcon_theme', 'light');
     }
+    window.dispatchEvent(new Event('falcon_theme_change'));
   };
 
   // If already authenticated, redirect to home

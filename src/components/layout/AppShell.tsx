@@ -36,9 +36,9 @@ const subscribeTheme = (callback: () => void) => {
 };
 
 const getThemeSnapshot = () => {
+  if (typeof window === 'undefined') return false;
   const savedTheme = localStorage.getItem('falcon_theme');
-  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  return savedTheme === 'dark' || (!savedTheme && prefersDark);
+  return savedTheme === 'dark';
 };
 
 const getThemeServerSnapshot = () => false;
