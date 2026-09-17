@@ -1,28 +1,65 @@
 import { db } from '@/core/db/app_database';
-import { supabase, isSupabaseConfigured } from '@/core/supabase/supabase_client';
+import { supabase, isSupabaseConfigured, setOrgTransportToken, restoreOrgTransportToken } from '@/core/supabase/supabase_client';
 import { networkListener } from '@/core/sync/network_listener';
-import type { User } from '@/types';
+import { PullSyncService } from '@/core/sync/pull_sync_service';
+import type { User, Organization, Branch } from '@/types';
 
 export class AuthRepository {
   private static readonly SESSION_STORAGE_KEY = 'falcon_erp_active_user';
 
   /**
    * Fast offline login via PIN Code (crucial for retail & cashiers)
+   * with multi-device cloud fallback if the device is not yet seeded.
    */
   public static async loginWithPin(pin: string): Promise<User | null> {
+    const cleanPin = pin.trim();
+
+    // 1. Fast local Dexie check
     const user = await db.users
-      .filter((u) => u.pin_code_hash === pin && u.is_active)
+      .filter((u) => u.pin_code_hash === cleanPin && Boolean(u.is_active))
       .first();
 
     if (user) {
+      await restoreOrgTransportToken();
       this.saveSession(user);
+
+      if (networkListener.getStatus() && isSupabaseConfigured()) {
+        PullSyncService.pullAll(user.org_id).catch(() => {});
+      }
+
       return user;
     }
+
+    // 2. Multi-device cloud lookup if device is online and not yet seeded
+    if (networkListener.getStatus() && isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase.rpc('falcon_authenticate_device', {
+          p_identifier: cleanPin,
+          p_password: cleanPin,
+        });
+
+        if (!error && data?.success && data.user) {
+          await this.bootstrapDeviceFromCloud(
+            data.user,
+            data.organization,
+            data.branch,
+            data.transport_token,
+            cleanPin
+          );
+
+          this.saveSession(data.user);
+          return data.user;
+        }
+      } catch (err) {
+        console.warn('[AuthRepository] Cloud PIN login failed:', err);
+      }
+    }
+
     return null;
   }
 
   /**
-   * Hybrid authentication: local Dexie fast check + Supabase cloud auth
+   * Hybrid authentication: local Dexie fast check + multi-device cloud RPC
    */
   public static async loginWithEmail(email: string, password: string): Promise<{ user: User | null; error?: string }> {
     const cleanIdentifier = email.trim().toLowerCase();
@@ -39,24 +76,57 @@ export class AuthRepository {
 
       // If user exists locally and password/PIN matches local record
       if (localUser && localUser.pin_code_hash === cleanPassword) {
+        await restoreOrgTransportToken();
         this.saveSession(localUser);
+
+        // If online, perform background sync to capture updates from other devices
+        if (networkListener.getStatus() && isSupabaseConfigured()) {
+          PullSyncService.pullAll(localUser.org_id).catch(() => {});
+        }
+
         return { user: localUser };
       }
 
-      // 2. If online and Supabase is configured, try Supabase Auth
+      // 2. Multi-device cloud login: query falcon_authenticate_device RPC
       if (networkListener.getStatus() && isSupabaseConfigured()) {
         try {
-          const { data, error } = await supabase.auth.signInWithPassword({
+          const { data, error } = await supabase.rpc('falcon_authenticate_device', {
+            p_identifier: cleanIdentifier,
+            p_password: cleanPassword,
+          });
+
+          if (!error && data?.success && data.user) {
+            await this.bootstrapDeviceFromCloud(
+              data.user,
+              data.organization,
+              data.branch,
+              data.transport_token,
+              cleanPassword
+            );
+
+            this.saveSession(data.user);
+            return { user: data.user };
+          } else if (data && !data.success) {
+            return { user: null, error: data.error };
+          }
+        } catch (cloudErr) {
+          console.warn('[AuthRepository] Cloud authentication error:', cloudErr);
+        }
+
+        // Optional fallback: Supabase Auth standard signInWithPassword
+        try {
+          const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
             email: cleanIdentifier,
             password: cleanPassword,
           });
 
-          if (!error && data.user) {
-            let user = await db.users.get(data.user.id);
+          if (!authError && authData.user) {
+            let user = await db.users.get(authData.user.id);
             if (!user) {
               user = await db.users.where('email').equals(cleanIdentifier).first();
             }
             if (user) {
+              await restoreOrgTransportToken();
               this.saveSession(user);
               return { user };
             }
@@ -76,6 +146,91 @@ export class AuthRepository {
       const msg = err instanceof Error ? err.message : 'حدث خطأ أثناء معالجة تسجيل الدخول.';
       return { user: null, error: msg };
     }
+  }
+
+  /**
+   * Initializes a brand-new device with the organization's cloud profile,
+   * configures RLS transport headers, and seeds local Dexie for offline readiness.
+   */
+  private static async bootstrapDeviceFromCloud(
+    cloudUser: User,
+    cloudOrg: Organization | null,
+    cloudBranch: Branch | null,
+    transportToken: string,
+    cleanPassword?: string
+  ): Promise<void> {
+    const now = new Date().toISOString();
+
+    // 1. Activate transport token on client immediately for all cloud requests
+    if (transportToken) {
+      setOrgTransportToken(transportToken);
+    }
+
+    // 2. Persist organization, branch, user, and transport setting in local Dexie
+    await db.transaction(
+      'rw',
+      [db.organizations, db.branches, db.users, db.app_settings],
+      async () => {
+        if (cloudOrg) {
+          await db.organizations.put({
+            id: cloudOrg.id,
+            name: cloudOrg.name,
+            activity_type: cloudOrg.activity_type || 'retail',
+            currency: cloudOrg.currency || 'EGP',
+            transport_token: transportToken,
+            is_active: true,
+            created_at: cloudOrg.created_at || now,
+            updated_at: cloudOrg.updated_at || now,
+            sync_status: 'synced',
+          });
+        }
+
+        if (cloudBranch) {
+          await db.branches.put({
+            id: cloudBranch.id,
+            org_id: cloudBranch.org_id || cloudUser.org_id,
+            code: cloudBranch.code || 'BR-01',
+            name: cloudBranch.name || 'الفرع الرئيسي',
+            is_main: cloudBranch.is_main ?? true,
+            is_active: true,
+            created_at: cloudBranch.created_at || now,
+            updated_at: cloudBranch.updated_at || now,
+            sync_status: 'synced',
+          });
+        }
+
+        if (transportToken) {
+          await db.app_settings.put({
+            id: 'org_transport_token',
+            org_id: cloudUser.org_id,
+            value: transportToken,
+            description: 'Organization transport token for multi-device RLS authorization.',
+            updated_at: now,
+            sync_status: 'synced',
+          });
+        }
+
+        await db.users.put({
+          id: cloudUser.id,
+          org_id: cloudUser.org_id,
+          branch_id: cloudUser.branch_id || cloudBranch?.id,
+          username: cloudUser.username,
+          full_name: cloudUser.full_name,
+          email: cloudUser.email,
+          role: cloudUser.role,
+          pin_code_hash: cleanPassword || cloudUser.pin_code_hash, // cached locally for subsequent offline logins
+          is_active: true,
+          created_at: cloudUser.created_at || now,
+          updated_at: cloudUser.updated_at || now,
+          sync_status: 'synced',
+        });
+      }
+    );
+
+    // 3. Trigger immediate pull sync for all organizational data (products, invoices, etc.)
+    PullSyncService.pullAll(cloudUser.org_id).catch((err) => {
+      console.warn('[AuthRepository] Initial multi-device background pull failed:', err);
+    });
   }
 
   public static saveSession(user: User): void {
