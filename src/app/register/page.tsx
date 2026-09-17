@@ -247,18 +247,39 @@ export default function RegisterPage() {
             .from('users')
             .upsert(newUser, { onConflict: 'id' });
 
-          // 3. Attach the org to the signed-in Supabase Auth user session
-          await supabase.auth.signUp({
-            email: email.trim(),
-            password: password.trim(),
-            options: {
-              data: {
-                full_name: fullName.trim(),
+          // 3. Register user in Supabase Auth (auth.users) via server API route
+          try {
+            await fetch('/api/auth/register-user', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                email: email.trim(),
+                password: password.trim(),
+                fullName: fullName.trim(),
+                orgId,
                 role: 'super_admin',
-                org_id: orgId,
+              }),
+            });
+          } catch (apiErr) {
+            console.warn('Backend auth registration fallback:', apiErr);
+          }
+
+          // 4. Attach session in Supabase Auth client if supported
+          try {
+            await supabase.auth.signUp({
+              email: email.trim(),
+              password: password.trim(),
+              options: {
+                data: {
+                  full_name: fullName.trim(),
+                  role: 'super_admin',
+                  org_id: orgId,
+                },
               },
-            },
-          });
+            });
+          } catch (signUpErr) {
+            console.warn('Client-side signUp skipped:', signUpErr);
+          }
         } catch (cloudErr) {
           console.warn('Supabase cloud registration queued:', cloudErr);
         }
