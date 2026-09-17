@@ -111,42 +111,43 @@ export default function LoginPage() {
       </div>
 
       {/* 3. Form Side (Left on Desktop, Below Banner on Mobile) */}
-      <div className="w-full lg:w-[50%] xl:w-[48%] min-h-screen flex flex-col justify-center items-center p-4 sm:p-8 lg:p-12 relative overflow-y-auto">
-        {/* Top bar controls */}
-        <div className="w-full max-w-[430px] flex items-center justify-between mb-4">
-          <span className="text-xs font-bold text-muted-foreground">Falcon System Access</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            className="w-9 h-9 rounded-xl text-muted-foreground hover:text-foreground"
-            title={isDarkMode ? 'التبديل إلى الوضع الفاتح' : 'التبديل إلى الوضع الداكن'}
-          >
-            {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
-          </Button>
-        </div>
-
-        <Card className="w-full max-w-[430px] border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#0f172a] shadow-2xl shadow-slate-200/50 dark:shadow-black/60 rounded-3xl my-auto">
-          {/* shadcn Tabs Switcher */}
-          <div className="p-6 pb-0">
-            <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-slate-100 dark:bg-slate-900/90 p-1 rounded-2xl h-11">
-                <TabsTrigger
-                  value="login"
-                  className="rounded-xl text-xs font-black cursor-default data-[state=active]:bg-white dark:data-[state=active]:bg-[#1e293b] data-[state=active]:text-primary data-[state=active]:shadow-sm"
-                >
-                  تسجيل الدخول
-                </TabsTrigger>
-                <TabsTrigger
-                  value="register"
-                  onClick={() => router.push('/register')}
-                  className="rounded-xl text-xs font-bold cursor-pointer text-muted-foreground hover:text-foreground"
-                >
-                  إنشاء حساب منشأة
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+      <div className="w-full lg:w-[50%] xl:w-[48%] min-h-screen flex flex-col items-center py-6 sm:py-8 px-4 sm:px-8 relative overflow-y-auto">
+        <div className="w-full max-w-[430px] my-auto flex flex-col items-center">
+          {/* Top bar controls */}
+          <div className="w-full flex items-center justify-between mb-3 sm:mb-4">
+            <span className="text-xs font-bold text-muted-foreground">Falcon System Access</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              className="w-9 h-9 rounded-xl text-muted-foreground hover:text-foreground"
+              title={isDarkMode ? 'التبديل إلى الوضع الفاتح' : 'التبديل إلى الوضع الداكن'}
+            >
+              {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+            </Button>
           </div>
+
+          <Card className="w-full border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#0f172a] shadow-2xl shadow-slate-200/50 dark:shadow-black/60 rounded-3xl overflow-hidden">
+            {/* shadcn Tabs Switcher */}
+            <div className="p-5 sm:p-6 pb-0">
+              <Tabs defaultValue="login" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 bg-slate-100 dark:bg-slate-900/90 p-1 rounded-2xl h-11 border border-slate-200/60 dark:border-slate-800/80">
+                  <TabsTrigger
+                    value="login"
+                    className="rounded-xl text-xs font-black cursor-default data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all"
+                  >
+                    تسجيل الدخول
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="register"
+                    onClick={() => router.push('/register')}
+                    className="rounded-xl text-xs font-bold cursor-pointer text-muted-foreground hover:text-foreground transition-all"
+                  >
+                    إنشاء حساب منشأة
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
 
           <CardHeader className="text-center pb-3 pt-5">
             <CardTitle className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
@@ -237,7 +238,8 @@ export default function LoginPage() {
               </Link>
             </p>
           </CardFooter>
-        </Card>
+          </Card>
+        </div>
       </div>
     </div>
   );

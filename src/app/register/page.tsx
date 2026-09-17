@@ -18,7 +18,7 @@ import { useSessionStore } from '@/core/state/useSessionStore';
 import type { Organization, Branch, User, Warehouse, Treasury } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Sun, Moon, Layers, UserPlus } from 'lucide-react';
+import { Sun, Moon, Layers, UserPlus, User as UserIcon, Mail, Lock, ShieldCheck, Eye, EyeOff, Store } from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -301,242 +301,199 @@ export default function RegisterPage() {
       </div>
 
       {/* 3. Form Side (Left on Desktop, Below Banner on Mobile) */}
-      <div className="w-full lg:w-[50%] xl:w-[48%] min-h-screen flex flex-col justify-center items-center p-4 sm:p-8 lg:p-12 relative overflow-y-auto">
-        {/* Top bar controls */}
-        <div className="w-full max-w-[440px] flex items-center justify-between mb-4">
-          <span className="text-xs font-bold text-muted-foreground">Falcon System Registration</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            className="w-9 h-9 rounded-xl text-muted-foreground hover:text-foreground"
-            title={isDarkMode ? 'التبديل إلى الوضع الفاتح' : 'التبديل إلى الوضع الداكن'}
-          >
-            {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
-          </Button>
-        </div>
-
-        <Card className="w-full max-w-[440px] border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#0f172a] shadow-2xl shadow-slate-200/50 dark:shadow-black/60 rounded-3xl my-auto">
-          {/* shadcn Tabs Switcher */}
-          <div className="p-6 pb-0">
-            <Tabs defaultValue="register" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-slate-100 dark:bg-slate-900/90 p-1 rounded-2xl h-11">
-                <TabsTrigger
-                  value="login"
-                  onClick={() => router.push('/login')}
-                  className="rounded-xl text-xs font-black cursor-pointer text-slate-600 dark:text-slate-400 hover:text-foreground"
-                >
-                  تسجيل الدخول
-                </TabsTrigger>
-                <TabsTrigger
-                  value="register"
-                  className="rounded-xl text-xs font-black cursor-default data-[state=active]:bg-white dark:data-[state=active]:bg-[#1e293b] data-[state=active]:text-primary data-[state=active]:shadow-sm"
-                >
-                  إنشاء حساب منشأة
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+      <div className="w-full lg:w-[50%] xl:w-[48%] min-h-screen flex flex-col items-center py-6 sm:py-8 px-4 sm:px-8 relative overflow-y-auto">
+        <div className="w-full max-w-[440px] my-auto flex flex-col items-center">
+          {/* Top bar controls */}
+          <div className="w-full flex items-center justify-between mb-3 sm:mb-4">
+            <span className="text-xs font-bold text-muted-foreground">Falcon System Registration</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              className="w-9 h-9 rounded-xl text-muted-foreground hover:text-foreground"
+              title={isDarkMode ? 'التبديل إلى الوضع الفاتح' : 'التبديل إلى الوضع الداكن'}
+            >
+              {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+            </Button>
           </div>
 
-          <CardHeader className="text-center pb-3 pt-5">
-            <CardTitle className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-              إنشاء حساب منشأة
-            </CardTitle>
-            <CardDescription className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">
-              سجل منشأتك الآن للبدء في إدارة نشاطك التجاري والمخزون.
-            </CardDescription>
-          </CardHeader>
+          <Card className="w-full border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#0f172a] shadow-2xl shadow-slate-200/50 dark:shadow-black/60 rounded-3xl overflow-hidden">
+            {/* shadcn Tabs Switcher */}
+            <div className="p-5 sm:p-6 pb-0">
+              <Tabs defaultValue="register" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 bg-slate-100 dark:bg-slate-900/90 p-1 rounded-2xl h-11 border border-slate-200/60 dark:border-slate-800/80">
+                  <TabsTrigger
+                    value="login"
+                    onClick={() => router.push('/login')}
+                    className="rounded-xl text-xs font-black cursor-pointer text-slate-600 dark:text-slate-400 hover:text-foreground transition-all"
+                  >
+                    تسجيل الدخول
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="register"
+                    className="rounded-xl text-xs font-black cursor-default data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all"
+                  >
+                    إنشاء حساب منشأة
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
 
-          <CardContent className="space-y-4">
-            {/* Register Form */}
-            <form onSubmit={handleRegister} className="space-y-4">
-              {/* Full Name */}
-              <div>
-                <Label htmlFor="fullName" className="block text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm mb-2 text-right">
-                  الاسم الكامل
-                </Label>
-                <Input
-                  id="fullName"
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="أدخل اسمك بالكامل"
-                  required
-                  className="h-11 sm:h-12 bg-slate-50 dark:bg-[#090e1a] border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-primary/30 text-sm"
-                  icon={
-                    /* ID Card / Badge Icon */
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="2" y="3" width="20" height="14" rx="2" />
-                      <line x1="8" y1="21" x2="16" y2="21" />
-                      <line x1="12" y1="17" x2="12" y2="21" />
-                      <circle cx="8" cy="9" r="2" />
-                      <path d="M12 13h4" />
-                      <path d="M12 9h4" />
-                    </svg>
-                  }
-                />
-              </div>
+            <CardHeader className="text-center pb-2 pt-4 sm:pt-5">
+              <CardTitle className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                إنشاء حساب منشأة
+              </CardTitle>
+              <CardDescription className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">
+                سجل منشأتك الآن للبدء في إدارة نشاطك التجاري والمخزون.
+              </CardDescription>
+            </CardHeader>
 
-              {/* Email Address */}
-              <div>
-                <Label htmlFor="email" className="block text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm mb-2 text-right">
-                  البريد الإلكتروني
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="example@domain.com"
-                  required
-                  className="h-11 sm:h-12 bg-slate-50 dark:bg-[#090e1a] border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-primary/30 text-sm"
-                  icon={
-                    /* Mail / Envelope Icon */
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="2" y="4" width="20" height="16" rx="2" />
-                      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                    </svg>
-                  }
-                />
-              </div>
+            <CardContent className="space-y-3 sm:space-y-3.5 p-5 sm:p-6 pt-2 sm:pt-3">
+              {/* Register Form */}
+              <form onSubmit={handleRegister} className="space-y-3 sm:space-y-3.5">
+                {/* Full Name */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="fullName" className="block text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm text-right">
+                    الاسم الكامل
+                  </Label>
+                  <Input
+                    id="fullName"
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="أدخل اسمك بالكامل"
+                    required
+                    className="h-10.5 sm:h-11 bg-slate-50 dark:bg-[#090e1a] border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-2 focus-visible:ring-primary/30 text-sm"
+                    icon={<UserIcon className="w-4 h-4 text-slate-400" />}
+                  />
+                </div>
 
-              {/* Activity Type */}
-              <div>
-                <Label htmlFor="activityType" className="block text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm mb-2 text-right">
-                  نوع النشاط التجاري
-                </Label>
-                <Select value={activityType} onValueChange={setActivityType}>
-                  <SelectTrigger className="h-11 sm:h-12 bg-slate-50 dark:bg-[#090e1a] border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-primary/30 text-sm font-semibold">
-                    <SelectValue placeholder="اختر نوع النشاط" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="retail">تجارة عامة وتجزئة وجملة</SelectItem>
-                    <SelectItem value="supermarket">سوبرماركت ومواد غذائية</SelectItem>
-                    <SelectItem value="clothing">ملابس وأحذية وأزياء</SelectItem>
-                    <SelectItem value="electronics">أجهزة وإلكترونيات وكمبيوتر</SelectItem>
-                    <SelectItem value="hardware">حدايد وبويات وقطع غيار</SelectItem>
-                    <SelectItem value="pharmacy">صيدلية ومستلزمات طبية</SelectItem>
-                    <SelectItem value="services">خدمات ومطاعم وكافيهات</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                {/* Email Address */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="email" className="block text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm text-right">
+                    البريد الإلكتروني
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="example@domain.com"
+                    required
+                    className="h-10.5 sm:h-11 bg-slate-50 dark:bg-[#090e1a] border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-2 focus-visible:ring-primary/30 text-sm"
+                    icon={<Mail className="w-4 h-4 text-slate-400" />}
+                  />
+                </div>
 
-              {/* Password */}
-              <div>
-                <Label htmlFor="password" className="block text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm mb-2 text-right">
-                  كلمة المرور
-                </Label>
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  className="h-11 sm:h-12 bg-slate-50 dark:bg-[#090e1a] border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-primary/30 text-sm"
-                  icon={
-                    /* Lock Icon */
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
-                  }
-                  trailingIcon={
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="cursor-pointer text-slate-400 hover:text-slate-600 focus:outline-none"
-                      title={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
-                    >
-                      {showPassword ? (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                          <line x1="1" y1="1" x2="23" y2="23" />
-                        </svg>
-                      ) : (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                          <circle cx="12" cy="12" r="3" />
-                        </svg>
-                      )}
-                    </button>
-                  }
-                />
-              </div>
+                {/* Activity Type */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="activityType" className="block text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm text-right">
+                    نوع النشاط التجاري
+                  </Label>
+                  <Select value={activityType} onValueChange={setActivityType}>
+                    <SelectTrigger className="h-10.5 sm:h-11 bg-slate-50 dark:bg-[#090e1a] border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-2 focus-visible:ring-primary/30 text-sm font-semibold flex items-center justify-between px-3">
+                      <div className="flex items-center gap-2">
+                        <Store className="w-4 h-4 text-slate-400 shrink-0" />
+                        <SelectValue placeholder="اختر نوع النشاط" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="retail">تجارة عامة وتجزئة وجملة</SelectItem>
+                      <SelectItem value="supermarket">سوبرماركت ومواد غذائية</SelectItem>
+                      <SelectItem value="clothing">ملابس وأحذية وأزياء</SelectItem>
+                      <SelectItem value="electronics">أجهزة وإلكترونيات وكمبيوتر</SelectItem>
+                      <SelectItem value="hardware">حدايد وبويات وقطع غيار</SelectItem>
+                      <SelectItem value="pharmacy">صيدلية ومستلزمات طبية</SelectItem>
+                      <SelectItem value="services">خدمات ومطاعم وكافيهات</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              {/* Confirm Password */}
-              <div>
-                <Label htmlFor="confirmPassword" className="block text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm mb-2 text-right">
-                  تأكيد كلمة المرور
-                </Label>
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  className="h-11 sm:h-12 bg-slate-50 dark:bg-[#090e1a] border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-primary/30 text-sm"
-                  icon={
-                    /* Repeat / History / Refresh Icon */
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                      <path d="M3 3v5h5" />
-                    </svg>
-                  }
-                  trailingIcon={
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="cursor-pointer text-slate-400 hover:text-slate-600 focus:outline-none"
-                      title={showConfirmPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
-                    >
-                      {showConfirmPassword ? (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                          <line x1="1" y1="1" x2="23" y2="23" />
-                        </svg>
-                      ) : (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                          <circle cx="12" cy="12" r="3" />
-                        </svg>
-                      )}
-                    </button>
-                  }
-                />
-              </div>
+                {/* Password */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="password" className="block text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm text-right">
+                    كلمة المرور
+                  </Label>
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    className="h-10.5 sm:h-11 bg-slate-50 dark:bg-[#090e1a] border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-2 focus-visible:ring-primary/30 text-sm tracking-wider"
+                    icon={<Lock className="w-4 h-4 text-slate-400" />}
+                    trailingIcon={
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="cursor-pointer text-slate-400 hover:text-slate-600 focus:outline-none"
+                        title={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    }
+                  />
+                </div>
 
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base rounded-xl shadow-lg shadow-blue-500/25 transition-all mt-4 active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
-              >
-                {isLoading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>جاري إنشاء الحساب والمنشأة...</span>
-                  </div>
-                ) : (
-                  <>
-                    <UserPlus className="w-4 h-4 ml-1.5" />
-                    <span>إنشاء الحساب</span>
-                  </>
-                )}
-              </Button>
-            </form>
-          </CardContent>
+                {/* Confirm Password */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="confirmPassword" className="block text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm text-right">
+                    تأكيد كلمة المرور
+                  </Label>
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    className="h-10.5 sm:h-11 bg-slate-50 dark:bg-[#090e1a] border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-2 focus-visible:ring-primary/30 text-sm tracking-wider"
+                    icon={<ShieldCheck className="w-4 h-4 text-slate-400" />}
+                    trailingIcon={
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="cursor-pointer text-slate-400 hover:text-slate-600 focus:outline-none"
+                        title={showConfirmPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    }
+                  />
+                </div>
 
-          <CardFooter className="flex justify-center border-t border-slate-100 dark:border-slate-800/80 pt-4 pb-4">
-            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
-              لديك حساب بالفعل؟{' '}
-              <Link href="/login" className="text-primary font-bold hover:underline mr-1">
-                تسجيل الدخول
-              </Link>
-            </p>
-          </CardFooter>
-        </Card>
+                {/* Submit Button */}
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full h-11 sm:h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm sm:text-base rounded-xl shadow-lg shadow-blue-500/25 transition-all mt-3 active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>جاري إنشاء الحساب والمنشأة...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <UserPlus className="w-4 h-4 ml-1.5" />
+                      <span>إنشاء الحساب</span>
+                    </>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+
+            <CardFooter className="flex justify-center border-t border-slate-100 dark:border-slate-800/80 py-3 sm:py-4">
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                لديك حساب بالفعل؟{' '}
+                <Link href="/login" className="text-primary font-bold hover:underline mr-1">
+                  تسجيل الدخول
+                </Link>
+              </p>
+            </CardFooter>
+          </Card>
+        </div>
       </div>
     </div>
   );
