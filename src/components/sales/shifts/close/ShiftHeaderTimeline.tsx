@@ -96,7 +96,7 @@ export function ShiftHeaderTimeline({
                 </Badge>
               </div>
               <span className="text-[11px] font-semibold text-slate-400 hidden sm:inline-block">
-                لوجيسكا ERP | نظام إدارة الصيدلية ونقاط البيع v1
+                لوجيسكا ERP | نظام إدارة الموارد ونقاط البيع v1
               </span>
             </div>
           </div>

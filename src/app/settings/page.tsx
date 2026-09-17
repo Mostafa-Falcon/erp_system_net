@@ -46,6 +46,7 @@ export default function SettingsPage() {
   // Identity state
   const [nameAr, setNameAr] = useState('');
   const [nameEn, setNameEn] = useState('');
+  const [activityType, setActivityType] = useState('retail');
 
   // Contact & Taxes state
   const [phone, setPhone] = useState('');
@@ -75,6 +76,7 @@ export default function SettingsPage() {
         if (orgRec) {
           setNameAr(orgRec.name || '');
           setNameEn(orgRec.legal_name || ''); // maps English name to legal_name field
+          setActivityType(orgRec.activity_type || 'retail');
           setPhone(orgRec.phone || '');
           setEmail(orgRec.email || '');
           setAddress(orgRec.address || '');
@@ -119,6 +121,7 @@ export default function SettingsPage() {
       await SettingsRepository.updateOrganization(orgId, {
         name: nameAr.trim(),
         legal_name: nameEn.trim() || undefined,
+        activity_type: activityType,
         phone: phone.trim() || undefined,
         email: email.trim() || undefined,
         address: address.trim() || undefined,
@@ -253,6 +256,17 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-3 text-xs font-bold text-slate-600 dark:text-slate-400">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 font-medium">نوع النشاط</span>
+                <span className="text-emerald-700 dark:text-emerald-400 font-black">
+                  {activityType === 'supermarket' ? 'سوبرماركت ومواد غذائية' :
+                   activityType === 'clothing' ? 'ملابس وأحذية وأزياء' :
+                   activityType === 'electronics' ? 'أجهزة وإلكترونيات' :
+                   activityType === 'hardware' ? 'حدايد وبويات وقطع غيار' :
+                   activityType === 'pharmacy' ? 'صيدلية ومستلزمات' :
+                   activityType === 'services' ? 'خدمات ومطاعم' : 'تجارة عامة وتجزئة'}
+                </span>
+              </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 font-medium">الفرع النشط</span>
                 <span className="text-slate-900 dark:text-white">الفرع الرئيسي</span>
@@ -391,6 +405,26 @@ export default function SettingsPage() {
                     </button>
                   )}
                 </div>
+              </div>
+
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="text-[11px] font-black text-slate-700 dark:text-slate-300">
+                  نوع النشاط التجاري
+                </label>
+                <Select value={activityType} onValueChange={setActivityType}>
+                  <SelectTrigger className="h-10 bg-slate-50/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white">
+                    <SelectValue placeholder="اختر نوع النشاط" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="retail">تجارة عامة وتجزئة وجملة</SelectItem>
+                    <SelectItem value="supermarket">سوبرماركت ومواد غذائية</SelectItem>
+                    <SelectItem value="clothing">ملابس وأحذية وأزياء</SelectItem>
+                    <SelectItem value="electronics">أجهزة وإلكترونيات وكمبيوتر</SelectItem>
+                    <SelectItem value="hardware">حدايد وبويات وقطع غيار ومواد بناء</SelectItem>
+                    <SelectItem value="pharmacy">صيدلية ومستلزمات طبية</SelectItem>
+                    <SelectItem value="services">خدمات ومطاعم وكافيهات</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

@@ -11,10 +11,12 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AuthBrandingPanel } from '@/components/auth/AuthBrandingPanel';
 import { db } from '@/core/db/app_database';
-import { supabase, isSupabaseConfigured } from '@/core/supabase/supabase_client';
+import { supabase, isSupabaseConfigured, setOrgTransportToken, generateOrgTransportToken } from '@/core/supabase/supabase_client';
 import { SyncQueueManager } from '@/core/sync/sync_queue_manager';
+import { AccountingRepository } from '@/modules/accounting/accounting_repository';
 import { useSessionStore } from '@/core/state/useSessionStore';
 import type { Organization, Branch, User, Warehouse, Treasury } from '@/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
 export default function RegisterPage() {
@@ -23,6 +25,7 @@ export default function RegisterPage() {
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [activityType, setActivityType] = useState('retail');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -52,6 +55,10 @@ export default function RegisterPage() {
       const treasuryId = uuidv4();
       const userId = uuidv4();
 
+      // Per-device transport token: authorizes this device for the org
+      // via the `x-falcon-org-token` header (RLS hybrid identity).
+      const transportToken = generateOrgTransportToken();
+
       // Derive clean organization name from owner's name
       const derivedOrgName = `مؤسسة ${fullName.trim()}`;
 
@@ -59,7 +66,9 @@ export default function RegisterPage() {
       const newOrg: Organization = {
         id: orgId,
         name: derivedOrgName,
+        activity_type: activityType,
         currency: 'EGP',
+        transport_token: transportToken,
         is_active: true,
         created_at: now,
         updated_at: now,
@@ -99,6 +108,7 @@ export default function RegisterPage() {
         org_id: orgId,
         branch_id: branchId,
         name: 'الخزينة الرئيسية',
+        account_code: '1110',
         type: 'safe',
         current_balance: 0,
         is_default: true,
@@ -143,7 +153,7 @@ export default function RegisterPage() {
       // Atomic local storage in Dexie
       await db.transaction(
         'rw',
-        [db.organizations, db.branches, db.warehouses, db.treasuries, db.users, db.units, db.expense_categories, db.sync_queue],
+        [db.organizations, db.branches, db.warehouses, db.treasuries, db.users, db.units, db.expense_categories, db.app_settings, db.sync_queue],
         async () => {
           await db.organizations.put(newOrg);
           await db.branches.put(newBranch);
@@ -152,6 +162,14 @@ export default function RegisterPage() {
           await db.users.put(newUser);
           await db.units.bulkPut(defaultUnits);
           await db.expense_categories.bulkPut(defaultExpenseCategories);
+          await db.app_settings.put({
+            id: 'org_transport_token',
+            org_id: orgId,
+            value: transportToken,
+            description: 'Organization transport token for RLS (never synced to cloud).',
+            updated_at: now,
+            sync_status: 'synced',
+          });
 
           await SyncQueueManager.enqueue('organizations', orgId, 'insert', newOrg);
           await SyncQueueManager.enqueue('branches', branchId, 'insert', newBranch);
@@ -161,9 +179,42 @@ export default function RegisterPage() {
         }
       );
 
+      // Seed the default chart of accounts for the new organization
+      await AccountingRepository.ensureDefaultChartOfAccounts(orgId);
+
       // Direct online sync to Supabase if connected
       if (isSupabaseConfigured()) {
         try {
+          // Activate the org transport token for every subsequent cloud request
+          setOrgTransportToken(transportToken);
+
+          // 1. Register the organization row via SECURITY DEFINER RPC
+          //    (no JWT / token exists yet, so the direct INSERT would be blocked by RLS).
+          const { error: rpcError } = await supabase.rpc('falcon_register_organization', {
+            p_id: orgId,
+            p_name: derivedOrgName,
+            p_currency: 'EGP',
+            p_transport_token: transportToken,
+          });
+          if (rpcError) {
+            throw rpcError;
+          }
+
+          // 2. Sync the remaining bootstrap records (RLS approves via transport token)
+          await supabase
+            .from('branches')
+            .upsert(newBranch, { onConflict: 'id' });
+          await supabase
+            .from('warehouses')
+            .upsert(newWarehouse, { onConflict: 'id' });
+          await supabase
+            .from('treasuries')
+            .upsert(newTreasury, { onConflict: 'id' });
+          await supabase
+            .from('users')
+            .upsert(newUser, { onConflict: 'id' });
+
+          // 3. Attach the org to the signed-in Supabase Auth user session
           await supabase.auth.signUp({
             email: email.trim(),
             password: password.trim(),
@@ -175,11 +226,6 @@ export default function RegisterPage() {
               },
             },
           });
-          await supabase.from('organizations').upsert(newOrg);
-          await supabase.from('branches').upsert(newBranch);
-          await supabase.from('warehouses').upsert(newWarehouse);
-          await supabase.from('treasuries').upsert(newTreasury);
-          await supabase.from('users').upsert(newUser);
         } catch (cloudErr) {
           console.warn('Supabase cloud registration queued:', cloudErr);
         }
@@ -311,6 +357,27 @@ export default function RegisterPage() {
                   </svg>
                 }
               />
+            </div>
+
+            {/* Activity Type */}
+            <div>
+              <Label htmlFor="activityType" className="block text-slate-700 font-bold text-xs sm:text-sm mb-2 text-right">
+                نوع النشاط التجاري
+              </Label>
+              <Select value={activityType} onValueChange={setActivityType}>
+                <SelectTrigger className="h-11 sm:h-12 bg-[#f0f4f8] border-slate-200 rounded-xl focus-visible:ring-[#558b2f] text-sm font-semibold">
+                  <SelectValue placeholder="اختر نوع النشاط" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="retail">تجارة عامة وتجزئة وجملة</SelectItem>
+                  <SelectItem value="supermarket">سوبرماركت ومواد غذائية</SelectItem>
+                  <SelectItem value="clothing">ملابس وأحذية وأزياء</SelectItem>
+                  <SelectItem value="electronics">أجهزة وإلكترونيات وكمبيوتر</SelectItem>
+                  <SelectItem value="hardware">حدايد وبويات وقطع غيار</SelectItem>
+                  <SelectItem value="pharmacy">صيدلية ومستلزمات طبية</SelectItem>
+                  <SelectItem value="services">خدمات ومطاعم وكافيهات</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Password */}

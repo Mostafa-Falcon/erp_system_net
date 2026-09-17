@@ -42,6 +42,8 @@ export interface Expense {
   description: string;
   receipt_number?: string;
   created_by: EntityId;
+  is_deleted?: boolean;
+  deleted_at?: ISODateString | null;
   created_at: ISODateString;
   sync_status?: 'synced' | 'pending' | 'failed';
 }
@@ -59,12 +61,15 @@ export interface FinancialVoucher {
   amount: number;
   description: string;
   reference_no?: string;
+  is_reversed?: boolean;
+  reversal_reason?: string | null;
+  reversed_voucher_id?: EntityId | null;
   created_by: EntityId;
   created_at: ISODateString;
   sync_status?: 'synced' | 'pending' | 'failed';
 }
 
-export type JournalEntryType = 'general' | 'sales' | 'purchases' | 'expenses' | 'opening';
+export type JournalEntryType = 'general' | 'sales' | 'purchases' | 'expenses' | 'opening' | 'payroll' | 'voucher' | 'adjustment' | 'reversal';
 
 export interface JournalEntry {
   id: EntityId;
@@ -74,7 +79,10 @@ export interface JournalEntry {
   entry_date: ISODateString;
   type: JournalEntryType;
   description: string;
+  reference_type?: string | null;
+  reference_id?: EntityId | null;
   total_amount: number;
+  is_reversed?: boolean;
   created_by: EntityId;
   created_at: ISODateString;
   sync_status?: 'synced' | 'pending' | 'failed';
@@ -100,6 +108,7 @@ export interface Account {
   account_type: 'parent' | 'leaf';
   current_balance: number;
   is_active: boolean;
+  system_flag?: boolean;
   created_at: ISODateString;
   updated_at: ISODateString;
   sync_status?: 'synced' | 'pending' | 'failed';

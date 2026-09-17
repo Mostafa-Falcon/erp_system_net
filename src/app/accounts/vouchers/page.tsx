@@ -375,7 +375,7 @@ function VouchersContent() {
                 </Label>
                 <div className="relative group">
                   <Input
-                    placeholder="مثال: صيدلية الأمل / شركة المتحدة"
+                    placeholder="مثال: مؤسسة الأمل / شركة المتحدة"
                     value={vContactId}
                     onChange={(e) => setVContactId(e.target.value)}
                     className="h-11 bg-slate-50/50 border-slate-200 focus:bg-white rounded-xl text-xs font-bold"

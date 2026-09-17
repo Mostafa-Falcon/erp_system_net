@@ -62,7 +62,7 @@ export const TransferBasicInfoCard: React.FC<TransferBasicInfoCardProps> = ({
           </div>
         </div>
 
-        {/* 2. Sender Branch (Current Active Branch of the Pharmacy Owner) */}
+        {/* 2. Sender Branch (Current Active Branch of the Business Owner) */}
         <div>
           <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">
             من الفرع المرسل <span className="text-emerald-600 dark:text-emerald-400 text-[11px] font-normal">(الفرع الحالي النشط)</span>

@@ -131,7 +131,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="مثال: قميص قطن، جبن، شاي، لابتوب، دواء..."
+                  placeholder="مثال: قميص قطن، جبن، شاي، لابتوب..."
                   className="h-11 text-xs font-bold rounded-xl"
                 />
               </div>
@@ -146,7 +146,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                       type="text"
                       value={scientificName}
                       onChange={(e) => setScientificName(e.target.value)}
-                      placeholder="وصف إضافي، ماركة، مواصفات، أو مادة فعالة"
+                      placeholder="وصف إضافي، ماركة، أو مواصفات فنية وموديل"
                       className="h-11 text-xs rounded-xl"
                     />
                   </div>

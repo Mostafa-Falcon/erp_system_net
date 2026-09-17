@@ -35,7 +35,7 @@ export const TransferSelectedItemsTable: React.FC<TransferSelectedItemsTableProp
             لم يتم إضافة أي أصناف حتى الآن
           </span>
           <span className="text-[11px] text-slate-400 max-w-sm">
-            ابحث عن الأدوية أو المستلزمات أعلاه وحدد الكمية ثم اضغط زر "إضافة" لإدراجها في أمر التحويل.
+            ابحث عن الأصناف أو المستلزمات أعلاه وحدد الكمية ثم اضغط زر "إضافة" لإدراجها في أمر التحويل.
           </span>
         </div>
       ) : (
@@ -45,7 +45,7 @@ export const TransferSelectedItemsTable: React.FC<TransferSelectedItemsTableProp
               <thead>
                 <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 text-slate-500 dark:text-slate-400 text-xs font-bold">
                   <th className="py-3 px-4">#</th>
-                  <th className="py-3 px-4">اسم الدواء / الصنف</th>
+                  <th className="py-3 px-4">اسم الصنف</th>
                   <th className="py-3 px-4">الباركود</th>
                   <th className="py-3 px-4">الوحدة</th>
                   <th className="py-3 px-4 text-center">الكمية المحولة</th>

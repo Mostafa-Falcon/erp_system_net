@@ -260,7 +260,7 @@ export function SupplierForm({ orgId, initial, onSaved }: SupplierFormProps) {
                     id="sup-name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="مثال: شركة ابن سينا فارما / المتحدة للأدوية"
+                    placeholder="مثال: شركة المتحدة للتجارة / مؤسسة النور"
                     className="h-11 rounded-xl text-xs font-bold bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white"
                     icon={<Building2 className="w-4 h-4" />}
                     required

@@ -8,6 +8,7 @@ import { useSessionStore } from '@/core/state/useSessionStore';
 import { useGlobalShortcuts } from '@/core/hooks/useGlobalShortcuts';
 import { realtimeSyncListener } from '@/core/sync/realtime_sync_listener';
 import { syncCoordinator } from '@/core/sync/sync_coordinator';
+import { restoreOrgTransportToken } from '@/core/supabase/supabase_client';
 import { ensureCleanLookupState } from '@/core/db/seed';
 
 interface AppShellProps {
@@ -104,8 +105,12 @@ export const AppShell: React.FC<AppShellProps> = ({
   useEffect(() => {
     if (currentUser?.org_id) {
       ensureCleanLookupState().catch(console.warn);
-      realtimeSyncListener.start(currentUser.org_id);
-      syncCoordinator.triggerSync().catch(console.error);
+      restoreOrgTransportToken()
+        .then(() => {
+          realtimeSyncListener.start(currentUser.org_id);
+          syncCoordinator.triggerSync().catch(console.error);
+        })
+        .catch(console.warn);
     }
     return () => {
       realtimeSyncListener.stop();

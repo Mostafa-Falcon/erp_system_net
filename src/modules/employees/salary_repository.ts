@@ -1,7 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '@/core/db/app_database';
 import { SyncQueueManager } from '@/core/sync/sync_queue_manager';
-import type { EmployeeSalaryStatement, User } from '@/types';
+import { TreasuryRepository } from '@/modules/treasury/treasury_repository';
+import { AccountingRepository } from '@/modules/accounting/accounting_repository';
+import type { EmployeeSalaryStatement, Expense } from '@/types';
 
 export class SalaryRepository {
   public static async getByMonth(orgId: string, month: string): Promise<EmployeeSalaryStatement[]> {
@@ -21,7 +23,6 @@ export class SalaryRepository {
     const newStatements: EmployeeSalaryStatement[] = [];
 
     // جلب الحضور لهذا الشهر لحساب الخصومات إن وجد
-    const startOfMonth = `${month}-01`;
     const attendance = await db.employee_attendance
       .where('org_id').equals(orgId)
       .filter(a => a.date.startsWith(month))
@@ -102,45 +103,44 @@ export class SalaryRepository {
 
   public static async markPaid(id: string, treasuryId?: string): Promise<void> {
     const now = new Date().toISOString();
-    await db.transaction('rw', [db.salary_statements, db.sync_queue, db.treasuries, db.expenses], async () => {
-      const record = await db.salary_statements.get(id);
-      if (!record || record.status === 'paid') return;
+    const statement = await db.salary_statements.get(id);
+    if (!statement || statement.status === 'paid') return;
 
-      // 1. تحديث حالة المسير
+    // Resolve a real expense category (falls back to a stable symbolic id)
+    const categories = await db.expense_categories.where('org_id').equals(statement.org_id).toArray();
+    const salaryCategory = categories.find((c) => c.code === 'EXP-03')
+      ?? categories.find((c) => c.name.includes('رواتب'));
+    const categoryId = salaryCategory?.id ?? 'salaries_wages';
+
+    const expenseId = uuidv4();
+
+    await db.transaction('rw', [db.salary_statements, db.sync_queue, db.treasuries, db.expenses], async () => {
+      // 1. Mark the payroll statement as paid
       await db.salary_statements.update(id, {
         status: 'paid',
         paid_at: now,
         treasury_id: treasuryId,
         updated_at: now,
-        sync_status: 'pending'
+        sync_status: 'pending',
       });
 
-      // 2. إذا تم تحديد خزينة، سجل مصروف
+      // 2. Record the payroll as an operating expense + move the treasury balance
       if (treasuryId) {
-        const expenseId = uuidv4();
-        const expense = {
+        const expense: Expense = {
           id: expenseId,
-          org_id: record.org_id,
-          category_id: 'salaries_wages', // تصنيف افتراضي
+          org_id: statement.org_id,
+          category_id: categoryId,
           treasury_id: treasuryId,
-          amount: record.net_salary,
-          description: `صرف راتب الموظف عن شهر ${record.month}`,
+          amount: statement.net_salary,
+          description: `صرف راتب الموظف عن شهر ${statement.month}`,
           created_by: 'system',
           created_at: now,
-          sync_status: 'pending'
+          sync_status: 'pending',
         };
-        await (db as any).expenses.put(expense);
+        await db.expenses.put(expense);
         await SyncQueueManager.enqueue('expenses', expenseId, 'insert', expense);
 
-        // تحديث رصيد الخزينة
-        const treasury = await db.treasuries.get(treasuryId);
-        if (treasury) {
-          await db.treasuries.update(treasuryId, {
-            current_balance: treasury.current_balance - record.net_salary,
-            updated_at: now
-          });
-          await SyncQueueManager.enqueue('treasuries', treasuryId, 'update', { ...treasury, current_balance: treasury.current_balance - record.net_salary });
-        }
+        await TreasuryRepository.adjustBalance(treasuryId, -statement.net_salary);
       }
 
       const updatedRecord = await db.salary_statements.get(id);
@@ -148,6 +148,24 @@ export class SalaryRepository {
         await SyncQueueManager.enqueue('salary_statements', id, 'update', updatedRecord);
       }
     });
+
+    // 3. Post the payroll journal entry (idempotent per statement)
+    if (treasuryId) {
+      try {
+        await AccountingRepository.postPayrollPayment({
+          orgId: statement.org_id,
+          branchId: statement.branch_id,
+          referenceId: id,
+          date: now,
+          amount: statement.net_salary,
+          description: `راتب عن شهر ${statement.month}`,
+          treasuryId,
+          userId: statement.created_by,
+        });
+      } catch (accountingError) {
+        console.warn('[Accounting] Failed to post payroll payment:', accountingError);
+      }
+    }
   }
 
   public static async deleteStatement(id: string): Promise<void> {

@@ -193,7 +193,21 @@ export class ScaleManager {
 
     try {
       // Prompt user to select scale COM/USB port
-      const port = await (navigator as any).serial.requestPort();
+      const nav = navigator as unknown as {
+        serial: {
+          requestPort: () => Promise<{
+            open: (opt: { baudRate: number }) => Promise<void>;
+            readable: {
+              getReader: () => {
+                read: () => Promise<{ value?: Uint8Array; done: boolean }>;
+                releaseLock: () => void;
+              };
+            };
+            close: () => Promise<void>;
+          }>;
+        };
+      };
+      const port = await nav.serial.requestPort();
       await port.open({ baudRate });
 
       const reader = port.readable.getReader();
@@ -226,10 +240,10 @@ export class ScaleManager {
         success: false,
         error: 'لم يتم استقبال قراءة وزن صحيحة من الميزان خلال المهلة الزمنية.',
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       return {
         success: false,
-        error: err?.message || 'تم إلغاء الاتصال أو فشل فتح المنفذ.',
+        error: err instanceof Error ? err.message : 'تم إلغاء الاتصال أو فشل فتح المنفذ.',
       };
     }
   }

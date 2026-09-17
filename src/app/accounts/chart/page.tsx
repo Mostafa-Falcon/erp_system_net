@@ -6,20 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Plus,
-  FolderTree,
   ChevronDown,
   ChevronRight,
   Search,
   Printer,
-  FileText,
-  Eye,
   MoreVertical,
   Layers,
-  ArrowRightLeft,
-  CircleDollarSign,
   Briefcase
 } from 'lucide-react';
 import { useSessionStore } from '@/core/state/useSessionStore';
+import { AccountingRepository } from '@/modules/accounting/accounting_repository';
 import { formatNumber } from '@/lib/format';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -38,25 +34,9 @@ export default function ChartOfAccountsPage() {
     try {
       setIsLoading(true);
       const { db } = await import('@/core/db/app_database');
+      await AccountingRepository.ensureDefaultChartOfAccounts(orgId);
       const list = await db.accounts.where('org_id').equals(orgId).toArray();
-
-      if (list.length === 0) {
-        // Seed default COA for demonstration if empty
-        const defaultAccounts: Account[] = [
-          { id: 'a1', org_id: orgId, code: '1000', name: 'الأصول', name_en: 'Assets', type: 'asset', account_type: 'parent', current_balance: 186551.25, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-          { id: 'a11', org_id: orgId, parent_id: 'a1', code: '1100', name: 'الأصول المتداولة', type: 'asset', account_type: 'parent', current_balance: 186551.25, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-          { id: 'a111', org_id: orgId, parent_id: 'a11', code: '1110', name: 'النقدية بالخزائن', type: 'asset', account_type: 'leaf', current_balance: 63818.75, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-          { id: 'a112', org_id: orgId, parent_id: 'a11', code: '1120', name: 'حسابات البنوك', type: 'asset', account_type: 'leaf', current_balance: 0.00, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-          { id: 'a113', org_id: orgId, parent_id: 'a11', code: '1130', name: 'مخزون السلع', type: 'asset', account_type: 'leaf', current_balance: 122732.50, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-
-          { id: 'l2', org_id: orgId, code: '2000', name: 'الخصوم', name_en: 'Liabilities', type: 'liability', account_type: 'parent', current_balance: 5400.00, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-          { id: 'l21', org_id: orgId, parent_id: 'l2', code: '2100', name: 'الخصوم المتداولة', type: 'liability', account_type: 'parent', current_balance: 5400.00, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-          { id: 'l211', org_id: orgId, parent_id: 'l21', code: '2110', name: 'الموردين', type: 'liability', account_type: 'leaf', current_balance: 5400.00, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-        ];
-        setAccounts(defaultAccounts);
-      } else {
-        setAccounts(list);
-      }
+      setAccounts(list);
     } catch (err) {
       console.error('Load accounts error:', err);
       toast.error('حدث خطأ أثناء تحميل شجرة الحسابات');

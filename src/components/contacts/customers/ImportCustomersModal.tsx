@@ -174,7 +174,7 @@ export function ImportCustomersModal({
               value={inputText}
               onChange={handleTextChange}
               rows={4}
-              placeholder={`محمد علي, 01012345678, C-101, 0\nصيدلية الشفاء, 01223456789, C-102, 500`}
+              placeholder={`محمد علي, 01012345678, C-101, 0\nشركة النور, 01223456789, C-102, 500`}
               className="w-full p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-xs font-mono focus:bg-white transition-all outline-none"
             />
           </div>

@@ -221,7 +221,7 @@ function BrandsContent() {
               <Input
                 value={brandName}
                 onChange={(e) => setBrandName(e.target.value)}
-                placeholder="مثال: فاركو للأدوية، نوفارتس، إيفا فارم"
+                placeholder="مثال: المراعي، جهينة، إيفا"
                 className="h-10 text-xs font-bold rounded-lg"
                 autoFocus
               />

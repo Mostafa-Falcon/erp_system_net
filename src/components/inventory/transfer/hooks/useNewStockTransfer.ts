@@ -45,7 +45,7 @@ export function useNewStockTransfer() {
 
         setBranches(branchList);
 
-        // 2. Sender branch MUST be the currently active branch of the pharmacy owner
+        // 2. Sender branch MUST be the currently active branch of the business owner
         const currentBid = activeBranchId || currentUser?.branch_id;
         let activeBranch: Branch | null = null;
         if (currentBid) {

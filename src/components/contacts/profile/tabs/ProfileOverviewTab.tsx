@@ -102,7 +102,7 @@ export function ProfileOverviewTab({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-slate-50/70 dark:bg-slate-900/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-800">
             <span className="text-[11px] font-bold text-slate-400 block mb-1">
-              إجمالي المسحوبات (دواء / فواتير)
+              إجمالي المسحوبات (أصناف / فواتير)
             </span>
             <div className="text-lg font-black text-blue-600 dark:text-blue-400">
               {formatNumber(stats.totalInvoicesAmount)} <span className="text-xs font-bold text-slate-400">ج.م</span>

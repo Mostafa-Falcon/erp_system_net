@@ -43,6 +43,7 @@ export interface EmployeeLeave {
 export interface EmployeeSalaryStatement {
   id: EntityId;
   org_id: EntityId;
+  branch_id?: EntityId | null;
   employee_id: EntityId;
   month: string; // YYYY-MM
   basic_salary: number;
@@ -56,6 +57,43 @@ export interface EmployeeSalaryStatement {
   status: 'draft' | 'approved' | 'paid' | 'cancelled';
   paid_at?: ISODateString | null;
   treasury_id?: EntityId | null; // Account used for payment
+  payment_voucher_id?: EntityId | null; // Financial voucher issued on payment
+  created_by?: EntityId | null;
+  created_at: ISODateString;
+  updated_at: ISODateString;
+  sync_status?: 'synced' | 'pending' | 'failed';
+}
+
+export type EmployeeAdvanceType = 'advance_salary' | 'bonus' | 'deduction' | 'allowance' | 'loan';
+export type EmployeeAdvanceStatus = 'pending' | 'approved' | 'rejected' | 'paid' | 'deducted_from_salary' | 'cancelled';
+
+export interface EmployeeAdvance {
+  id: EntityId;
+  org_id: EntityId;
+  branch_id?: EntityId | null;
+  employee_id: EntityId;
+  adjustment_type: EmployeeAdvanceType;
+  amount: number;
+  reason?: string;
+  status: EmployeeAdvanceStatus;
+  approved_by?: EntityId | null;
+  salary_statement_id?: EntityId | null;
+  created_by?: EntityId | null;
+  created_at: ISODateString;
+  updated_at: ISODateString;
+  sync_status?: 'synced' | 'pending' | 'failed';
+}
+
+export interface EmployeeDocument {
+  id: EntityId;
+  org_id: EntityId;
+  employee_id: EntityId;
+  title: string;
+  document_type?: string;
+  file_url?: string;
+  file_type?: string;
+  notes?: string;
+  created_by?: EntityId | null;
   created_at: ISODateString;
   updated_at: ISODateString;
   sync_status?: 'synced' | 'pending' | 'failed';

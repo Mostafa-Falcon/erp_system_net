@@ -22,10 +22,10 @@ interface ImportRow {
 }
 
 const SAMPLE_DATA: ImportRow[] = [
-  { name: 'بانادول إكسترا 500 ملجم', sku: 'MED-PAN-01', cost_price: 25.0, sale_price: 32.5, barcode: '6221234567891', category_name: 'مسكنات', stock: 100 },
-  { name: 'كونجستال أقراص لنزلات البرد', sku: 'MED-CNG-02', cost_price: 18.0, sale_price: 24.0, barcode: '6221234567892', category_name: 'أدوية برد', stock: 50 },
-  { name: 'أوجمنتين 1 جم 14 قرص', sku: 'MED-AUG-03', cost_price: 75.0, sale_price: 98.0, barcode: '6221234567893', category_name: 'مضادات حيوية', stock: 30 },
-  { name: 'شامبو هيد آند شولدرز 400 مل', sku: 'COS-HNS-04', cost_price: 60.0, sale_price: 85.0, barcode: '6221234567894', category_name: 'عناية شخصية', stock: 20 },
+  { name: 'زيت طهي 1 لتر', sku: 'GRO-OIL-01', cost_price: 55.0, sale_price: 68.0, barcode: '6221234567891', category_name: 'بقالة', stock: 100 },
+  { name: 'شاي أسود 250 جم', sku: 'GRO-TEA-02', cost_price: 18.0, sale_price: 24.0, barcode: '6221234567892', category_name: 'مشروبات', stock: 50 },
+  { name: 'أرز مصري 1 كجم', sku: 'GRO-RIC-03', cost_price: 30.0, sale_price: 38.0, barcode: '6221234567893', category_name: 'بقالة', stock: 30 },
+  { name: 'شامبو 400 مل', sku: 'COS-SHM-04', cost_price: 60.0, sale_price: 85.0, barcode: '6221234567894', category_name: 'عناية شخصية', stock: 20 },
 ];
 
 function ImportContent() {

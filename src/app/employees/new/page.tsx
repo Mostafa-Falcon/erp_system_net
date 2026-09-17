@@ -58,7 +58,7 @@ export default function AddEmployeePage() {
   const [fullName, setFullName] = useState('');
   const [department, setDepartment] = useState('');
   const [phone, setPhone] = useState('');
-  const [role, setRole] = useState<UserRole>('pharmacist');
+  const [role, setRole] = useState<UserRole>('supervisor');
   const [branchId, setBranchId] = useState('');
   const [pinCode, setPinCode] = useState('1234');
 
@@ -97,8 +97,8 @@ export default function AddEmployeePage() {
 
   const applyTemplate = (template: string) => {
     switch (template) {
-      case 'pharmacist':
-        setRole('pharmacist');
+      case 'supervisor':
+        setRole('supervisor');
         setPermissions(['dashboard_view', 'inventory_view', 'inventory_add', 'inventory_edit', 'sales_view', 'sales_pos', 'purchases_view', 'customers_view']);
         break;
       case 'cashier':
@@ -216,7 +216,7 @@ export default function AddEmployeePage() {
                           <Input
                             value={department}
                             onChange={e => setDepartment(e.target.value)}
-                            placeholder="مثال: الصيدلية، الحسابات, الدليفري..."
+                            placeholder="مثال: المبيعات، الحسابات، التوصيل..."
                             className="h-12 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 pr-11 text-sm font-bold rounded-xl focus:bg-white dark:focus:bg-slate-900 transition-colors shadow-xs"
                           />
                           <Briefcase className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within/input:text-blue-500 transition-colors" />
@@ -244,7 +244,7 @@ export default function AddEmployeePage() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="rounded-xl shadow-xl border-slate-200 dark:border-slate-800">
-                            <SelectItem value="pharmacist" className="py-2.5"><div className="flex items-center gap-2.5"><Briefcase className="w-4 h-4 text-slate-400"/> دكتور صيدلي (Pharmacist)</div></SelectItem>
+                            <SelectItem value="supervisor" className="py-2.5"><div className="flex items-center gap-2.5"><Briefcase className="w-4 h-4 text-slate-400"/> مشرف عام (Supervisor)</div></SelectItem>
                             <SelectItem value="manager" className="py-2.5"><div className="flex items-center gap-2.5"><Briefcase className="w-4 h-4 text-slate-400"/> مدير فرع (Manager)</div></SelectItem>
                             <SelectItem value="cashier" className="py-2.5"><div className="flex items-center gap-2.5"><Briefcase className="w-4 h-4 text-slate-400"/> كاشير (Cashier)</div></SelectItem>
                             <SelectItem value="warehouse_keeper" className="py-2.5"><div className="flex items-center gap-2.5"><Briefcase className="w-4 h-4 text-slate-400"/> أمين مخزن (Warehouse)</div></SelectItem>
@@ -417,7 +417,7 @@ export default function AddEmployeePage() {
                             type="email"
                             value={email}
                             onChange={e => setEmail(e.target.value)}
-                            placeholder="user@pharmacy.com"
+                            placeholder="user@company.com"
                             className="h-12 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 pr-11 text-sm font-bold rounded-xl focus:bg-white dark:focus:bg-slate-900 font-mono text-left shadow-xs transition-colors"
                             dir="ltr"
                           />
@@ -471,7 +471,7 @@ export default function AddEmployeePage() {
                   <div className="mb-6 bg-slate-50/50 dark:bg-slate-900/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-800/80">
                     <p className="text-[10px] font-black text-amber-600 dark:text-amber-500 mb-2 flex items-center gap-1"><Zap className="w-3.5 h-3.5"/> القوالب السريعة:</p>
                     <div className="grid grid-cols-2 gap-2">
-                      <Button variant="outline" onClick={() => applyTemplate('pharmacist')} className="h-8 rounded-xl border-blue-100 text-blue-700 bg-white text-[10px] font-black gap-1 transition-all"><Zap className="w-3 h-3"/> صيدلي</Button>
+                      <Button variant="outline" onClick={() => applyTemplate('supervisor')} className="h-8 rounded-xl border-blue-100 text-blue-700 bg-white text-[10px] font-black gap-1 transition-all"><Zap className="w-3 h-3"/> مشرف</Button>
                       <Button variant="outline" onClick={() => applyTemplate('cashier')} className="h-8 rounded-xl border-teal-100 text-teal-700 bg-white text-[10px] font-black gap-1 transition-all"><Zap className="w-3 h-3"/> كاشير</Button>
                       <Button variant="outline" onClick={() => applyTemplate('warehouse')} className="h-8 rounded-xl border-emerald-100 text-emerald-700 bg-white text-[10px] font-black gap-1 transition-all"><Zap className="w-3 h-3"/> مخزن</Button>
                       <Button variant="outline" onClick={() => applyTemplate('accountant')} className="h-8 rounded-xl border-purple-100 text-purple-700 bg-white text-[10px] font-black gap-1 transition-all"><Zap className="w-3 h-3"/> محاسب</Button>
@@ -497,8 +497,8 @@ export default function AddEmployeePage() {
                        icon={<Archive className="w-4 h-4 opacity-80" />}
                        color="emerald"
                        items={[
-                         { id: 'inventory_view', label: 'عرض الأصناف', desc: 'تصفح دليل الأدوية والكميات' },
-                         { id: 'inventory_add', label: 'إضافة أصناف جديدة', desc: 'تسجيل دواء أو صنف جديد' },
+                         { id: 'inventory_view', label: 'عرض الأصناف', desc: 'تصفح دليل الأصناف والكميات' },
+                         { id: 'inventory_add', label: 'إضافة أصناف جديدة', desc: 'تسجيل صنف جديد' },
                          { id: 'inventory_edit', label: 'تعديل بيانات الأصناف', desc: 'تعديل الأسعار والباركوود' },
                          { id: 'inventory_transfer', label: 'التحويل المخزني', desc: 'نقل الكميات بين الفروع' },
                          { id: 'inventory_adjust', label: 'الجرد والتسويات', desc: 'تسجيل الجرد الفعلي ومطابقة العجز' },
@@ -512,7 +512,7 @@ export default function AddEmployeePage() {
                        icon={<ShoppingBag className="w-4 h-4 opacity-80" />}
                        color="teal"
                        items={[
-                         { id: 'sales_pos', label: 'شاشة نقطة البيع (POS)', desc: 'صرف الروشتات وفواتير المبيعات' },
+                         { id: 'sales_pos', label: 'شاشة نقطة البيع (POS)', desc: 'إصدار فواتير المبيعات' },
                          { id: 'sales_view', label: 'عرض الفواتير', desc: 'تصفح سجل الفواتير والمبيعات السابقة' },
                          { id: 'sales_return', label: 'مرتجع المبيعات', desc: 'معالجة وتنفيذ إرجاع الفواتير' },
                        ]}

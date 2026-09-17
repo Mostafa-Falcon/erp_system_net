@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '@/core/db/app_database';
 import { SyncQueueManager } from '@/core/sync/sync_queue_manager';
+import { AccountingRepository } from '@/modules/accounting/accounting_repository';
 import type {
   Treasury,
   Expense,
@@ -47,8 +48,7 @@ export class TreasuryRepository {
   }): Promise<Treasury> {
     const now = new Date().toISOString();
     const treasuryId = uuidv4();
-    const count = await db.treasuries.where('org_id').equals(params.orgId).count();
-    const defaultCode = String(1101 + count);
+    const defaultCode = params.type === 'bank' ? '1120' : '1110';
 
     const treasury: Treasury = {
       id: treasuryId,
@@ -103,6 +103,8 @@ export class TreasuryRepository {
     if (!from || !to) throw new Error('أحد الخزائن غير موجودة');
     if (from.current_balance < params.amount) throw new Error('الرصيد في الخزينة المصدر غير كافٍ');
 
+    const transferRefId = uuidv4();
+
     await db.transaction('rw', [db.treasuries, db.financial_vouchers, db.sync_queue], async () => {
       // 1. Withdraw from source
       await this.adjustBalance(params.fromTreasuryId, -params.amount);
@@ -111,7 +113,7 @@ export class TreasuryRepository {
       await this.adjustBalance(params.toTreasuryId, params.amount);
 
       // 3. Record Vouchers (Optional but good for history)
-      const vOutId = uuidv4();
+      const vOutId = transferRefId;
       const vOut: FinancialVoucher = {
         id: vOutId,
         org_id: params.orgId,
@@ -143,6 +145,21 @@ export class TreasuryRepository {
       await db.financial_vouchers.add(vIn);
       await SyncQueueManager.enqueue('financial_vouchers', vInId, 'insert', vIn);
     });
+
+    try {
+      await AccountingRepository.postInternalTransfer({
+        orgId: params.orgId,
+        sourceTreasuryId: params.fromTreasuryId,
+        destinationTreasuryId: params.toTreasuryId,
+        amount: params.amount,
+        date: now,
+        description: params.description,
+        referenceId: transferRefId,
+        userId: params.userId,
+      });
+    } catch (accountingError) {
+      console.warn('[Accounting] Failed to post internal transfer:', accountingError);
+    }
   }
 
   /**
@@ -338,6 +355,23 @@ export class TreasuryRepository {
       await this.adjustBalance(params.treasuryId, delta);
     });
 
+    try {
+      await AccountingRepository.postVoucher({
+        orgId: params.orgId,
+        voucherId,
+        voucherNo,
+        date: now,
+        type: params.type,
+        amount: params.amount,
+        description: params.description,
+        treasuryId: params.treasuryId,
+        hasContact: Boolean(params.contactId),
+        userId: params.userId,
+      });
+    } catch (accountingError) {
+      console.warn('[Accounting] Failed to post voucher:', accountingError);
+    }
+
     return voucher;
   }
 
@@ -397,6 +431,20 @@ export class TreasuryRepository {
         }
       }
     );
+
+    try {
+      await AccountingRepository.postExpense({
+        orgId: params.orgId,
+        expenseId,
+        date: now,
+        amount: params.amount,
+        description: params.description,
+        treasuryId: params.treasuryId,
+        userId: params.userId,
+      });
+    } catch (accountingError) {
+      console.warn('[Accounting] Failed to post expense:', accountingError);
+    }
 
     return expense;
   }
@@ -515,6 +563,21 @@ export class TreasuryRepository {
       }
     );
 
+    try {
+      await AccountingRepository.postSupplierPayment({
+        orgId: params.orgId,
+        voucherId,
+        voucherNo,
+        date: now,
+        amount: params.amount,
+        discount: params.discount || 0,
+        treasuryId: params.treasuryId,
+        userId: params.userId,
+      });
+    } catch (accountingError) {
+      console.warn('[Accounting] Failed to post supplier payment:', accountingError);
+    }
+
     return { voucherId, newBalance: newContactBalance };
   }
 
@@ -626,6 +689,21 @@ export class TreasuryRepository {
         await SyncQueueManager.enqueue('contact_transactions', transId, 'insert', trans);
       }
     );
+
+    try {
+      await AccountingRepository.postCustomerPayment({
+        orgId: params.orgId,
+        voucherId,
+        voucherNo,
+        date: now,
+        amount: params.amount,
+        discount: params.discount || 0,
+        treasuryId: params.treasuryId,
+        userId: params.userId,
+      });
+    } catch (accountingError) {
+      console.warn('[Accounting] Failed to post customer payment:', accountingError);
+    }
 
     return { voucherId, newBalance: newContactBalance };
   }

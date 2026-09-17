@@ -12,7 +12,7 @@ export class ActivityRepository {
   }
 
   public static async filterLogs(orgId: string, query: string, type: string): Promise<ActivityLog[]> {
-    let collection = db.activity_logs.where('org_id').equals(orgId);
+    const collection = db.activity_logs.where('org_id').equals(orgId);
 
     const logs = await collection.reverse().sortBy('created_at');
 

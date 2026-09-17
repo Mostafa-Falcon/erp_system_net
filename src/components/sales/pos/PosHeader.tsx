@@ -63,7 +63,7 @@ export function PosHeader({
         </h1>
 
         <span className="hidden sm:inline-flex text-[11px] font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-900/60 rounded-md px-2.5 py-0.5 mr-2">
-          لوجيسكا سيستمز | نظام إدارة الصيدلية v1
+          لوجيسكا سيستمز | نظام إدارة الموارد والمبيعات v1
         </span>
       </div>
 

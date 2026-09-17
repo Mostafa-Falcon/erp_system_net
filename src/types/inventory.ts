@@ -85,14 +85,14 @@ export interface Product {
   
   // Inventory tracking flags
   tracks_batch: boolean; // For batch / lot numbers
-  tracks_expiry: boolean; // For expiry dates (food, pharma, chemicals)
+  tracks_expiry: boolean; // For expiry dates (food, consumables, chemicals)
   expiry_alert_days?: number; // أيام التنبيه قبل انتهاء الصلاحية
   min_stock_alert: number;
   max_stock_limit?: number;
   
   // Extended specifications & metadata
   name_en?: string; // اسم الصنف بالإنجليزي
-  scientific_name?: string; // الاسم العلمي / الوصف الإضافي / المادة الفعالة
+  scientific_name?: string; // الوصف الإضافي / المواصفات الفنية / الموديل
   shelf_location?: string; // المكان / الرف
   alternate_barcodes?: string[]; // باركود بديل
   substitute_ids?: EntityId[]; // معرفات الأصناف البديلة المدخلة بواسطة صاحب المنشأة

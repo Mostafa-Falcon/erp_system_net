@@ -60,7 +60,7 @@ export const TransferItemSelectorCard: React.FC<TransferItemSelectorCardProps> =
         {/* Product Autocomplete Search (6 cols) */}
         <div className="lg:col-span-6 relative">
           <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">
-            اكتب اسم الدواء أو الباركود
+            اكتب اسم الصنف أو الباركود
           </label>
           <div className="relative">
             <input
@@ -71,7 +71,7 @@ export const TransferItemSelectorCard: React.FC<TransferItemSelectorCardProps> =
                 onSearchOpenChange(true);
               }}
               onFocus={() => onSearchOpenChange(true)}
-              placeholder="اكتب اسم الدواء أو الباركود..."
+              placeholder="اكتب اسم الصنف أو الباركود..."
               className="w-full h-10 pr-9 pl-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">

@@ -635,7 +635,7 @@ export function CustomerForm({ orgId, initial, onSaved }: CustomerFormProps) {
                 <div className="text-xs font-bold text-slate-600 dark:text-slate-400 space-y-1">
                   <p className="font-black text-slate-900 dark:text-white">إدارة ائتمان ومبيعات آمنة</p>
                   <p className="text-[11px]">
-                    ضبط سقف الائتمان يحمي الصيدلية من تجاوز العملاء للحدود المالية المسموح بها.
+                    ضبط سقف الائتمان يحمي المنشأة من تجاوز العملاء للحدود المالية المسموح بها.
                   </p>
                 </div>
               </div>

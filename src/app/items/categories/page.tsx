@@ -236,7 +236,7 @@ function CategoriesContent() {
                 <Input
                   value={categoryName}
                   onChange={(e) => setCategoryName(e.target.value)}
-                  placeholder="مثال: أدوية، مستحضرات تجميل، عناية شخصية"
+                  placeholder="مثال: بقالة، مستلزمات منزلية، عناية شخصية"
                   className="h-10 text-xs font-bold rounded-lg"
                   autoFocus
                 />

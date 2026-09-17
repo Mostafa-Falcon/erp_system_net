@@ -4,6 +4,7 @@ import { SyncQueueManager } from '@/core/sync/sync_queue_manager';
 import { InventoryRepository } from '@/modules/inventory/inventory_repository';
 import { TreasuryRepository } from '@/modules/treasury/treasury_repository';
 import { ContactsRepository } from '@/modules/contacts/contacts_repository';
+import { AccountingRepository } from '@/modules/accounting/accounting_repository';
 import type {
   CashierShift,
   SalesInvoice,
@@ -125,7 +126,7 @@ export class SalesRepository {
       sync_status: 'pending',
     };
 
-    const tablesToLock: any[] = [db.cashier_shifts, db.sync_queue];
+    const tablesToLock: Array<typeof db.cashier_shifts | typeof db.sync_queue | typeof db.treasuries> = [db.cashier_shifts, db.sync_queue];
     const shouldTransfer = destinationTreasuryId && destinationTreasuryId !== shift.treasury_id && actualClosingBalance > 0;
     if (shouldTransfer) {
       tablesToLock.push(db.treasuries);
@@ -314,6 +315,9 @@ export class SalesRepository {
         await db.sales_invoices.add(invoice);
         await db.sales_invoice_items.bulkAdd(invoiceItems);
         await SyncQueueManager.enqueue('sales_invoices', invoiceId, 'insert', invoice);
+        for (const item of invoiceItems) {
+          await SyncQueueManager.enqueue('sales_invoice_items', item.id, 'insert', item);
+        }
 
         // 2. Decrement Stock for each item
         for (const item of invoiceItems) {
@@ -373,6 +377,27 @@ export class SalesRepository {
         }
       }
     );
+
+    // 6. Post double-entry journal entry (idempotent, after stock/treasury commit)
+    try {
+      await AccountingRepository.postSalesInvoice({
+        orgId: params.orgId,
+        branchId: params.branchId,
+        invoiceId,
+        invoiceNumber,
+        date: now,
+        netRevenue: finalTotal - totalTax,
+        taxAmount: totalTax,
+        cashPaid,
+        cardPaid,
+        creditAmount: remainingAmount,
+        cogs: invoiceItems.reduce((sum, item) => sum + item.quantity * item.unit_cost, 0),
+        treasuryId: params.treasuryId,
+        userId: params.userId,
+      });
+    } catch (accountingError) {
+      console.warn('[Accounting] Failed to post sales invoice:', accountingError);
+    }
 
     return invoice;
   }
@@ -475,6 +500,26 @@ export class SalesRepository {
         }
       }
     );
+
+    // 4. Post double-entry journal entry for the return
+    try {
+      await AccountingRepository.postSalesReturn({
+        orgId: params.orgId,
+        branchId: params.branchId,
+        returnId,
+        returnNumber,
+        date: now,
+        netReturn: total,
+        taxAmount: 0,
+        refundedAmount: total,
+        creditAmount: 0,
+        cogs: params.items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0),
+        treasuryId: params.treasuryId,
+        userId: params.userId,
+      });
+    } catch (accountingError) {
+      console.warn('[Accounting] Failed to post sales return:', accountingError);
+    }
 
     return returnDoc;
   }
@@ -582,6 +627,19 @@ export class SalesRepository {
         }
       }
     );
+
+    // 6. Reverse the invoice journal entry
+    try {
+      await AccountingRepository.reverseDocument(
+        invoice.org_id,
+        'sale_invoice',
+        invoice.id,
+        params.reason || 'إلغاء فاتورة مبيعات',
+        params.userId
+      );
+    } catch (accountingError) {
+      console.warn('[Accounting] Failed to reverse sales invoice:', accountingError);
+    }
 
     return updatedInvoice;
   }
@@ -752,8 +810,14 @@ export class SalesRepository {
             });
           }
 
+          for (const oldIt of oldItems) {
+            await SyncQueueManager.enqueue('sales_invoice_items', oldIt.id, 'delete', { id: oldIt.id });
+          }
           await db.sales_invoice_items.where('invoice_id').equals(existing.id).delete();
           await db.sales_invoice_items.bulkAdd(newItemsToSave);
+          for (const item of newItemsToSave) {
+            await SyncQueueManager.enqueue('sales_invoice_items', item.id, 'insert', item);
+          }
         }
 
         // 2. Adjust treasury
@@ -802,6 +866,34 @@ export class SalesRepository {
         await SyncQueueManager.enqueue('sales_invoices', existing.id, 'update', updatedInvoice);
       }
     );
+
+    // 6. Reverse the previous journal entry and post the updated figures
+    try {
+      await AccountingRepository.reverseDocument(
+        existing.org_id,
+        'sale_invoice',
+        existing.id,
+        `تعديل فاتورة مبيعات #${existing.invoice_number}`,
+        params.userId
+      );
+      await AccountingRepository.postSalesInvoice({
+        orgId: existing.org_id,
+        branchId: existing.branch_id,
+        invoiceId: existing.id,
+        invoiceNumber: existing.invoice_number,
+        date: now,
+        netRevenue: finalTotal - totalTax,
+        taxAmount: totalTax,
+        cashPaid,
+        cardPaid,
+        creditAmount: remainingAmount,
+        cogs: newItemsToSave.reduce((sum, item) => sum + item.quantity * item.unit_cost, 0),
+        treasuryId: existing.treasury_id,
+        userId: params.userId,
+      });
+    } catch (accountingError) {
+      console.warn('[Accounting] Failed to re-post sales invoice:', accountingError);
+    }
 
     return updatedInvoice;
   }

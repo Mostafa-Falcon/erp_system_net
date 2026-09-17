@@ -617,7 +617,7 @@ export default function NewStocktakePage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleBarcodeKeyDown}
-              placeholder="امسح الباركود بجهاز المسح أو ابحث باسم الدواء / الكود / الرف... (اضغط Enter للإضافة المباشرة)"
+              placeholder="امسح الباركود بجهاز المسح أو ابحث باسم الصنف / الكود / الرف... (اضغط Enter للإضافة المباشرة)"
               className="h-13 pr-12 pl-24 text-sm font-bold rounded-2xl bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 focus:border-[#558b2f] transition-all shadow-inner"
               autoFocus
             />

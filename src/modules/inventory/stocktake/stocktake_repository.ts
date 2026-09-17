@@ -147,6 +147,22 @@ export class StocktakeRepository {
           if (updated) {
             await SyncQueueManager.enqueue('stocktake_sessions', sessionId, 'update', updated);
           }
+
+          // Auto-accounting journal entry for inventory variance
+          try {
+            const { AccountingRepository } = await import('@/modules/accounting/accounting_repository');
+            await AccountingRepository.postStocktakeAdjustment({
+              orgId: session.org_id,
+              branchId: session.branch_id,
+              sessionId: session.id,
+              sessionNumber: session.session_number,
+              date: now,
+              totalDifferenceValue: session.total_difference_value,
+              userId,
+            });
+          } catch (accErr) {
+            console.warn('Accounting stocktake post warning:', accErr);
+          }
         }
       );
       return { success: true };

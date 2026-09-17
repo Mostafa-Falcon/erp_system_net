@@ -50,6 +50,10 @@ import {
   Truck,
   Users,
   Handshake,
+  BookOpen,
+  Scale,
+  Landmark,
+  TrendingUp,
 } from 'lucide-react';
 import type { Branch } from '@/types';
 
@@ -204,6 +208,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen }) => {
       subItems: [
         { label: 'شجرة الحسابات', href: '/accounts/chart' },
         { label: 'قيود اليومية', href: '/accounts/journal' },
+        { label: 'دفتر الأستاذ', href: '/accounts/ledger', icon: <BookOpen className="w-4 h-4" /> },
         { label: 'الخزائن والبنوك', href: '/accounts/treasuries' },
         { label: 'سندات القبض والصرف', href: '/accounts/vouchers' },
         { label: 'المصروفات', href: '/accounts/expenses' },
@@ -216,6 +221,9 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen }) => {
       subItems: [
         { label: 'تقارير المبيعات', href: '/reports/sales' },
         { label: 'تقارير الأرباح', href: '/reports/profits' },
+        { label: 'ميزان المراجعة', href: '/reports/trial', icon: <Scale className="w-4 h-4" /> },
+        { label: 'الميزانية العمومية', href: '/reports/balance-sheet', icon: <Landmark className="w-4 h-4" /> },
+        { label: 'قائمة الدخل', href: '/reports/income', icon: <TrendingUp className="w-4 h-4" /> },
         { label: 'حركة المخزون', href: '/reports/inventory' },
         { label: 'الانتهاء (الصلاحية)', href: '/reports/expiry' },
         { label: 'تقييم المخزون', href: '/reports/valuation' },

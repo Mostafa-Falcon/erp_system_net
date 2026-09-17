@@ -46,7 +46,7 @@ export default function NewStockTransferPage() {
   return (
     <AppShell
       title="طلب تحويل مخزني جديد"
-      subtitle="إنشاء حركة نقل أدوية ومستلزمات بين الفروع"
+      subtitle="إنشاء حركة نقل أصناف ومستلزمات بين الفروع"
       actions={
         <div className="flex items-center gap-2">
           <button

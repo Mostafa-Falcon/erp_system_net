@@ -19,11 +19,11 @@ import {
   Calendar,
   FilterX,
   BookOpen,
-  LayoutGrid,
   TrendingUp,
   History
 } from 'lucide-react';
-import type { JournalEntry, SalesInvoice, PurchaseInvoice, FinancialVoucher, Expense } from '@/types';
+import type { JournalEntry, JournalEntryLine, Account } from '@/types';
+import { AccountingRepository } from '@/modules/accounting/accounting_repository';
 
 import {
   Select,
@@ -39,58 +39,45 @@ export default function JournalEntriesPage() {
 
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [detailEntry, setDetailEntry] = useState<JournalEntry | null>(null);
+  const [detailLines, setDetailLines] = useState<Array<JournalEntryLine & { accountName: string; accountCode: string }>>([]);
 
   // Filters State
   const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [pageSize, setPageSize] = useState('25');
+
+  const openDetails = async (entry: JournalEntry) => {
+    try {
+      const { db } = await import('@/core/db/app_database');
+      const [lines, accounts] = await Promise.all([
+        db.journal_entry_lines.where('entry_id').equals(entry.id).toArray(),
+        db.accounts.where('org_id').equals(orgId).toArray(),
+      ]);
+      const accById = new Map<string, Account>(accounts.map((a) => [a.id, a]));
+      setDetailLines(
+        lines.map((line) => {
+          const acc = accById.get(line.account_id);
+          return { ...line, accountName: acc?.name ?? '-', accountCode: acc?.code ?? '-' };
+        })
+      );
+      setDetailEntry(entry);
+      setIsDetailsOpen(true);
+    } catch (err) {
+      console.error('Load entry lines error:', err);
+      toast.error('تعذر تحميل تفاصيل القيد');
+    }
+  };
 
   const loadData = async () => {
     if (!orgId) return;
     try {
       setIsLoading(true);
+      await AccountingRepository.ensureDefaultChartOfAccounts(orgId);
       const { db } = await import('@/core/db/app_database');
-
-      // Fetch real journal entries if any
       const journalList = await db.journal_entries.where('org_id').equals(orgId).reverse().sortBy('entry_date');
-
-      // If empty, let's derive some "virtual" entries from other documents for demonstration/professionalism
-      if (journalList.length === 0) {
-        const [sales, purchases, vouchers, expenses] = await Promise.all([
-          db.sales_invoices.where('org_id').equals(orgId).limit(50).toArray(),
-          db.purchase_invoices.where('org_id').equals(orgId).limit(20).toArray(),
-          db.financial_vouchers.where('org_id').equals(orgId).limit(50).toArray(),
-          db.expenses.where('org_id').equals(orgId).limit(50).toArray(),
-        ]);
-
-        const derived: JournalEntry[] = [
-          ...sales.map(s => ({
-            id: `sale-${s.id}`,
-            org_id: orgId,
-            entry_no: s.invoice_number.replace('INV-', ''),
-            entry_date: s.invoice_date,
-            type: 'sales' as const,
-            description: `قيد مبيعات - فاتورة رقم ${s.invoice_number}`,
-            total_amount: s.total,
-            created_by: s.created_by,
-            created_at: s.created_at
-          })),
-          ...vouchers.map(v => ({
-            id: `vouch-${v.id}`,
-            org_id: orgId,
-            entry_no: v.voucher_no.split('-').pop() || '000',
-            entry_date: v.created_at,
-            type: 'general' as any,
-            description: v.description,
-            total_amount: v.amount,
-            created_by: v.created_by,
-            created_at: v.created_at
-          }))
-        ].sort((a, b) => b.entry_date.localeCompare(a.entry_date));
-
-        setEntries(derived);
-      } else {
-        setEntries(journalList as any);
-      }
+      setEntries(journalList);
     } catch (err) {
       console.error('Load journal error:', err);
       toast.error('حدث خطأ أثناء تحميل القيود');
@@ -104,12 +91,14 @@ export default function JournalEntriesPage() {
   }, [orgId]);
 
   const filteredEntries = useMemo(() => {
-    return entries.filter(e =>
-      !searchQuery ||
-      e.entry_no.includes(searchQuery) ||
-      e.description.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [entries, searchQuery]);
+    return entries.filter(e => {
+      const matchesType = typeFilter === 'all' || e.type === typeFilter;
+      const matchesSearch = !searchQuery ||
+        e.entry_no.includes(searchQuery) ||
+        e.description.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesType && matchesSearch;
+    });
+  }, [entries, searchQuery, typeFilter]);
 
   const stats = useMemo(() => {
     const today = new Date().toDateString();
@@ -136,7 +125,7 @@ export default function JournalEntriesPage() {
   return (
     <AppShell
       title="قيود اليومية العامة"
-      subtitle="سجل الحركات المالية المزدوجة لكافة عمليات الصيدلية لضمان الشفافية والرقابة المحاسبية."
+      subtitle="سجل الحركات المالية المزدوجة لكافة عمليات المنشأة لضمان الشفافية والرقابة المحاسبية."
       actions={headerActions}
     >
       <div className="space-y-6 text-right" dir="rtl">
@@ -156,7 +145,7 @@ export default function JournalEntriesPage() {
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-black text-slate-400">نوع القيد</span>
-                <Select defaultValue="all">
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
                   <SelectTrigger className="w-32 h-10 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 text-xs font-bold">
                     <SelectValue />
                   </SelectTrigger>
@@ -165,6 +154,10 @@ export default function JournalEntriesPage() {
                     <SelectItem value="general">قيد عام</SelectItem>
                     <SelectItem value="sales">مبيعات</SelectItem>
                     <SelectItem value="purchases">مشتريات</SelectItem>
+                    <SelectItem value="voucher">سندات</SelectItem>
+                    <SelectItem value="expenses">مصروفات</SelectItem>
+                    <SelectItem value="payroll">رواتب</SelectItem>
+                    <SelectItem value="reversal">قيد عكسي</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -252,7 +245,7 @@ export default function JournalEntriesPage() {
                     </td>
                     <td className="py-4 px-4 text-center">
                       <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                        {e.type === 'sales' ? 'مبيعات' : e.type === 'purchases' ? 'مشتريات' : 'قيد عام'}
+                        {entryTypeLabel(e.type)}
                       </span>
                     </td>
                     <td className="py-4 px-4 text-slate-600 dark:text-slate-400 font-medium truncate max-w-xs">{e.description}</td>
@@ -260,7 +253,10 @@ export default function JournalEntriesPage() {
                       {formatNumber(e.total_amount)} <span className="text-[10px] opacity-70">ج.م</span>
                     </td>
                     <td className="py-4 px-4 text-center">
-                      <button className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mx-auto hover:bg-blue-600 hover:text-white transition-all cursor-pointer">
+                      <button
+                        onClick={() => openDetails(e)}
+                        className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mx-auto hover:bg-blue-600 hover:text-white transition-all cursor-pointer"
+                      >
                         <Eye className="w-4 h-4" />
                       </button>
                     </td>
@@ -287,9 +283,70 @@ export default function JournalEntriesPage() {
 
         </div>
 
+        {isDetailsOpen && detailEntry && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setIsDetailsOpen(false)} />
+            <div className="relative z-10 w-full max-w-2xl bg-white dark:bg-[#131b2e] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden" dir="rtl">
+              <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white">قيد #{detailEntry.entry_no}</h3>
+                  <p className="text-[11px] font-bold text-slate-400 mt-0.5">{detailEntry.description}</p>
+                </div>
+                <button onClick={() => setIsDetailsOpen(false)} className="text-slate-400 hover:text-slate-700 text-xs font-black cursor-pointer">
+                  إغلاق
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-right border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/60 dark:bg-slate-900/40 text-[11px] font-black text-slate-400 border-b border-slate-100 dark:border-slate-800">
+                      <th className="py-3 px-4">الحساب</th>
+                      <th className="py-3 px-4 text-left w-28">مدين</th>
+                      <th className="py-3 px-4 text-left w-28">دائن</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 text-xs font-bold">
+                    {detailLines.map((line) => (
+                      <tr key={line.id}>
+                        <td className="py-3 px-4 text-slate-700 dark:text-slate-200">
+                          <span className="font-mono text-slate-400 mr-2">{line.accountCode}</span>
+                          {line.accountName}
+                        </td>
+                        <td className="py-3 px-4 text-left font-mono text-blue-600">{line.debit ? formatNumber(line.debit) : '-'}</td>
+                        <td className="py-3 px-4 text-left font-mono text-amber-600">{line.credit ? formatNumber(line.credit) : '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-slate-50 dark:bg-slate-900/60 border-t-2 border-slate-200 dark:border-slate-700 text-xs font-black">
+                      <td className="py-3 px-4">الإجمالي</td>
+                      <td className="py-3 px-4 text-left font-mono text-blue-700">{formatNumber(detailLines.reduce((s, l) => s + l.debit, 0))}</td>
+                      <td className="py-3 px-4 text-left font-mono text-amber-700">{formatNumber(detailLines.reduce((s, l) => s + l.credit, 0))}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </AppShell>
   );
+}
+
+function entryTypeLabel(type: JournalEntry['type']): string {
+  const labels: Record<string, string> = {
+    general: 'قيد عام',
+    sales: 'مبيعات',
+    purchases: 'مشتريات',
+    voucher: 'سندات',
+    expenses: 'مصروفات',
+    payroll: 'رواتب',
+    reversal: 'قيد عكسي',
+    closing: 'إقفال',
+  };
+  return labels[type] ?? 'قيد عام';
 }
 
 function StatCard({ label, value, icon, color, isNumber = false }: { label: string, value: number, icon: React.ReactNode, color: 'blue' | 'emerald' | 'indigo' | 'amber', isNumber?: boolean }) {

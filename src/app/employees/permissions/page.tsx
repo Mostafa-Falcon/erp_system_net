@@ -56,8 +56,8 @@ const PERMISSION_GROUPS = [
     icon: <Archive className="w-4 h-4" />,
     color: 'emerald',
     permissions: [
-      { id: 'inventory_view', label: 'عرض الأصناف والكميات', desc: 'تصفح قائمة الأدوية والمنتجات المتاحة.' },
-      { id: 'inventory_add', label: 'إضافة أصناف جديدة', desc: 'تسجيل دواء أو صنف جديد في النظام.' },
+      { id: 'inventory_view', label: 'عرض الأصناف والكميات', desc: 'تصفح قائمة الأصناف والمنتجات المتاحة.' },
+      { id: 'inventory_add', label: 'إضافة أصناف جديدة', desc: 'تسجيل صنف جديد في النظام.' },
       { id: 'inventory_edit', label: 'تعديل بيانات الأصناف', desc: 'تعديل الأسعار، الباركود، والحدود الدنيا.' },
       { id: 'inventory_transfer', label: 'التحويل المخزني', desc: 'نقل الأصناف بين الفروع والمستودعات.' },
       { id: 'inventory_adjust', label: 'الجرد والتسويات', desc: 'إجراء جرد فعلي وتعديل فروقات المخزون.' },

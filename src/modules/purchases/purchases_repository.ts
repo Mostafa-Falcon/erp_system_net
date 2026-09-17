@@ -5,6 +5,7 @@ import { InventoryRepository } from '@/modules/inventory/inventory_repository';
 import { TreasuryRepository } from '@/modules/treasury/treasury_repository';
 import { ContactsRepository } from '@/modules/contacts/contacts_repository';
 import { ProductRepository } from '@/modules/inventory/product_repository';
+import { AccountingRepository } from '@/modules/accounting/accounting_repository';
 import type {
   PurchaseInvoice,
   PurchaseInvoiceItem,
@@ -128,6 +129,9 @@ export class PurchasesRepository {
         await db.purchase_invoices.add(invoice);
         await db.purchase_invoice_items.bulkAdd(invoiceItems);
         await SyncQueueManager.enqueue('purchase_invoices', invoiceId, 'insert', invoice);
+        for (const item of invoiceItems) {
+          await SyncQueueManager.enqueue('purchase_invoice_items', item.id, 'insert', item);
+        }
 
         // 2. Increase stock and update product cost
         for (const item of invoiceItems) {
@@ -173,6 +177,25 @@ export class PurchasesRepository {
         }
       }
     );
+
+    // 5. Post double-entry journal entry
+    try {
+      await AccountingRepository.postPurchaseInvoice({
+        orgId: params.orgId,
+        branchId: params.branchId,
+        invoiceId,
+        invoiceNumber: systemInvoiceNumber,
+        date: now,
+        netPurchase: subtotal - discount,
+        taxAmount: totalTax,
+        paidAmount: paid,
+        creditAmount: remaining,
+        treasuryId: params.treasuryId,
+        userId: params.userId,
+      });
+    } catch (accountingError) {
+      console.warn('[Accounting] Failed to post purchase invoice:', accountingError);
+    }
 
     return invoice;
   }
@@ -351,6 +374,25 @@ export class PurchasesRepository {
         }
       }
     );
+
+    // 6. Post double-entry journal entry for the purchase return
+    try {
+      await AccountingRepository.postPurchaseReturn({
+        orgId: params.orgId,
+        branchId: params.branchId,
+        returnId,
+        returnNumber,
+        date: now,
+        netReturn: total,
+        taxAmount: 0,
+        refundedAmount: params.refundType === 'treasury' ? total : 0,
+        creditAmount: total,
+        treasuryId: params.treasuryId,
+        userId: params.userId,
+      });
+    } catch (accountingError) {
+      console.warn('[Accounting] Failed to post purchase return:', accountingError);
+    }
 
     return returnDoc;
   }

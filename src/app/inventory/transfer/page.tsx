@@ -33,7 +33,7 @@ export default function StockTransfersPage() {
   return (
     <AppShell
       title="تحويلات المخزون"
-      subtitle="متابعة حركات نقل الأدوية بين الفروع والمخازن"
+      subtitle="متابعة حركات نقل الأصناف بين الفروع والمخازن"
       actions={
         <div className="flex items-center gap-2">
           <button

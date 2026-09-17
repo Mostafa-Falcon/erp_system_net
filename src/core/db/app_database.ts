@@ -39,6 +39,8 @@ import type {
   EmployeeAttendance,
   EmployeeSalaryStatement,
   EmployeeLeave,
+  EmployeeAdvance,
+  EmployeeDocument,
   Department,
 } from '@/types';
 
@@ -90,6 +92,8 @@ export class FalconAppDatabase extends Dexie {
   employee_attendance!: Table<EmployeeAttendance, string>;
   salary_statements!: Table<EmployeeSalaryStatement, string>;
   employee_leaves!: Table<EmployeeLeave, string>;
+  employee_advances!: Table<EmployeeAdvance, string>;
+  employee_documents!: Table<EmployeeDocument, string>;
   departments!: Table<Department, string>;
 
   journal_entries!: Table<JournalEntry, string>;
@@ -181,6 +185,12 @@ export class FalconAppDatabase extends Dexie {
       salary_statements: 'id, org_id, employee_id, month, status, sync_status',
       employee_leaves: 'id, org_id, employee_id, leave_type, status, start_date, sync_status',
       departments: 'id, org_id, parent_id, manager_id, is_active, sync_status',
+    });
+
+    // Incremental upgrade: adds employee advances (loans/bonuses) and employee documents.
+    this.version(9).stores({
+      employee_advances: 'id, org_id, branch_id, employee_id, adjustment_type, status, sync_status',
+      employee_documents: 'id, org_id, employee_id, document_type, sync_status',
     });
   }
 }

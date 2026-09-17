@@ -21,6 +21,7 @@ export interface Organization {
   email?: string;
   address?: string;
   logo_url?: string;
+  transport_token?: string;
   created_at: ISODateString;
   updated_at: ISODateString;
   is_active: boolean;
@@ -41,7 +42,7 @@ export interface Branch {
   sync_status?: 'synced' | 'pending' | 'failed';
 }
 
-export type UserRole = 'super_admin' | 'admin' | 'manager' | 'cashier' | 'accountant' | 'warehouse_keeper' | 'pharmacist' | 'delivery';
+export type UserRole = 'super_admin' | 'admin' | 'manager' | 'cashier' | 'accountant' | 'warehouse_keeper' | 'supervisor' | 'delivery';
 
 export interface User {
   id: EntityId;
