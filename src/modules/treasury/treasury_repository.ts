@@ -43,15 +43,19 @@ export class TreasuryRepository {
     type: TreasuryType;
     openingBalance: number;
     isDefault: boolean;
+    accountCode?: string;
   }): Promise<Treasury> {
     const now = new Date().toISOString();
     const treasuryId = uuidv4();
+    const count = await db.treasuries.where('org_id').equals(params.orgId).count();
+    const defaultCode = String(1101 + count);
 
     const treasury: Treasury = {
       id: treasuryId,
       org_id: params.orgId,
       branch_id: params.branchId || undefined,
       name: params.name,
+      account_code: params.accountCode || defaultCode,
       type: params.type,
       current_balance: params.openingBalance,
       is_default: params.isDefault,
@@ -75,6 +79,70 @@ export class TreasuryRepository {
     });
 
     return treasury;
+  }
+
+  /**
+   * Internal Transfer between two treasuries
+   */
+  public static async internalTransfer(params: {
+    orgId: string;
+    fromTreasuryId: string;
+    toTreasuryId: string;
+    amount: number;
+    description: string;
+    userId: string;
+  }): Promise<void> {
+    const now = new Date().toISOString();
+
+    if (params.amount <= 0) throw new Error('المبلغ يجب أن يكون أكبر من صفر');
+    if (params.fromTreasuryId === params.toTreasuryId) throw new Error('لا يمكن التحويل لنفس الخزينة');
+
+    const from = await db.treasuries.get(params.fromTreasuryId);
+    const to = await db.treasuries.get(params.toTreasuryId);
+
+    if (!from || !to) throw new Error('أحد الخزائن غير موجودة');
+    if (from.current_balance < params.amount) throw new Error('الرصيد في الخزينة المصدر غير كافٍ');
+
+    await db.transaction('rw', [db.treasuries, db.financial_vouchers, db.sync_queue], async () => {
+      // 1. Withdraw from source
+      await this.adjustBalance(params.fromTreasuryId, -params.amount);
+
+      // 2. Deposit to destination
+      await this.adjustBalance(params.toTreasuryId, params.amount);
+
+      // 3. Record Vouchers (Optional but good for history)
+      const vOutId = uuidv4();
+      const vOut: FinancialVoucher = {
+        id: vOutId,
+        org_id: params.orgId,
+        voucher_no: `TR-OUT-${Date.now()}`,
+        type: 'payment',
+        treasury_id: params.fromTreasuryId,
+        amount: params.amount,
+        description: `تحويل صادر إلى ${to.name}: ${params.description}`,
+        created_by: params.userId,
+        created_at: now,
+        sync_status: 'pending',
+      };
+      await db.financial_vouchers.add(vOut);
+      await SyncQueueManager.enqueue('financial_vouchers', vOutId, 'insert', vOut);
+
+      const vInId = uuidv4();
+      const vIn: FinancialVoucher = {
+        id: vInId,
+        org_id: params.orgId,
+        voucher_no: `TR-IN-${Date.now()}`,
+        type: 'receipt',
+        treasury_id: params.toTreasuryId,
+        amount: params.amount,
+        description: `تحويل وارد من ${from.name}: ${params.description}`,
+        created_by: params.userId,
+        created_at: now,
+        sync_status: 'pending',
+      };
+      await db.financial_vouchers.add(vIn);
+      await SyncQueueManager.enqueue('financial_vouchers', vInId, 'insert', vIn);
+    });
   }
 
   /**
@@ -119,6 +187,25 @@ export class TreasuryRepository {
     await db.transaction('rw', [db.treasuries, db.sync_queue], async () => {
       await db.treasuries.put(updated);
       await SyncQueueManager.enqueue('treasuries', treasuryId, 'update', updated);
+    });
+  }
+
+  /**
+   * Hard delete a treasury if it's not the main one and has no critical dependencies
+   */
+  public static async deleteTreasury(treasuryId: string, orgId: string): Promise<void> {
+    const treasury = await db.treasuries.get(treasuryId);
+    if (!treasury) throw new Error('الخزينة غير موجودة');
+    if (treasury.is_default) throw new Error('لا يمكن حذف الخزينة الرئيسية');
+
+    // Optional: Check for balance or transactions
+    if (Math.abs(treasury.current_balance) > 0.01) {
+      throw new Error('لا يمكن حذف خزينة بها رصيد مالي. يرجى تصفير الرصيد أولاً.');
+    }
+
+    await db.transaction('rw', [db.treasuries, db.sync_queue], async () => {
+      await db.treasuries.delete(treasuryId);
+      await SyncQueueManager.enqueue('treasuries', treasuryId, 'delete', { id: treasuryId, org_id: orgId });
     });
   }
 
@@ -284,13 +371,32 @@ export class TreasuryRepository {
       sync_status: 'pending',
     };
 
-    await db.transaction('rw', [db.expenses, db.treasuries, db.sync_queue], async () => {
-      await db.expenses.add(expense);
-      await SyncQueueManager.enqueue('expenses', expenseId, 'insert', expense);
+    await db.transaction(
+      'rw',
+      [db.expenses, db.treasuries, db.cashier_shifts, db.sync_queue],
+      async () => {
+        await db.expenses.add(expense);
+        await SyncQueueManager.enqueue('expenses', expenseId, 'insert', expense);
 
-      // Deduct from treasury
-      await this.adjustBalance(params.treasuryId, -params.amount);
-    });
+        // Deduct from treasury
+        await this.adjustBalance(params.treasuryId, -params.amount);
+
+        // If shiftId is provided, live-update shift running balance
+        if (params.shiftId) {
+          const shift = await db.cashier_shifts.get(params.shiftId);
+          if (shift && shift.status === 'open') {
+            const updatedShift = {
+              ...shift,
+              total_expenses: (shift.total_expenses || 0) + params.amount,
+              expected_closing_balance: shift.expected_closing_balance - params.amount,
+              sync_status: 'pending' as const,
+            };
+            await db.cashier_shifts.put(updatedShift);
+            await SyncQueueManager.enqueue('cashier_shifts', shift.id, 'update', updatedShift);
+          }
+        }
+      }
+    );
 
     return expense;
   }
@@ -300,5 +406,227 @@ export class TreasuryRepository {
    */
   public static async getExpenseCategories(orgId: string): Promise<ExpenseCategory[]> {
     return await db.expense_categories.where('org_id').equals(orgId).toArray();
+  }
+
+  /**
+   * Record payment to supplier or customer/supplier contact (سداد لمورد أو عميل/مورد)
+   */
+  public static async recordSupplierPayment(params: {
+    orgId: string;
+    contactId: string;
+    treasuryId: string;
+    shiftId?: string | null;
+    amount: number;
+    discount?: number;
+    paymentMethod: 'cash' | 'card' | 'bank_transfer' | 'cheque';
+    referenceNo?: string;
+    notes?: string;
+    userId: string;
+  }): Promise<{ voucherId: string; newBalance: number }> {
+    const now = new Date().toISOString();
+    const voucherId = uuidv4();
+    const count = await db.financial_vouchers.where('org_id').equals(params.orgId).count();
+    const voucherNo = params.referenceNo || `PAY-${String(count + 1).padStart(4, '0')}`;
+
+    const contact = await db.contacts.get(params.contactId);
+    if (!contact) throw new Error('جهة التعامل غير موجودة');
+
+    const totalSettled = params.amount + (params.discount || 0);
+
+    const voucher: FinancialVoucher = {
+      id: voucherId,
+      org_id: params.orgId,
+      voucher_no: voucherNo,
+      type: 'payment',
+      treasury_id: params.treasuryId,
+      contact_id: params.contactId,
+      shift_id: params.shiftId,
+      amount: params.amount,
+      description: params.notes || `سداد لحساب ${contact.type === 'both' ? 'العميل/المورد' : 'المورد'} «${contact.name}»`,
+      reference_no: voucherNo,
+      created_by: params.userId,
+      created_at: now,
+      sync_status: 'pending',
+    };
+
+    let newContactBalance = 0;
+
+    await db.transaction(
+      'rw',
+      [
+        db.financial_vouchers,
+        db.treasuries,
+        db.contacts,
+        db.contact_transactions,
+        db.cashier_shifts,
+        db.sync_queue,
+      ],
+      async () => {
+        // 1. Add financial voucher
+        await db.financial_vouchers.add(voucher);
+        await SyncQueueManager.enqueue('financial_vouchers', voucherId, 'insert', voucher);
+
+        // 2. Deduct amount from Treasury
+        await this.adjustBalance(params.treasuryId, -params.amount);
+
+        // 3. If shiftId provided, live-update shift running balance
+        if (params.shiftId) {
+          const shift = await db.cashier_shifts.get(params.shiftId);
+          if (shift && shift.status === 'open') {
+            const updatedShift = {
+              ...shift,
+              total_expenses: (shift.total_expenses || 0) + params.amount,
+              expected_closing_balance: shift.expected_closing_balance - params.amount,
+              sync_status: 'pending' as const,
+            };
+            await db.cashier_shifts.put(updatedShift);
+            await SyncQueueManager.enqueue('cashier_shifts', shift.id, 'update', updatedShift);
+          }
+        }
+
+        // 4. Adjust Contact balance: debit = totalSettled
+        newContactBalance = contact.current_balance + totalSettled;
+        const updatedContact = {
+          ...contact,
+          current_balance: newContactBalance,
+          updated_at: now,
+          sync_status: 'pending' as const,
+        };
+        await db.contacts.put(updatedContact);
+        await SyncQueueManager.enqueue('contacts', params.contactId, 'update', updatedContact);
+
+        // 5. Add Contact transaction
+        const transId = uuidv4();
+        const trans = {
+          id: transId,
+          org_id: params.orgId,
+          contact_id: params.contactId,
+          reference_type: 'payment_voucher' as const,
+          reference_id: voucherId,
+          debit: totalSettled,
+          credit: 0,
+          balance_after: newContactBalance,
+          notes: params.notes || `سداد نقدي/بنكي رقم ${voucherNo}${params.discount ? ` (شامل خصم مكتسب ${params.discount} ج.م)` : ''}`,
+          created_at: now,
+          sync_status: 'pending' as const,
+        };
+        await db.contact_transactions.add(trans);
+        await SyncQueueManager.enqueue('contact_transactions', transId, 'insert', trans);
+      }
+    );
+
+    return { voucherId, newBalance: newContactBalance };
+  }
+
+  /**
+   * Record receipt/collection from customer or customer/supplier contact (تحصيل دفعة من عميل أو عميل/مورد)
+   */
+  public static async recordCustomerPayment(params: {
+    orgId: string;
+    contactId: string;
+    treasuryId: string;
+    shiftId?: string | null;
+    amount: number;
+    discount?: number;
+    paymentMethod: 'cash' | 'card' | 'bank_transfer' | 'cheque';
+    referenceNo?: string;
+    notes?: string;
+    userId: string;
+  }): Promise<{ voucherId: string; newBalance: number }> {
+    const now = new Date().toISOString();
+    const voucherId = uuidv4();
+    const count = await db.financial_vouchers.where('org_id').equals(params.orgId).count();
+    const voucherNo = params.referenceNo || `RCV-${String(count + 1).padStart(4, '0')}`;
+
+    const contact = await db.contacts.get(params.contactId);
+    if (!contact) throw new Error('جهة التعامل غير موجودة');
+
+    const totalSettled = params.amount + (params.discount || 0);
+
+    const voucher: FinancialVoucher = {
+      id: voucherId,
+      org_id: params.orgId,
+      voucher_no: voucherNo,
+      type: 'receipt',
+      treasury_id: params.treasuryId,
+      contact_id: params.contactId,
+      shift_id: params.shiftId,
+      amount: params.amount,
+      description: params.notes || `تحصيل دفعة من ${contact.type === 'both' ? 'العميل/المورد' : 'العميل'} «${contact.name}»`,
+      reference_no: voucherNo,
+      created_by: params.userId,
+      created_at: now,
+      sync_status: 'pending',
+    };
+
+    let newContactBalance = 0;
+
+    await db.transaction(
+      'rw',
+      [
+        db.financial_vouchers,
+        db.treasuries,
+        db.contacts,
+        db.contact_transactions,
+        db.cashier_shifts,
+        db.sync_queue,
+      ],
+      async () => {
+        // 1. Add financial voucher
+        await db.financial_vouchers.add(voucher);
+        await SyncQueueManager.enqueue('financial_vouchers', voucherId, 'insert', voucher);
+
+        // 2. Add amount to Treasury
+        await this.adjustBalance(params.treasuryId, params.amount);
+
+        // 3. If shiftId provided, live-update shift running balance
+        if (params.shiftId) {
+          const shift = await db.cashier_shifts.get(params.shiftId);
+          if (shift && shift.status === 'open') {
+            const isCard = params.paymentMethod === 'card';
+            const updatedShift = {
+              ...shift,
+              total_sales_cash: isCard ? shift.total_sales_cash : (shift.total_sales_cash || 0) + params.amount,
+              total_sales_card: isCard ? (shift.total_sales_card || 0) + params.amount : shift.total_sales_card,
+              expected_closing_balance: isCard ? shift.expected_closing_balance : shift.expected_closing_balance + params.amount,
+              sync_status: 'pending' as const,
+            };
+            await db.cashier_shifts.put(updatedShift);
+            await SyncQueueManager.enqueue('cashier_shifts', shift.id, 'update', updatedShift);
+          }
+        }
+
+        // 4. Adjust Contact balance: credit = totalSettled (decreases customer debt)
+        newContactBalance = contact.current_balance - totalSettled;
+        const updatedContact = {
+          ...contact,
+          current_balance: newContactBalance,
+          updated_at: now,
+          sync_status: 'pending' as const,
+        };
+        await db.contacts.put(updatedContact);
+        await SyncQueueManager.enqueue('contacts', params.contactId, 'update', updatedContact);
+
+        // 5. Add Contact transaction
+        const transId = uuidv4();
+        const trans = {
+          id: transId,
+          org_id: params.orgId,
+          contact_id: params.contactId,
+          reference_type: 'receipt_voucher' as const,
+          reference_id: voucherId,
+          debit: 0,
+          credit: totalSettled,
+          balance_after: newContactBalance,
+          notes: params.notes || `تحصيل نقدي/بنكي رقم ${voucherNo}${params.discount ? ` (شامل خصم مسموح به ${params.discount} ج.م)` : ''}`,
+          created_at: now,
+          sync_status: 'pending' as const,
+        };
+        await db.contact_transactions.add(trans);
+        await SyncQueueManager.enqueue('contact_transactions', transId, 'insert', trans);
+      }
+    );
+
+    return { voucherId, newBalance: newContactBalance };
   }
 }

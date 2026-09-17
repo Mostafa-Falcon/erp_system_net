@@ -26,6 +26,7 @@ export function daysToExpiry(dateStr?: string | null): number {
 
 export const MOVEMENT_TYPE_LABELS: Record<InventoryTransactionType, string> = {
   opening_stock: 'رصيد افتتاحي',
+  opening_balance: 'رصيد افتتاحي',
   purchase: 'مشتريات',
   sale: 'مبيعات',
   sale_return: 'مرتجع بيع',
@@ -39,8 +40,9 @@ export const MOVEMENT_TYPE_LABELS: Record<InventoryTransactionType, string> = {
 
 export const TRANSFER_STATUS_LABELS: Record<string, string> = {
   draft: 'مسودة',
-  pending: 'معلق',
-  completed: 'مكتمل',
+  pending: 'قيد الشحن',
+  in_transit: 'تم الشحن',
+  completed: 'تم الاستلام',
   cancelled: 'ملغي',
 };
 

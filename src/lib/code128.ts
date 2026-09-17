@@ -47,11 +47,10 @@ export function encodeCode128(payload: string): BarcodeSymbols {
   const values: number[] = [START_B];
   let checksum = START_B;
 
-  for (let i = 0; i < payload.length; i++) {
-    const code = payload.charCodeAt(i);
-    if (code < 32 || code > 126) {
-      throw new Error(`Code 128 (B) supports ASCII 32-126 only: "${payload[i]}"`);
-    }
+  const sanitized = payload.replace(/[^\x20-\x7E]/g, '') || '0';
+
+  for (let i = 0; i < sanitized.length; i++) {
+    const code = sanitized.charCodeAt(i);
     const value = code - 32; // Subset B maps ASCII → value
     values.push(value);
     checksum += value * (i + 1);
@@ -88,26 +87,31 @@ function expandToRuns(bits: string): { width: number; black: boolean }[] {
  * Dimensions are in millimetres so label printers can scale accurately.
  */
 export function renderCode128Svg(payload: string, opts: { moduleWidth?: number; height?: number } = {}): string {
-  const moduleWidth = opts.moduleWidth ?? 0.6;
-  const height = opts.height ?? 56;
-  const { pattern } = encodeCode128(payload);
+  if (!payload || !payload.trim()) return '';
+  try {
+    const moduleWidth = opts.moduleWidth ?? 0.6;
+    const height = opts.height ?? 56;
+    const { pattern } = encodeCode128(payload.trim());
 
-  let totalWidth = 0;
-  for (const bits of pattern) {
-    totalWidth += bits.length * moduleWidth;
-  }
-
-  let x = 0;
-  let path = '';
-  pattern.forEach((bits) => {
-    const runs = expandToRuns(bits);
-    for (const run of runs) {
-      if (run.black) {
-        path += `M${x.toFixed(2)} 0 h${(run.width * moduleWidth).toFixed(2)} v${height} h${(-run.width * moduleWidth).toFixed(2)} Z `;
-      }
-      x += run.width * moduleWidth;
+    let totalWidth = 0;
+    for (const bits of pattern) {
+      totalWidth += bits.length * moduleWidth;
     }
-  });
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth.toFixed(2)}mm" height="${height}mm" viewBox="0 0 ${totalWidth.toFixed(2)} ${height}" preserveAspectRatio="none"><path d="${path.trim()}" fill="#000" /></svg>`;
+    let x = 0;
+    let path = '';
+    pattern.forEach((bits) => {
+      const runs = expandToRuns(bits);
+      for (const run of runs) {
+        if (run.black) {
+          path += `M${x.toFixed(2)} 0 h${(run.width * moduleWidth).toFixed(2)} v${height} h${(-run.width * moduleWidth).toFixed(2)} Z `;
+        }
+        x += run.width * moduleWidth;
+      }
+    });
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth.toFixed(2)}mm" height="${height}mm" viewBox="0 0 ${totalWidth.toFixed(2)} ${height}" preserveAspectRatio="none"><path d="${path.trim()}" fill="#000" /></svg>`;
+  } catch {
+    return '';
+  }
 }

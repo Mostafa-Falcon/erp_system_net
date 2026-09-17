@@ -9,10 +9,14 @@ import { PurchasesRepository } from '@/modules/purchases/purchases_repository';
 import { ContactsRepository } from '@/modules/contacts/contacts_repository';
 import { InventoryRepository } from '@/modules/inventory/inventory_repository';
 import { formatNumber } from '@/lib/format';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { Contact, Product, Treasury, Unit, Warehouse } from '@/types';
-
-const selectCls =
-  'h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#558b2f]';
 
 interface Line {
   productId: string;
@@ -229,20 +233,33 @@ export function PurchaseInvoiceForm({ onSaved }: { onSaved: (invoiceId: string) 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         <div className="md:col-span-2">
           <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">المورد</span>
-          <select value={supplierId} onChange={(e) => setSupplierId(e.target.value)} className={selectCls + ' w-full'}>
-            <option value="">— اختر المورد —</option>
-            {suppliers.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}{c.phone ? ` (${c.phone})` : ''}</option>
-            ))}
-          </select>
+          <Select value={supplierId} onValueChange={setSupplierId}>
+            <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+              <SelectValue placeholder="— اختر المورد —" />
+            </SelectTrigger>
+            <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl max-h-60">
+              {suppliers.map((c) => (
+                <SelectItem key={c.id} value={c.id} className="">
+                  {c.name}{c.phone ? ` (${c.phone})` : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">المخزن</span>
-          <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} className={selectCls + ' w-full'}>
-            {warehouses.map((w) => (
-              <option key={w.id} value={w.id}>{w.name}</option>
-            ))}
-          </select>
+          <Select value={warehouseId} onValueChange={setWarehouseId}>
+            <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+              <SelectValue placeholder="اختر المخزن" />
+            </SelectTrigger>
+            <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+              {warehouses.map((w) => (
+                <SelectItem key={w.id} value={w.id} className="">
+                  {w.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">رقم فاتورة المورد</span>
@@ -277,11 +294,18 @@ export function PurchaseInvoiceForm({ onSaved }: { onSaved: (invoiceId: string) 
         {paymentType === 'cash' ? (
           <div className="md:col-span-2">
             <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">الخزينة (سداد نقدي)</span>
-            <select value={treasuryId} onChange={(e) => setTreasuryId(e.target.value)} className={selectCls + ' w-full'}>
-              {treasuries.map((t) => (
-                <option key={t.id} value={t.id}>{t.name} ({t.current_balance.toLocaleString('en-US', { maximumFractionDigits: 2 })})</option>
-              ))}
-            </select>
+            <Select value={treasuryId} onValueChange={setTreasuryId}>
+              <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+                <SelectValue placeholder="اختر الخزينة" />
+              </SelectTrigger>
+              <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+                {treasuries.map((t) => (
+                  <SelectItem key={t.id} value={t.id} className="">
+                    {t.name} ({t.current_balance.toLocaleString('en-US', { maximumFractionDigits: 2 })})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         ) : (
           <div className="md:col-span-2">
@@ -321,16 +345,18 @@ export function PurchaseInvoiceForm({ onSaved }: { onSaved: (invoiceId: string) 
                 <div key={idx} className="grid grid-cols-2 md:grid-cols-12 gap-2 items-end rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-3">
                   <div className="col-span-2 md:col-span-3">
                     <span className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">الصنف</span>
-                    <select
-                      value={line.productId}
-                      onChange={(e) => onProductChange(idx, e.target.value)}
-                      className={selectCls + ' w-full bg-white dark:bg-slate-800'}
-                    >
-                      <option value="">— اختر —</option>
-                      {products.map((pr) => (
-                        <option key={pr.id} value={pr.id}>{pr.name}</option>
-                      ))}
-                    </select>
+                    <Select value={line.productId} onValueChange={(val) => onProductChange(idx, val)}>
+                      <SelectTrigger className="w-full h-9 rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-800 text-xs font-bold">
+                        <SelectValue placeholder="— اختر الصنف —" />
+                      </SelectTrigger>
+                      <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl max-h-60">
+                        {products.map((pr) => (
+                          <SelectItem key={pr.id} value={pr.id} className="">
+                            {pr.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   {p?.tracks_batch && (
                     <>
@@ -348,17 +374,18 @@ export function PurchaseInvoiceForm({ onSaved }: { onSaved: (invoiceId: string) 
                   )}
                   <div>
                     <span className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">الوحدة</span>
-                    <select
-                      value={line.unitId}
-                      onChange={(e) => onUnitChange(idx, e.target.value)}
-                      className={selectCls + ' w-full bg-white dark:bg-slate-800'}
-                    >
-                      {(unitOptions[line.productId] || []).map((u) => (
-                        <option key={u.unitId} value={u.unitId}>
-                          {unitsById[u.unitId]?.symbol || ''}{u.factor !== 1 ? ` (×${u.factor})` : ''}
-                        </option>
-                      ))}
-                    </select>
+                    <Select value={line.unitId} onValueChange={(val) => onUnitChange(idx, val)}>
+                      <SelectTrigger className="w-full h-9 rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-800 text-xs font-bold">
+                        <SelectValue placeholder="الوحدة" />
+                      </SelectTrigger>
+                      <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+                        {(unitOptions[line.productId] || []).map((u) => (
+                          <SelectItem key={u.unitId} value={u.unitId} className="">
+                            {unitsById[u.unitId]?.symbol || ''}{u.factor !== 1 ? ` (×${u.factor})` : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <span className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">الكمية</span>

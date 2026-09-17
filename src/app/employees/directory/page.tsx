@@ -18,6 +18,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+import { useRouter } from 'next/navigation';
+
 const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
   { value: 'cashier', label: 'كاشير ونقطة بيع (POS)' },
   { value: 'manager', label: 'مدير فرع' },
@@ -26,6 +28,7 @@ const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
 ];
 
 function EmployeesContent() {
+  const router = useRouter();
   const { currentUser } = useSessionStore();
   const orgId = currentUser?.org_id || '';
 
@@ -35,18 +38,6 @@ function EmployeesContent() {
   const [roleFilter, setRoleFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
 
-  // Add form
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [fullName, setFullName] = useState('');
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [role, setRole] = useState<UserRole>('cashier');
-  const [branchId, setBranchId] = useState('');
-  const [pinCode, setPinCode] = useState('1234');
-  const [isSaving, setIsSaving] = useState(false);
-  const [formError, setFormError] = useState('');
-
   // Edit form
   const [editTarget, setEditTarget] = useState<User | null>(null);
   const [eFullName, setEFullName] = useState('');
@@ -55,6 +46,8 @@ function EmployeesContent() {
   const [eRole, setERole] = useState<UserRole>('cashier');
   const [eBranchId, setEBranchId] = useState('');
   const [ePinCode, setEPinCode] = useState('');
+  const [formError, setFormError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const loadData = async () => {
     if (!orgId) return;
@@ -66,9 +59,6 @@ function EmployeesContent() {
       ]);
       setEmployees(empList);
       setBranches(branchList);
-      if (branchList.length > 0) {
-        setBranchId((prev) => prev || branchList.find((b) => b.is_main)?.id || branchList[0].id);
-      }
     } catch (err) {
       console.error('Failed to load employees:', err);
     } finally {
@@ -105,51 +95,7 @@ function EmployeesContent() {
   }, [employees]);
 
   const openAddModal = () => {
-    setFormError('');
-    setFullName('');
-    setUsername('');
-    setEmail('');
-    setPhone('');
-    setRole('cashier');
-    setPinCode('1234');
-    setIsAddModalOpen(true);
-  };
-
-  const handleAddEmployee = async () => {
-    setFormError('');
-    if (!currentUser) return;
-    if (!fullName.trim()) {
-      setFormError('أدخل اسم الموظف.');
-      return;
-    }
-    if (!username.trim()) {
-      setFormError('أدخل اسم المستخدم (Login).');
-      return;
-    }
-    if (employees.some((e) => e.username.toLowerCase() === username.trim().toLowerCase())) {
-      setFormError('اسم المستخدم محجوز بالفعل لموظف آخر.');
-      return;
-    }
-    setIsSaving(true);
-    try {
-      const dto: CreateEmployeeDTO = {
-        org_id: orgId,
-        branch_id: branchId || undefined,
-        full_name: fullName,
-        username,
-        email: email || undefined,
-        phone: phone || undefined,
-        role,
-        pin_code: pinCode,
-      };
-      await EmployeeRepository.addEmployee(dto);
-      setIsAddModalOpen(false);
-      await loadData();
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'حدث خطأ أثناء إضافة الموظف.');
-    } finally {
-      setIsSaving(false);
-    }
+    router.push('/employees/new');
   };
 
   const openEditModal = (emp: User) => {
@@ -370,75 +316,6 @@ function EmployeesContent() {
           </div>
         </div>
       </div>
-
-      {/* Add modal */}
-      {isAddModalOpen && (
-        <Modal title="إضافة موظف جديد للمنشأة" onClose={() => setIsAddModalOpen(false)}>
-          {formError && <FormError message={formError} />}
-
-          <div>
-            <Label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">اسم الموظف بالكامل</Label>
-            <Input type="text" placeholder="محمد إبراهيم" value={fullName} onChange={(e) => setFullName(e.target.value)} className="h-10 bg-slate-50 dark:bg-slate-900 text-sm" />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">اسم المستخدم (Login)</Label>
-              <Input type="text" placeholder="mohamed_pos" value={username} onChange={(e) => setUsername(e.target.value)} className="h-10 bg-slate-50 dark:bg-slate-900 text-sm" />
-            </div>
-            <div>
-              <Label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">رقم الهاتف</Label>
-              <Input type="tel" placeholder="01099887766" value={phone} onChange={(e) => setPhone(e.target.value)} className="h-10 bg-slate-50 dark:bg-slate-900 text-sm" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">الدور الوظيفي والصلاحية</Label>
-              <Select value={role} onValueChange={(val) => setRole(val as UserRole)}>
-                <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
-                  <SelectValue placeholder="اختر الدور" />
-                </SelectTrigger>
-                <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
-                  {ROLE_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value} className="">
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">الفرع المخصص</Label>
-              <Select value={branchId} onValueChange={setBranchId}>
-                <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
-                  <SelectValue placeholder="اختر الفرع" />
-                </SelectTrigger>
-                <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
-                  {branches.map((b) => (
-                    <SelectItem key={b.id} value={b.id} className="">
-                      {b.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">رمز PIN السريع (للكاشير)</Label>
-              <Input type="password" maxLength={6} placeholder="1234" value={pinCode} onChange={(e) => setPinCode(e.target.value)} className="h-10 bg-slate-50 dark:bg-slate-900 text-sm font-mono text-center tracking-widest" />
-            </div>
-            <div>
-              <Label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">البريد الإلكتروني (اختياري)</Label>
-              <Input type="email" placeholder="mohamed@company.com" value={email} onChange={(e) => setEmail(e.target.value)} className="h-10 bg-slate-50 dark:bg-slate-900 text-sm" />
-            </div>
-          </div>
-
-          <ModalFooter onCancel={() => setIsAddModalOpen(false)} onSave={handleAddEmployee} isSaving={isSaving} saveLabel="حفظ وإضافة الموظف" />
-        </Modal>
-      )}
 
       {/* Edit modal */}
       {editTarget && (

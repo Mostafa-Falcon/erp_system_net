@@ -29,8 +29,17 @@ import type {
   PurchaseInvoice,
   PurchaseInvoiceItem,
   PurchaseReturn,
+  StocktakeSession,
+  StocktakeItem,
   SyncQueueItem,
   ActivityLog,
+  JournalEntry,
+  JournalEntryLine,
+  Account,
+  EmployeeAttendance,
+  EmployeeSalaryStatement,
+  EmployeeLeave,
+  Department,
 } from '@/types';
 
 /**
@@ -75,6 +84,18 @@ export class FalconAppDatabase extends Dexie {
   purchase_invoice_items!: Table<PurchaseInvoiceItem, string>;
   purchase_returns!: Table<PurchaseReturn, string>;
   
+  stocktake_sessions!: Table<StocktakeSession, string>;
+  stocktake_items!: Table<StocktakeItem, string>;
+
+  employee_attendance!: Table<EmployeeAttendance, string>;
+  salary_statements!: Table<EmployeeSalaryStatement, string>;
+  employee_leaves!: Table<EmployeeLeave, string>;
+  departments!: Table<Department, string>;
+
+  journal_entries!: Table<JournalEntry, string>;
+  journal_entry_lines!: Table<JournalEntryLine, string>;
+  accounts!: Table<Account, string>;
+
   sync_queue!: Table<SyncQueueItem, string>;
   activity_logs!: Table<ActivityLog, string>;
 
@@ -134,6 +155,32 @@ export class FalconAppDatabase extends Dexie {
     // Incremental upgrade: adds the product_types table.
     this.version(4).stores({
       product_types: 'id, org_id, name, is_active, sync_status',
+    });
+
+    // Incremental upgrade: adds stocktake tables.
+    this.version(5).stores({
+      stocktake_sessions: 'id, org_id, branch_id, warehouse_id, session_number, status, created_at, sync_status',
+      stocktake_items: 'id, session_id, product_id',
+    });
+
+    // Incremental upgrade: adds reference_type index to inventory_transactions for efficient document-based lookups.
+    this.version(6).stores({
+      inventory_transactions: 'id, org_id, warehouse_id, product_id, transaction_type, reference_type, reference_id, created_at, sync_status',
+    });
+
+    // Incremental upgrade: adds journal entries for accounting.
+    this.version(7).stores({
+      journal_entries: 'id, org_id, branch_id, entry_no, entry_date, type, sync_status',
+      journal_entry_lines: 'id, entry_id, account_id',
+      accounts: 'id, org_id, parent_id, code, type, is_active, sync_status',
+    });
+
+    // Incremental upgrade: adds employee attendance, salary statements, and departments.
+    this.version(8).stores({
+      employee_attendance: 'id, org_id, branch_id, employee_id, date, status, sync_status',
+      salary_statements: 'id, org_id, employee_id, month, status, sync_status',
+      employee_leaves: 'id, org_id, employee_id, leave_type, status, start_date, sync_status',
+      departments: 'id, org_id, parent_id, manager_id, is_active, sync_status',
     });
   }
 }

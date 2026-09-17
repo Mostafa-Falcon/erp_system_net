@@ -3,20 +3,40 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { ContactsRepository } from '@/modules/contacts/contacts_repository';
 import type { Contact, ContactType } from '@/types';
+import { cn } from '@/lib/utils';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Building2,
+  Phone,
+  Mail,
+  Hash,
+  ArrowUpRight,
+  ArrowDownLeft,
+  MapPin,
+  FileText,
+  BadgeInfo,
+  CheckCircle2,
+  X,
+  RefreshCw,
+  User,
+  Truck,
+  Handshake
+} from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
 const inputCls =
-  'h-10 w-full px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#558b2f]';
+  'h-12 w-full px-4 pr-10 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900 text-sm font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all';
 
-const selectCls =
-  'h-10 w-full px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#558b2f]';
-
-const TYPE_LABELS: Record<ContactType, string> = {
-  customer: 'عميل',
-  supplier: 'مورد',
-  both: 'عميل ومورد',
-};
+const sectionHeaderCls = "text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 pr-1";
 
 interface ContactFormProps {
   orgId: string;
@@ -36,7 +56,9 @@ export function ContactForm({ orgId, initial, presetType, onSaved }: ContactForm
   const [taxNumber, setTaxNumber] = useState(initial?.tax_number ?? '');
   const [address, setAddress] = useState(initial?.address ?? '');
   const [creditLimit, setCreditLimit] = useState(String(initial?.credit_limit ?? 0));
-  const [openingBalance, setOpeningBalance] = useState('0');
+  const [openingBalanceDebit, setOpeningBalanceDebit] = useState('0'); // لنا (مدين)
+  const [openingBalanceCredit, setOpeningBalanceCredit] = useState('0'); // علينا (دائن)
+  const [isActive, setIsActive] = useState(initial?.is_active ?? true);
   const [notes, setNotes] = useState(initial?.notes ?? '');
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -50,6 +72,8 @@ export function ContactForm({ orgId, initial, presetType, onSaved }: ContactForm
 
     setIsSaving(true);
     try {
+      const finalOpening = (Number(openingBalanceDebit) || 0) - (Number(openingBalanceCredit) || 0);
+
       if (isEdit && initial) {
         const updated = await ContactsRepository.updateContact(initial.id, {
           name: name.trim(),
@@ -60,6 +84,7 @@ export function ContactForm({ orgId, initial, presetType, onSaved }: ContactForm
           tax_number: taxNumber.trim() || undefined,
           address: address.trim() || undefined,
           credit_limit: Number(creditLimit) || 0,
+          is_active: isActive,
           notes: notes.trim() || undefined,
         });
         if (!updated) throw new Error('تعذر تحديث الجهة.');
@@ -76,10 +101,10 @@ export function ContactForm({ orgId, initial, presetType, onSaved }: ContactForm
             tax_number: taxNumber.trim() || undefined,
             address: address.trim() || undefined,
             credit_limit: Number(creditLimit) || 0,
-            is_active: true,
+            is_active: isActive,
             notes: notes.trim() || undefined,
           },
-          Number(openingBalance) || 0
+          finalOpening
         );
         onSaved(created);
       }
@@ -92,83 +117,205 @@ export function ContactForm({ orgId, initial, presetType, onSaved }: ContactForm
   };
 
   return (
-    <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-black text-slate-900 dark:text-white">
-          {isEdit ? 'تعديل جهة تعامل' : 'جهة تعامل جديدة'}
-        </h3>
-        {isEdit && (
-          <span className="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-black">
-            {TYPE_LABELS[type]} • {TYPE_LABELS[initial?.type ?? type]}
-          </span>
-        )}
-      </div>
+    <div className="space-y-6" dir="rtl">
+
+      {/* 🟢 Main Data Section */}
+      <Card className="rounded-[2rem] border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden bg-white dark:bg-[#131b2e]">
+        <CardContent className="p-8">
+           <h4 className={sectionHeaderCls}>البيانات الأساسية</h4>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              <div className="space-y-2 md:col-span-2">
+                 <label className="text-[11px] font-black text-slate-500 pr-1">نوع جهة التعامل <span className="text-red-500">*</span></label>
+                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                   <button
+                     type="button"
+                     onClick={() => setType('customer')}
+                     className={cn(
+                       "flex items-center gap-3 p-3.5 rounded-2xl border text-xs font-black transition-all cursor-pointer",
+                       type === 'customer'
+                         ? "bg-blue-50/90 border-blue-500 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 shadow-xs ring-1 ring-blue-500/30"
+                         : "border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900"
+                     )}
+                   >
+                     <User className="w-4 h-4 text-blue-600" />
+                     <span>عميل (مبيعات وفواتير)</span>
+                   </button>
+
+                   <button
+                     type="button"
+                     onClick={() => setType('supplier')}
+                     className={cn(
+                       "flex items-center gap-3 p-3.5 rounded-2xl border text-xs font-black transition-all cursor-pointer",
+                       type === 'supplier'
+                         ? "bg-emerald-50/90 border-emerald-500 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 shadow-xs ring-1 ring-emerald-500/30"
+                         : "border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900"
+                     )}
+                   >
+                     <Truck className="w-4 h-4 text-emerald-600" />
+                     <span>مورد (مشتريات وبضاعة)</span>
+                   </button>
+
+                   <button
+                     type="button"
+                     onClick={() => setType('both')}
+                     className={cn(
+                       "flex items-center gap-3 p-3.5 rounded-2xl border text-xs font-black transition-all cursor-pointer",
+                       type === 'both'
+                         ? "bg-purple-50/90 border-purple-500 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 shadow-xs ring-1 ring-purple-500/30"
+                         : "border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900"
+                     )}
+                   >
+                     <Handshake className="w-4 h-4 text-purple-600" />
+                     <span>مورد وعميل معاً (مزدوج)</span>
+                   </button>
+                 </div>
+              </div>
+
+              <div className="space-y-2 group">
+                 <label className="text-[11px] font-black text-slate-500 pr-1">اسم الجهة / المشروع <span className="text-red-500">*</span></label>
+                 <div className="relative">
+                    <Building2 className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                    <Input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="أدخل الاسم التجاري بدقة..." />
+                 </div>
+              </div>
+
+              <div className="space-y-2">
+                 <label className="text-[11px] font-black text-slate-500 pr-1">كود الحساب (تلقائي)</label>
+                 <div className="relative">
+                    <Hash className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-300" />
+                    <Input disabled value={initial?.code || 'CS-000001'} className={cn(inputCls, "bg-slate-50 text-slate-400 font-mono")} />
+                 </div>
+              </div>
+
+              <div className="space-y-2 group">
+                 <label className="text-[11px] font-black text-slate-500 pr-1">رقم الهاتف الأساسي</label>
+                 <div className="relative">
+                    <Phone className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                    <Input value={mobile} onChange={(e) => setMobile(e.target.value)} className={inputCls} placeholder="01XXXXXXXXX" dir="ltr" />
+                 </div>
+              </div>
+
+              <div className="space-y-2 group">
+                 <label className="text-[11px] font-black text-slate-500 pr-1">البريد الإلكتروني</label>
+                 <div className="relative">
+                    <Mail className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                    <Input value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} placeholder="example@mail.com" dir="ltr" />
+                 </div>
+              </div>
+           </div>
+        </CardContent>
+      </Card>
+
+      {/* 🔴 Opening Balances Section */}
+      <Card className="rounded-[2rem] border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden bg-white dark:bg-[#131b2e]">
+        <CardContent className="p-8">
+           <h4 className={sectionHeaderCls}>الأرصدة الافتتاحية</h4>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-2 group">
+                 <label className="text-[11px] font-black text-slate-500 pr-1">رصيد مورد افتتاحي (له علينا)</label>
+                 <div className="relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                       <span className="text-[10px] font-bold text-slate-400 uppercase">ج.م</span>
+                       <ArrowUpRight className="w-4 h-4 text-red-500" />
+                    </div>
+                    <Input
+                      type="number"
+                      value={openingBalanceCredit}
+                      onChange={(e) => setOpeningBalanceCredit(e.target.value)}
+                      className={cn(inputCls, "pl-16 text-left font-mono text-lg text-red-600")}
+                      placeholder="0.0"
+                    />
+                 </div>
+              </div>
+
+              <div className="space-y-2 group">
+                 <label className="text-[11px] font-black text-slate-500 pr-1">رصيد عميل افتتاحي (عليه لنا)</label>
+                 <div className="relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                       <span className="text-[10px] font-bold text-slate-400 uppercase">ج.م</span>
+                       <ArrowDownLeft className="w-4 h-4 text-emerald-500" />
+                    </div>
+                    <Input
+                      type="number"
+                      value={openingBalanceDebit}
+                      onChange={(e) => setOpeningBalanceDebit(e.target.value)}
+                      className={cn(inputCls, "pl-16 text-left font-mono text-lg text-emerald-600")}
+                      placeholder="0.0"
+                    />
+                 </div>
+              </div>
+           </div>
+           <p className="mt-4 text-[10px] font-bold text-slate-400 flex items-center gap-2">
+              <BadgeInfo className="w-3.5 h-3.5" /> ملاحظة: الرصيد الافتتاحي هو الرصيد المستحق قبل البدء في استخدام النظام.
+           </p>
+        </CardContent>
+      </Card>
+
+      {/* 🔵 Additional Info Section */}
+      <Card className="rounded-[2rem] border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden bg-white dark:bg-[#131b2e]">
+        <CardContent className="p-8">
+           <h4 className={sectionHeaderCls}>بيانات إضافية</h4>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              <div className="space-y-2 group">
+                 <label className="text-[11px] font-black text-slate-500 pr-1">الرقم الضريبي</label>
+                 <div className="relative">
+                    <FileText className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                    <Input value={taxNumber} onChange={(e) => setTaxNumber(e.target.value)} className={inputCls} placeholder="أدخل الرقم الضريبي للجهة..." />
+                 </div>
+              </div>
+
+              <div className="space-y-2 group">
+                 <label className="text-[11px] font-black text-slate-500 pr-1">العنوان بالتفصيل</label>
+                 <div className="relative">
+                    <MapPin className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                    <Input value={address} onChange={(e) => setAddress(e.target.value)} className={inputCls} placeholder="المدينة، الحي، الشارع..." />
+                 </div>
+              </div>
+
+              <div className="md:col-span-2 space-y-2 group">
+                 <label className="text-[11px] font-black text-slate-500 pr-1">ملاحظات إضافية</label>
+                 <div className="relative">
+                    <FileText className="absolute right-3.5 top-4 w-4.5 h-4.5 text-slate-400" />
+                    <textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      className={cn(inputCls, "h-24 py-3 resize-none")}
+                      placeholder="أي معلومات إضافية تخص التعامل مع هذه الجهة..."
+                    />
+                 </div>
+              </div>
+           </div>
+
+           <div className="mt-10 pt-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                 <Switch checked={isActive} onCheckedChange={setIsActive} className="data-[state=checked]:bg-emerald-600" />
+                 <div>
+                    <p className="text-xs font-black text-slate-700 dark:text-white">الحساب نشط ويسمح بالتعامل</p>
+                    <p className="text-[10px] font-bold text-slate-400">يمكنك تعطيل التعامل مع هذه الجهة مؤقتاً دون حذفها.</p>
+                 </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                 <Button variant="ghost" onClick={() => window.history.back()} className="rounded-xl font-bold h-12 px-6">تراجع</Button>
+                 <Button
+                   onClick={save}
+                   disabled={isSaving}
+                   className="h-12 px-10 bg-blue-600 hover:bg-blue-700 text-white rounded-[1.25rem] font-black text-sm gap-2 shadow-xl shadow-blue-500/20 active:scale-95 transition-all"
+                 >
+                    {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                    {isSaving ? 'جاري الحفظ...' : 'حفظ البيانات وتفعيل الحساب'}
+                 </Button>
+              </div>
+           </div>
+        </CardContent>
+      </Card>
 
       {error && (
-        <div className="rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 px-4 py-3 text-xs font-bold text-red-700 dark:text-red-300">
-          {error}
+        <div className="p-4 bg-red-50 text-red-600 border border-red-100 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+           <X className="w-5 h-5" />
+           <span className="text-xs font-black">{error}</span>
         </div>
       )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        <div className="lg:col-span-2">
-          <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">اسم الجهة *</span>
-          <Input type="text" value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="الاسم التجاري أو الشخصي" />
-        </div>
-        <div>
-          <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">نوع الجهة *</span>
-          <select value={type} onChange={(e) => setType(e.target.value as ContactType)} className={selectCls}>
-            <option value="customer">عميل</option>
-            <option value="supplier">مورد</option>
-            <option value="both">عميل ومورد</option>
-          </select>
-        </div>
-        <div>
-          <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">هاتف أرضي</span>
-          <Input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls} placeholder="02-..." />
-        </div>
-        <div>
-          <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">موبايل</span>
-          <Input type="text" value={mobile} onChange={(e) => setMobile(e.target.value)} className={inputCls} placeholder="01..." dir="ltr" />
-        </div>
-        <div>
-          <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">البريد الإلكتروني</span>
-          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} dir="ltr" />
-        </div>
-        <div>
-          <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">الرقم الضريبي</span>
-          <Input type="text" value={taxNumber} onChange={(e) => setTaxNumber(e.target.value)} className={inputCls} dir="ltr" />
-        </div>
-        <div>
-          <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">حد الائتمان</span>
-          <Input type="number" min={0} step="any" value={creditLimit} onChange={(e) => setCreditLimit(e.target.value)} className={inputCls} />
-        </div>
-        {!isEdit && (
-          <div>
-            <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">رصيد افتتاحي</span>
-            <Input type="number" step="any" value={openingBalance} onChange={(e) => setOpeningBalance(e.target.value)} className={inputCls} />
-            <span className="block text-[10px] text-slate-400 mt-0.5">موجب = على الجهة (مدين) • سالب = للجهة (دائن)</span>
-          </div>
-        )}
-        <div className="lg:col-span-2">
-          <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">العنوان</span>
-          <Input type="text" value={address} onChange={(e) => setAddress(e.target.value)} className={inputCls} />
-        </div>
-        <div>
-          <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">ملاحظات</span>
-          <Input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} className={inputCls} />
-        </div>
-      </div>
-
-      <div className="flex items-center justify-end gap-2 pt-2">
-        <Button
-          onClick={save}
-          disabled={isSaving}
-          className="h-10 px-6 bg-[#558b2f] hover:bg-[#436d25] text-white text-xs font-bold rounded-xl shadow-xs"
-        >
-          {isSaving ? 'جاري الحفظ...' : isEdit ? 'حفظ التعديلات' : 'حفظ الجهة'}
-        </Button>
-      </div>
     </div>
   );
 }

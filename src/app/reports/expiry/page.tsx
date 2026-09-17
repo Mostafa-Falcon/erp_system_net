@@ -5,6 +5,24 @@ import { Suspense } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/ui/Icons';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { useSessionStore } from '@/core/state/useSessionStore';
 import { ProductRepository } from '@/modules/inventory/product_repository';
 import { formatNumber, isExpired, daysToExpiry, formatDateTime } from '@/lib/format';
@@ -121,105 +139,154 @@ function ExpiryReportContent() {
     >
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-          <span className="text-xs font-bold text-slate-400">منتهية</span>
-          <div className="text-xl font-black text-red-600 mt-1">{formatNumber(totals.expired)}</div>
+        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm border-b-4 border-b-red-600">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">منتهية</span>
+          <div className="text-2xl font-black text-red-600 mt-1">{formatNumber(totals.expired)}</div>
         </div>
-        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-          <span className="text-xs font-bold text-slate-400">خلال 30 يوم</span>
-          <div className="text-xl font-black text-amber-600 mt-1">{formatNumber(totals.soon30)}</div>
+        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm border-b-4 border-b-amber-600">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">خلال 30 يوم</span>
+          <div className="text-2xl font-black text-amber-600 mt-1">{formatNumber(totals.soon30)}</div>
         </div>
-        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-          <span className="text-xs font-bold text-slate-400">خلال 90 يوم</span>
-          <div className="text-xl font-black text-orange-600 mt-1">{formatNumber(totals.soon90)}</div>
+        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm border-b-4 border-b-orange-600">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">خلال 90 يوم</span>
+          <div className="text-2xl font-black text-orange-600 mt-1">{formatNumber(totals.soon90)}</div>
         </div>
-        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-          <span className="text-xs font-bold text-slate-400">سارية</span>
-          <div className="text-xl font-black text-emerald-600 mt-1">{formatNumber(totals.valid)}</div>
+        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm border-b-4 border-b-emerald-600">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">سارية</span>
+          <div className="text-2xl font-black text-emerald-600 mt-1">{formatNumber(totals.valid)}</div>
         </div>
-        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-          <span className="text-xs font-bold text-slate-400">القيمة المعروضة</span>
-          <div className="text-xl font-black text-slate-900 dark:text-white mt-1">{formatNumber(totals.value)}</div>
+        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">القيمة المعروضة</span>
+          <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">{formatNumber(totals.value)}</div>
         </div>
       </div>
 
+      <Separator className="my-2 opacity-50" />
+
       {/* Filters */}
-      <div className="flex flex-col lg:flex-row gap-3 flex-wrap bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-        <select value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)} className={selectCls}>
-          <option value="all">كل المخازن</option>
-          {warehouses.map((w) => (
-            <option key={w.id} value={w.id}>{w.name}</option>
-          ))}
-        </select>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as 'all' | ExpiryStatus)} className={selectCls}>
-          <option value="all">كل الحالات</option>
-          {(Object.keys(STATUS_LABELS) as ExpiryStatus[]).map((s) => (
-            <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-          ))}
-        </select>
-        <select value={productFilter} onChange={(e) => setProductFilter(e.target.value)} className={selectCls + ' lg:min-w-52'}>
-          <option value="all">كل الأصناف</option>
-          {products.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
+      <div className="flex flex-col lg:flex-row gap-3 items-center flex-wrap bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+        <div className="w-full sm:w-48">
+          <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
+            <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+              <SelectValue placeholder="المخزن" />
+            </SelectTrigger>
+            <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+              <SelectItem value="all" className="">
+                كل المخازن
+              </SelectItem>
+              {warehouses.map((w) => (
+                <SelectItem key={w.id} value={w.id} className="">
+                  {w.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="w-full sm:w-52">
+          <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val as 'all' | ExpiryStatus)}>
+            <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+              <SelectValue placeholder="حالة الصلاحية" />
+            </SelectTrigger>
+            <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+              <SelectItem value="all" className="">
+                كل الحالات
+              </SelectItem>
+              {(Object.keys(STATUS_LABELS) as ExpiryStatus[]).map((s) => (
+                <SelectItem key={s} value={s} className="">
+                  {STATUS_LABELS[s]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="w-full sm:w-60">
+          <Select value={productFilter} onValueChange={setProductFilter}>
+            <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+              <SelectValue placeholder="الصنف" />
+            </SelectTrigger>
+            <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl max-h-60">
+              <SelectItem value="all" className="">
+                كل الأصناف
+              </SelectItem>
+              {products.map((p) => (
+                <SelectItem key={p.id} value={p.id} className="">
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Batches table */}
-      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden print:border-0">
-        <div className="overflow-x-auto">
-          <table className="w-full text-right border-collapse">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                <th className="py-3.5 px-4">الصنف</th>
-                <th className="py-3.5 px-4">رقم الدفعة</th>
-                <th className="py-3.5 px-4">المخزن</th>
-                <th className="py-3.5 px-4">تاريخ الانتهاء</th>
-                <th className="py-3.5 px-4">المتبقي</th>
-                <th className="py-3.5 px-4">الرصيد</th>
-                <th className="py-3.5 px-4">الوحدة</th>
-                <th className="py-3.5 px-4">القيمة</th>
-                <th className="py-3.5 px-4">الحالة</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
+      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-md print:border-0">
+        <ScrollArea className="h-[calc(100vh-450px)] min-h-[400px]">
+          <Table>
+            <TableHeader className="sticky top-0 z-10 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm shadow-sm">
+              <TableRow>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">الصنف</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">رقم الدفعة</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">المخزن</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">تاريخ الانتهاء</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">المتبقي</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">الرصيد</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">الوحدة</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">القيمة</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">الحالة</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="text-xs font-bold">
               {isLoading ? (
-                <tr><td colSpan={9} className="py-12 text-center text-slate-400 font-semibold">جاري تحميل الدفعات...</td></tr>
+                Array.from({ length: 8 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={9} className="py-4 px-4">
+                      <Skeleton className="h-6 w-full opacity-50" />
+                    </TableCell>
+                  </TableRow>
+                ))
               ) : rows.length === 0 ? (
-                <tr><td colSpan={9} className="py-12 text-center text-slate-400 font-semibold">لا توجد دفعات مطابقة للفلاتر المحددة.</td></tr>
+                <TableRow>
+                  <TableCell colSpan={9} className="py-20 text-center text-slate-400 font-bold">
+                    لا توجد دفعات مطابقة للفلاتر المحددة.
+                  </TableCell>
+                </TableRow>
               ) : (
                 rows.map(({ batch, info }) => {
                   const p = products.find((x) => x.id === batch.product_id);
                   return (
-                    <tr key={batch.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                      <td className="py-3 px-4 font-bold text-slate-900 dark:text-white">{p?.name || '—'}</td>
-                      <td className="py-3 px-4 font-mono font-bold text-slate-700 dark:text-slate-200">{batch.batch_number}</td>
-                      <td className="py-3 px-4 font-bold text-slate-700 dark:text-slate-300">{warehouseName(batch.warehouse_id)}</td>
-                      <td className="py-3 px-4 text-slate-500 whitespace-nowrap">{batch.expiry_date ? formatDateTime(batch.expiry_date) : '—'}</td>
-                      <td className="py-3 px-4 font-black">
+                    <TableRow key={batch.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors group">
+                      <TableCell className="font-black text-slate-900 dark:text-white py-3">{p?.name || '—'}</TableCell>
+                      <TableCell className="font-mono font-bold text-slate-700 dark:text-slate-300">{batch.batch_number}</TableCell>
+                      <TableCell className="font-bold text-slate-700 dark:text-slate-300">{warehouseName(batch.warehouse_id)}</TableCell>
+                      <TableCell className="text-slate-500 whitespace-nowrap font-mono text-[11px]">
+                        {batch.expiry_date ? new Date(batch.expiry_date).toLocaleDateString('en-GB') : '—'}
+                      </TableCell>
+                      <TableCell className="font-black">
                         {info.days !== undefined ? (
                           <span className={info.status === 'valid' ? 'text-emerald-600' : 'text-amber-600'}>
                             {formatNumber(info.days)} يوم
                           </span>
                         ) : (
-                          <span className="text-slate-400">—</span>
+                          <span className="text-slate-400 opacity-30">—</span>
                         )}
-                      </td>
-                      <td className="py-3 px-4 font-black text-slate-800 dark:text-slate-100">{formatNumber(batch.current_quantity)}</td>
-                      <td className="py-3 px-4 text-slate-500">{unitSymbol(p?.base_unit_id)}</td>
-                      <td className="py-3 px-4 font-bold">{formatNumber(batch.current_quantity * (batch.purchase_price || 0))}</td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black border ${STATUS_STYLES[info.status]}`}>
+                      </TableCell>
+                      <TableCell className="font-black text-slate-800 dark:text-slate-100 text-sm">{formatNumber(batch.current_quantity)}</TableCell>
+                      <TableCell className="text-slate-500 font-medium">{unitSymbol(p?.base_unit_id)}</TableCell>
+                      <TableCell className="font-mono">{formatNumber(batch.current_quantity * (batch.purchase_price || 0))}</TableCell>
+                      <TableCell>
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black border shadow-xs transition-transform group-hover:scale-105 inline-block ${STATUS_STYLES[info.status]}`}>
                           {STATUS_LABELS[info.status]}
                         </span>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })
               )}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </ScrollArea>
       </div>
     </AppShell>
   );

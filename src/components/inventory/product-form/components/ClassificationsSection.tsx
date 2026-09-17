@@ -39,7 +39,7 @@ export const ClassificationsSection: React.FC<ClassificationsSectionProps> = ({
   setActiveModal,
 }) => {
   return (
-    <Card className="border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#131b2e] shadow-xs">
+    <Card className="border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#131b2e] shadow-xs rounded-2xl">
       <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
         <CardTitle className="text-sm font-black text-slate-800 dark:text-slate-200 flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
@@ -50,7 +50,7 @@ export const ClassificationsSection: React.FC<ClassificationsSectionProps> = ({
         {/* 1. الشركة / الماركة / المورد */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">
+            <Label className="text-xs font-black text-slate-600 dark:text-slate-400">
               الشركة المصنعة / الماركة
             </Label>
             <Button
@@ -82,7 +82,7 @@ export const ClassificationsSection: React.FC<ClassificationsSectionProps> = ({
         {/* 2. المجموعة / التصنيف */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">
+            <Label className="text-xs font-black text-slate-600 dark:text-slate-400">
               المجموعة / التصنيف
             </Label>
             <Button
@@ -114,7 +114,7 @@ export const ClassificationsSection: React.FC<ClassificationsSectionProps> = ({
         {/* 3. نوع المنتج */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <Label className="text-xs font-bold text-slate-600 dark:text-slate-400">
+            <Label className="text-xs font-black text-slate-600 dark:text-slate-400">
               نوع المنتج
             </Label>
             <Button

@@ -7,6 +7,33 @@ import { AppShell } from '@/components/layout/AppShell';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/ui/Icons';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { format } from 'date-fns';
+import { DatePicker } from '@/components/ui/date-picker';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Textarea } from '@/components/ui/textarea';
 import { useSessionStore } from '@/core/state/useSessionStore';
 import { ProductRepository } from '@/modules/inventory/product_repository';
 import { InventoryRepository } from '@/modules/inventory/inventory_repository';
@@ -261,18 +288,20 @@ function InventoryStatusContent() {
       }
     >
       {/* Warehouse selector + KPIs */}
-      <div className="flex flex-col lg:flex-row gap-3 items-center justify-between bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+      <div className="flex flex-col lg:flex-row gap-3 items-center justify-between bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
         <div className="flex items-center gap-2 flex-wrap">
-          <Icons.Warehouse />
-          <span className="text-xs font-black text-slate-500 dark:text-slate-400">المخزن:</span>
+          <div className="flex items-center gap-1.5 text-slate-400 px-1">
+            <Icons.Warehouse className="w-4 h-4" />
+            <span className="text-[10px] font-black uppercase tracking-widest">المخزن:</span>
+          </div>
           {warehouses.map((w) => (
             <button
               key={w.id}
               onClick={() => setSelectedWarehouse(w.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`px-4 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer border ${
                 selectedWarehouse === w.id
-                  ? 'bg-[#558b2f] text-white shadow-xs'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  ? 'bg-[#558b2f] text-white shadow-md border-[#558b2f] scale-105'
+                  : 'bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
               {w.name}
@@ -281,20 +310,22 @@ function InventoryStatusContent() {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-black border border-emerald-200 dark:border-emerald-800">
+          <span className="px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-black border border-emerald-200 dark:border-emerald-800 shadow-xs">
             إجمالي الرصيد: {formatNumber(totals.totalQty)}
           </span>
-          <span className="px-3 py-1.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 text-xs font-black border border-amber-200 dark:border-amber-800">
+          <span className="px-3 py-1.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 text-[10px] font-black border border-amber-200 dark:border-amber-800 shadow-xs">
             منخفض: {totals.lowCount}
           </span>
-          <span className="px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-xs font-black border border-red-200 dark:border-red-800">
+          <span className="px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-[10px] font-black border border-red-200 dark:border-red-800 shadow-xs">
             نفد: {totals.outCount}
           </span>
         </div>
       </div>
 
+      <Separator className="opacity-50" />
+
       {/* Search + filters */}
-      <div className="flex flex-col sm:flex-row gap-3 bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row gap-3 bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
         <div className="w-full sm:w-80">
           <Input
             type="text"
@@ -304,95 +335,132 @@ function InventoryStatusContent() {
             className="h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs"
           />
         </div>
-        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as 'all' | ItemType)} className={selectCls}>
-          <option value="all">كل الأنواع</option>
-          <option value="storable">بضاعة</option>
-          <option value="service">خدمات</option>
-          <option value="composite">مجمع</option>
-        </select>
+        <div className="w-full sm:w-48">
+          <Select
+            value={typeFilter}
+            onValueChange={(val) => setTypeFilter(val as 'all' | ItemType)}
+          >
+            <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+              <SelectValue placeholder="كل الأنواع" />
+            </SelectTrigger>
+            <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+              <SelectItem value="all" className="">
+                كل الأنواع
+              </SelectItem>
+              <SelectItem value="storable" className="">
+                بضاعة
+              </SelectItem>
+              <SelectItem value="service" className="">
+                خدمات
+              </SelectItem>
+              <SelectItem value="composite" className="">
+                مجمع
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Stock table */}
-      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-right border-collapse">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                <th className="py-3.5 px-4">الصنف</th>
-                <th className="py-3.5 px-4">الرصيد الحالي</th>
-                <th className="py-3.5 px-4">محجوز</th>
-                <th className="py-3.5 px-4">متاح</th>
-                <th className="py-3.5 px-4">أقل حد</th>
-                <th className="py-3.5 px-4">الدفعات</th>
-                <th className="py-3.5 px-4">الحالة</th>
-                <th className="py-3.5 px-4 text-center">إجراءات</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
+      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-md">
+        <ScrollArea className="h-[calc(100vh-450px)] min-h-[400px]">
+          <Table>
+            <TableHeader className="sticky top-0 z-10 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm shadow-sm">
+              <TableRow>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">الصنف</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">الرصيد</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">محجوز</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider text-[#558b2f]">متاح</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">أقل حد</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">الدفعات</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">الحالة</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider text-center">إجراءات</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="text-xs font-bold">
               {isLoading ? (
-                <tr><td colSpan={8} className="py-12 text-center text-slate-400 font-semibold">جاري تحميل أرصدة المخزون...</td></tr>
+                Array.from({ length: 10 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={8} className="py-4 px-4">
+                      <Skeleton className="h-6 w-full opacity-50" />
+                    </TableCell>
+                  </TableRow>
+                ))
               ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400 font-semibold">
+                <TableRow>
+                  <TableCell colSpan={8} className="py-20 text-center text-slate-400 font-bold">
                     لا توجد أصناف في {activeWarehouse?.name || 'المخزن المحدد'}.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
-                rows.map(({ product: p, level, batches: batchList }) => {
-                  const qty = selectedWarehouse ? level?.quantity ?? 0 : stockLevels.filter((s) => s.product_id === p.id).reduce((a, s) => a + s.quantity, 0);
-                  const reserved = selectedWarehouse ? level?.reserved_quantity ?? 0 : 0;
-                  const available = qty - reserved;
-                  const status = p.item_type === 'service' ? null : qty <= 0 ? 'out' : qty <= p.min_stock_alert ? 'low' : 'ok';
-                  return (
-                    <tr key={p.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                      <td className="py-3 px-4">
-                        <span className="font-bold text-slate-900 dark:text-white block">{p.name}</span>
-                        <span className="text-[10px] font-mono text-slate-400">{p.sku}</span>
-                      </td>
-                      <td className="py-3 px-4 font-black text-slate-900 dark:text-white">{formatNumber(qty)}</td>
-                      <td className="py-3 px-4">{formatNumber(reserved)}</td>
-                      <td className="py-3 px-4 font-bold text-[#558b2f]">{formatNumber(available)}</td>
-                      <td className="py-3 px-4 text-slate-500">{p.item_type === 'storable' ? formatNumber(p.min_stock_alert) : '—'}</td>
-                      <td className="py-3 px-4 text-slate-500">
-                        {p.item_type !== 'storable'
-                          ? '—'
-                          : p.tracks_batch
-                            ? batchList.length > 0
-                              ? `${batchList.length} دفعة (${formatNumber(batchList.reduce((a, b) => a + b.current_quantity, 0))})`
-                              : 'بدون دفعات'
-                            : 'غير متتبع'}
-                      </td>
-                      <td className="py-3 px-4">
-                        {status === null && <span className="text-slate-300 text-[11px]">خدمة</span>}
-                        {status === 'out' && <span className="px-2.5 py-1 rounded-full text-[11px] font-black bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300">نفد</span>}
-                        {status === 'low' && <span className="px-2.5 py-1 rounded-full text-[11px] font-black bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">منخفض</span>}
-                        {status === 'ok' && <span className="px-2.5 py-1 rounded-full text-[11px] font-black bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">متوفر</span>}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            onClick={() => openStockModal(p)}
-                            className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-                            title="رصيد افتتاحي"
-                          >
-                            <Icons.Inbox />
-                          </button>
-                          <button
-                            onClick={() => openAdjustModal(p)}
-                            className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-[#558b2f]/10 hover:text-[#558b2f] transition-colors cursor-pointer"
-                            title="تسوية"
-                          >
-                            <Icons.ClipboardList />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                <TooltipProvider>
+                  {rows.map(({ product: p, level, batches: batchList }) => {
+                    const qty = selectedWarehouse ? level?.quantity ?? 0 : stockLevels.filter((s) => s.product_id === p.id).reduce((a, s) => a + s.quantity, 0);
+                    const reserved = selectedWarehouse ? level?.reserved_quantity ?? 0 : 0;
+                    const available = qty - reserved;
+                    const status = p.item_type === 'service' ? null : qty <= 0 ? 'out' : qty <= p.min_stock_alert ? 'low' : 'ok';
+                    return (
+                      <TableRow key={p.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors group">
+                        <TableCell className="py-3 px-4">
+                          <span className="font-black text-slate-900 dark:text-white block group-hover:text-[#558b2f] transition-colors">{p.name}</span>
+                          <span className="text-[10px] font-mono text-slate-400">{p.sku}</span>
+                        </TableCell>
+                        <TableCell className="font-black text-slate-900 dark:text-white text-sm">{formatNumber(qty)}</TableCell>
+                        <TableCell className="text-slate-500 font-mono">{formatNumber(reserved)}</TableCell>
+                        <TableCell className="font-black text-[#558b2f] text-sm bg-emerald-50/20 dark:bg-emerald-950/10">
+                          {formatNumber(available)}
+                        </TableCell>
+                        <TableCell className="text-slate-500 font-mono">{p.item_type === 'storable' ? formatNumber(p.min_stock_alert) : '—'}</TableCell>
+                        <TableCell className="text-slate-500">
+                          {p.item_type !== 'storable'
+                            ? '—'
+                            : p.tracks_batch
+                              ? batchList.length > 0
+                                ? <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="cursor-help underline decoration-dotted decoration-slate-300">
+                                        {batchList.length} دفعات
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="font-bold text-[10px]">
+                                      إجمالي الكمية: {formatNumber(batchList.reduce((a, b) => a + b.current_quantity, 0))}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                : 'بدون دفعات'
+                              : 'غير متتبع'}
+                        </TableCell>
+                        <TableCell>
+                          {status === null && <span className="text-slate-300 text-[10px] font-black uppercase">خدمة</span>}
+                          {status === 'out' && <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300 border border-red-100 dark:border-red-900 shadow-xs">نفد</span>}
+                          {status === 'low' && <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-100 dark:border-amber-900 shadow-xs">منخفض</span>}
+                          {status === 'ok' && <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-900 shadow-xs">متوفر</span>}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => openStockModal(p)}
+                              className="w-8 h-8 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer shadow-xs"
+                              title="رصيد افتتاحي"
+                            >
+                              <div className="w-3.5 h-3.5 [&>svg]:w-full [&>svg]:h-full"><Icons.Inbox /></div>
+                            </button>
+                            <button
+                              onClick={() => openAdjustModal(p)}
+                              className="w-8 h-8 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-[#558b2f] hover:text-white transition-all cursor-pointer shadow-xs"
+                              title="تسوية"
+                            >
+                              <div className="w-3.5 h-3.5 [&>svg]:w-full [&>svg]:h-full"><Icons.ClipboardList /></div>
+                            </button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TooltipProvider>
               )}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </ScrollArea>
       </div>
 
       {/* Opening stock modal */}
@@ -400,75 +468,76 @@ function InventoryStatusContent() {
         <Modal title="رصيد افتتاحي" onClose={() => setOpenModal(false)}>
           <div className="space-y-4">
             <div>
-              <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">الصنف</span>
-              <div className="h-10 px-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center text-xs font-black text-slate-900 dark:text-white">
+              <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 px-1">الصنف المختار</span>
+              <div className="h-12 px-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center text-xs font-black text-slate-900 dark:text-white shadow-inner">
                 {modalProduct ? (
-                  <span>{modalProduct.name} <span className="text-slate-400 font-mono">({modalProduct.sku})</span></span>
+                  <div className="flex flex-col">
+                    <span>{modalProduct.name}</span>
+                    <span className="text-[10px] text-slate-400 font-mono">{modalProduct.sku}</span>
+                  </div>
                 ) : (
-                  'اختر التصنيف ثم اختر الصنف من الجدول، أو استخدم الزر أعلاه'
+                  'اختر صنفاً من الجدول'
                 )}
               </div>
             </div>
 
-            {!modalProduct && (
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">اختر صنفاً</span>
-                <select
-                  value=""
-                  onChange={(e) => {
-                    const p = products.find((x) => x.id === e.target.value);
-                    if (p) openStockModal(p);
-                  }}
-                  className={selectCls + ' w-full'}
-                >
-                  <option value="">— اختر —</option>
-                  {products.filter((p) => p.item_type === 'storable').map((p) => (
-                    <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
-                  ))}
-                </select>
+                <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 px-1">الكمية *</span>
+                <Input type="number" min={0} step="any" required value={osQty} onChange={(e) => setOsQty(e.target.value)} className="h-11 bg-slate-50 dark:bg-slate-900 text-sm font-black rounded-2xl" />
               </div>
-            )}
+              <div>
+                <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 px-1">الوحدة</span>
+                <Select value={osUnitId} onValueChange={(val) => setOsUnitId(val)}>
+                  <SelectTrigger className="w-full h-11 rounded-2xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+                    <SelectValue placeholder="اختر الوحدة" />
+                  </SelectTrigger>
+                  <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+                    {modalProduct && unitsById[modalProduct.base_unit_id] && (
+                      <SelectItem key={modalProduct.base_unit_id} value={modalProduct.base_unit_id}>{unitsById[modalProduct.base_unit_id].name}</SelectItem>
+                    )}
+                    {Object.values(unitsById).filter((u) => !modalProduct || u.id !== modalProduct.base_unit_id).map((u) => (
+                      <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">الكمية *</span>
-                <Input type="number" min={0} step="any" required value={osQty} onChange={(e) => setOsQty(e.target.value)} className="h-10 bg-slate-50 dark:bg-slate-900 text-sm" />
+                <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 px-1">تكلفة الوحدة</span>
+                <Input type="number" min={0} step="0.01" value={osCost} onChange={(e) => setOsCost(e.target.value)} className="h-11 bg-slate-50 dark:bg-slate-900 text-sm font-mono rounded-2xl" />
               </div>
-              <div>
-                <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">الوحدة</span>
-                <select value={osUnitId} onChange={(e) => setOsUnitId(e.target.value)} className={selectCls + ' w-full'}>
-                  {modalProduct && unitsById[modalProduct.base_unit_id] && (
-                    <option value={modalProduct.base_unit_id}>{unitsById[modalProduct.base_unit_id].name}</option>
-                  )}
-                  {Object.values(unitsById).map((u) => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
-                  ))}
-                </select>
-              </div>
+              {modalProduct?.tracks_batch && (
+                <div>
+                  <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 px-1">رقم الدفعة *</span>
+                  <Input type="text" value={osBatch} onChange={(e) => setOsBatch(e.target.value)} placeholder="Batch ID" className="h-11 bg-slate-50 dark:bg-slate-900 text-sm font-mono rounded-2xl" />
+                </div>
+              )}
             </div>
-
-            <div>
-              <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">تكلفة الوحدة</span>
-              <Input type="number" min={0} step="0.01" value={osCost} onChange={(e) => setOsCost(e.target.value)} className="h-10 bg-slate-50 dark:bg-slate-900 text-sm" />
-            </div>
-
-            {modalProduct?.tracks_batch && (
-              <div>
-                <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">رقم الدفعة / الرتلة *</span>
-                <Input type="text" value={osBatch} onChange={(e) => setOsBatch(e.target.value)} placeholder="مثال LOT-2026-01" className="h-10 bg-slate-50 dark:bg-slate-900 text-sm font-mono" />
-              </div>
-            )}
 
             {modalProduct?.tracks_expiry && (
               <div>
-                <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">تاريخ الصلاحية</span>
-                <Input type="date" value={osExpiry} onChange={(e) => setOsExpiry(e.target.value)} className="h-10 bg-slate-50 dark:bg-slate-900 text-sm" />
+                <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 px-1">تاريخ الصلاحية</span>
+                <DatePicker
+                  date={osExpiry}
+                  onSelect={(d) => setOsExpiry(d ? format(d, 'yyyy-MM-dd') : '')}
+                  placeholder="اختر تاريخ الانتهاء"
+                  className="w-full rounded-2xl h-11"
+                />
               </div>
             )}
 
             <div>
-              <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">ملاحظات</span>
-              <Input type="text" value={osNotes} onChange={(e) => setOsNotes(e.target.value)} className="h-10 bg-slate-50 dark:bg-slate-900 text-sm" />
+              <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 px-1">ملاحظات</span>
+              <Textarea
+                rows={2}
+                value={osNotes}
+                onChange={(e) => setOsNotes(e.target.value)}
+                placeholder="ملاحظات اختيارية..."
+                className="w-full min-h-[80px] rounded-2xl resize-none text-xs font-bold bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-3"
+              />
             </div>
 
             {formError && <ErrorBanner msg={formError} />}
@@ -494,19 +563,24 @@ function InventoryStatusContent() {
                   {modalProduct.name}
                 </div>
               ) : (
-                <select
+                <Select
                   value=""
-                  onChange={(e) => {
-                    const p = products.find((x) => x.id === e.target.value);
+                  onValueChange={(val) => {
+                    const p = products.find((x) => x.id === val);
                     if (p) openAdjustModal(p);
                   }}
-                  className={selectCls + ' w-full'}
                 >
-                  <option value="">— اختر صنفاً —</option>
-                  {products.filter((p) => p.item_type === 'storable').map((p) => (
-                    <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+                    <SelectValue placeholder="— اختر صنفاً —" />
+                  </SelectTrigger>
+                  <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl max-h-60">
+                    {products.filter((p) => p.item_type === 'storable').map((p) => (
+                      <SelectItem key={p.id} value={p.id} className="">
+                        {p.name} ({p.sku})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             </div>
 
@@ -519,20 +593,41 @@ function InventoryStatusContent() {
               </div>
               <div>
                 <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">الوحدة</span>
-                <select value={adjUnitId} onChange={(e) => setAdjUnitId(e.target.value)} className={selectCls + ' w-full'}>
-                  {modalProduct && unitsById[modalProduct.base_unit_id] && (
-                    <option value={modalProduct.base_unit_id}>{unitsById[modalProduct.base_unit_id].name}</option>
-                  )}
-                  {Object.values(unitsById).map((u) => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
-                  ))}
-                </select>
+                <Select value={adjUnitId} onValueChange={(val) => setAdjUnitId(val)}>
+                  <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+                    <SelectValue placeholder="اختر الوحدة" />
+                  </SelectTrigger>
+                  <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+                    {modalProduct && unitsById[modalProduct.base_unit_id] && (
+                      <SelectItem
+                        key={modalProduct.base_unit_id}
+                        value={modalProduct.base_unit_id}
+                        className=""
+                      >
+                        {unitsById[modalProduct.base_unit_id].name}
+                      </SelectItem>
+                    )}
+                    {Object.values(unitsById)
+                      .filter((u) => !modalProduct || u.id !== modalProduct.base_unit_id)
+                      .map((u) => (
+                        <SelectItem key={u.id} value={u.id} className="">
+                          {u.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
             <div>
               <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">سبب التسوية</span>
-              <Input type="text" value={adjNotes} onChange={(e) => setAdjNotes(e.target.value)} placeholder="جرد / توالف / تصحيح قيد..." className="h-10 bg-slate-50 dark:bg-slate-900 text-sm" />
+              <Textarea
+                rows={2}
+                value={adjNotes}
+                onChange={(e) => setAdjNotes(e.target.value)}
+                placeholder="جرد / توالف / تصحيح قيد..."
+                className="w-full min-h-[64px] resize-none text-xs font-bold bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+              />
             </div>
 
             {formError && <ErrorBanner msg={formError} />}

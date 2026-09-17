@@ -13,6 +13,7 @@ export interface Organization {
   id: EntityId;
   name: string;
   legal_name?: string;
+  activity_type?: string;
   tax_number?: string;
   commercial_reg_no?: string;
   currency: string; // e.g. EGP, SAR, USD
@@ -40,7 +41,7 @@ export interface Branch {
   sync_status?: 'synced' | 'pending' | 'failed';
 }
 
-export type UserRole = 'super_admin' | 'admin' | 'manager' | 'cashier' | 'accountant' | 'warehouse_keeper';
+export type UserRole = 'super_admin' | 'admin' | 'manager' | 'cashier' | 'accountant' | 'warehouse_keeper' | 'pharmacist' | 'delivery';
 
 export interface User {
   id: EntityId;
@@ -52,6 +53,15 @@ export interface User {
   phone?: string;
   role: UserRole;
   pin_code_hash?: string; // For rapid cashier shift switch offline
+
+  // Payroll & Permissions
+  basic_salary?: number;
+  salary_cycle?: 'monthly' | 'weekly' | 'daily' | 'hourly';
+  deductions?: number;
+  allowances?: number;
+
+  permissions?: string[]; // Array of module access keys
+
   is_active: boolean;
   created_at: ISODateString;
   updated_at: ISODateString;

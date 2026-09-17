@@ -1,5 +1,12 @@
 import React from 'react';
-import { Calendar, ChevronDown, RefreshCw } from 'lucide-react';
+import { Calendar, RefreshCw } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface MonitoringHeaderProps {
   dateRange: string;
@@ -73,23 +80,24 @@ export const MonitoringHeader: React.FC<MonitoringHeaderProps> = ({
         </div>
 
         {/* Period Dropdown Select */}
-        <div className="relative">
-          <select
+        <div className="w-36">
+          <Select
             value={dateRange}
             disabled={!!selectedDate}
-            onChange={(e) => setDateRange(e.target.value)}
-            className={`h-9 pl-8 pr-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs appearance-none cursor-pointer ${
-              selectedDate ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
+            onValueChange={setDateRange}
           >
-            <option value="اليوم">اليوم</option>
-            <option value="أمس">أمس</option>
-            <option value="آخر 7 أيام">آخر 7 أيام</option>
-            <option value="آخر 30 يوم">آخر 30 يوم</option>
-            <option value="هذا الشهر">هذا الشهر</option>
-            <option value="هذا العام">هذا العام</option>
-          </select>
-          <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <SelectTrigger className="h-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold">
+              <SelectValue placeholder="الفترة" />
+            </SelectTrigger>
+            <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+              <SelectItem value="اليوم" className="text-xs font-bold cursor-pointer py-1.5 px-3">اليوم</SelectItem>
+              <SelectItem value="أمس" className="text-xs font-bold cursor-pointer py-1.5 px-3">أمس</SelectItem>
+              <SelectItem value="آخر 7 أيام" className="text-xs font-bold cursor-pointer py-1.5 px-3">آخر 7 أيام</SelectItem>
+              <SelectItem value="آخر 30 يوم" className="text-xs font-bold cursor-pointer py-1.5 px-3">آخر 30 يوم</SelectItem>
+              <SelectItem value="هذا الشهر" className="text-xs font-bold cursor-pointer py-1.5 px-3">هذا الشهر</SelectItem>
+              <SelectItem value="هذا العام" className="text-xs font-bold cursor-pointer py-1.5 px-3">هذا العام</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
     </div>

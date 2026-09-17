@@ -11,6 +11,13 @@ import {
   ChevronLeft,
 } from 'lucide-react';
 import type { StockAlertItem } from '../types';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface StockShortageTableProps {
   stockShortages: StockAlertItem[];
@@ -75,11 +82,18 @@ export const StockShortageTable: React.FC<StockShortageTableProps> = ({
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold">
             <span>عرض</span>
-            <select className="h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-xs font-bold">
-              <option>25</option>
-              <option>50</option>
-              <option>100</option>
-            </select>
+            <div className="w-18">
+              <Select defaultValue="25">
+                <SelectTrigger className="h-8 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold">
+                  <SelectValue placeholder="25" />
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl min-w-[70px]">
+                  <SelectItem value="25" className="text-xs font-bold cursor-pointer py-1 px-2">25</SelectItem>
+                  <SelectItem value="50" className="text-xs font-bold cursor-pointer py-1 px-2">50</SelectItem>
+                  <SelectItem value="100" className="text-xs font-bold cursor-pointer py-1 px-2">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <span>إدخالات</span>
           </div>
 

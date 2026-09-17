@@ -43,7 +43,7 @@ export const AdvancedSettingsSection: React.FC<AdvancedSettingsSectionProps> = (
   setProductNotes,
 }) => {
   return (
-    <Card className="border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#131b2e] shadow-xs">
+    <Card className="border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#131b2e] shadow-xs rounded-2xl">
       <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
         <CardTitle className="text-sm font-black text-slate-800 dark:text-slate-200 flex items-center gap-2">
           <Settings className="w-4 h-4 text-emerald-600" />
@@ -104,7 +104,7 @@ export const AdvancedSettingsSection: React.FC<AdvancedSettingsSectionProps> = (
 
           {enableMinStockAlert && (
             <div className="pt-2">
-              <Label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+              <Label className="block text-[11px] font-black text-slate-600 dark:text-slate-400 mb-1">
                 حد تنبيه النواقص (بالوحدة الأساسية)
               </Label>
               <div className="relative">
@@ -173,7 +173,7 @@ export const AdvancedSettingsSection: React.FC<AdvancedSettingsSectionProps> = (
 
         {/* ملاحظات الصنف */}
         <div>
-          <Label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+          <Label className="block text-[11px] font-black text-slate-600 dark:text-slate-400 mb-1">
             ملاحظات الصنف
           </Label>
           <Textarea

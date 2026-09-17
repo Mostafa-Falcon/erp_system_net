@@ -21,6 +21,11 @@ export class PullSyncService {
     'contacts',
     'treasuries',
     'expense_categories',
+    'accounts',
+    'employee_attendance',
+    'salary_statements',
+    'employee_leaves',
+    'activity_logs',
   ];
 
   public static async pullAll(orgId: string): Promise<Record<string, number>> {

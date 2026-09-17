@@ -61,7 +61,7 @@ export const WeightPricingSection: React.FC<WeightPricingSectionProps> = ({
   );
 
   return (
-    <Card className="border border-blue-200 dark:border-blue-900/60 bg-white dark:bg-[#131b2e] shadow-xs">
+    <Card className="border border-blue-200 dark:border-blue-900/60 bg-white dark:bg-[#131b2e] shadow-xs rounded-2xl">
       <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
         <CardTitle className="text-sm font-black text-slate-800 dark:text-slate-200 flex items-center gap-2">
           <Scale className="w-5 h-5 text-blue-600" />
@@ -71,7 +71,7 @@ export const WeightPricingSection: React.FC<WeightPricingSectionProps> = ({
       <CardContent className="p-5 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <Label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+            <Label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-2">
               الوحدة الأساسية
             </Label>
             <Input
@@ -83,7 +83,7 @@ export const WeightPricingSection: React.FC<WeightPricingSectionProps> = ({
           </div>
 
           <div>
-            <Label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+            <Label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-2">
               الرصيد الافتتاحي (كجم)
             </Label>
             <Input
@@ -98,7 +98,7 @@ export const WeightPricingSection: React.FC<WeightPricingSectionProps> = ({
           </div>
 
           <div>
-            <Label className="block text-xs font-bold text-blue-700 dark:text-blue-300 mb-2">
+            <Label className="block text-xs font-black text-blue-700 dark:text-blue-300 mb-2">
               كود الميزان الإلكتروني (PLU)
             </Label>
             <Input
@@ -113,7 +113,7 @@ export const WeightPricingSection: React.FC<WeightPricingSectionProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
           <div>
-            <Label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+            <Label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-2">
               سعر شراء الكيلو
             </Label>
             <Input
@@ -128,7 +128,7 @@ export const WeightPricingSection: React.FC<WeightPricingSectionProps> = ({
           </div>
 
           <div className="flex items-center justify-between p-2.5 h-11 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
-            <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
+            <span className="text-xs font-black text-slate-600 dark:text-slate-400">
               تسعير مزدوج
             </span>
             <Switch
@@ -138,7 +138,7 @@ export const WeightPricingSection: React.FC<WeightPricingSectionProps> = ({
           </div>
 
           <div>
-            <Label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+            <Label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-2">
               الخصم
             </Label>
             <div className="flex gap-1.5">
@@ -182,7 +182,7 @@ export const WeightPricingSection: React.FC<WeightPricingSectionProps> = ({
           {weightDualPricing ? (
             <>
               <div className="sm:col-span-5">
-                <Label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+                <Label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-2">
                   سعر بيع الكيلو القديم
                 </Label>
                 <Input
@@ -196,7 +196,7 @@ export const WeightPricingSection: React.FC<WeightPricingSectionProps> = ({
                 />
               </div>
               <div className="sm:col-span-5">
-                <Label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+                <Label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-2">
                   سعر بيع الكيلو الجديد *
                 </Label>
                 <Input
@@ -215,7 +215,7 @@ export const WeightPricingSection: React.FC<WeightPricingSectionProps> = ({
             </>
           ) : (
             <div className="sm:col-span-10">
-              <Label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+              <Label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-2">
                 سعر بيع الكيلو الحالي *
               </Label>
               <Input

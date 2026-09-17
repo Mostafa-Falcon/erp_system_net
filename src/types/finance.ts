@@ -11,6 +11,7 @@ export interface Treasury {
   org_id: EntityId;
   branch_id?: EntityId;
   name: string;
+  account_code?: string;
   type: TreasuryType;
   current_balance: number;
   is_default: boolean;
@@ -62,3 +63,46 @@ export interface FinancialVoucher {
   created_at: ISODateString;
   sync_status?: 'synced' | 'pending' | 'failed';
 }
+
+export type JournalEntryType = 'general' | 'sales' | 'purchases' | 'expenses' | 'opening';
+
+export interface JournalEntry {
+  id: EntityId;
+  org_id: EntityId;
+  branch_id?: EntityId;
+  entry_no: string;
+  entry_date: ISODateString;
+  type: JournalEntryType;
+  description: string;
+  total_amount: number;
+  created_by: EntityId;
+  created_at: ISODateString;
+  sync_status?: 'synced' | 'pending' | 'failed';
+}
+
+export interface JournalEntryLine {
+  id: EntityId;
+  entry_id: EntityId;
+  account_id: EntityId; // References Account id
+  debit: number;
+  credit: number;
+  description?: string;
+}
+
+export interface Account {
+  id: EntityId;
+  org_id: EntityId;
+  parent_id?: EntityId | null;
+  code: string;
+  name: string;
+  name_en?: string;
+  type: 'asset' | 'liability' | 'equity' | 'revenue' | 'expense';
+  account_type: 'parent' | 'leaf';
+  current_balance: number;
+  is_active: boolean;
+  created_at: ISODateString;
+  updated_at: ISODateString;
+  sync_status?: 'synced' | 'pending' | 'failed';
+}
+
+

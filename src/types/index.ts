@@ -10,3 +10,4 @@ export * from './contacts';
 export * from './finance';
 export * from './sales';
 export * from './purchases';
+export * from './employees';

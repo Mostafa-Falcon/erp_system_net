@@ -170,4 +170,90 @@ export class SettingsRepository {
 
     await this.updateBranch(branchId, { is_active: !branch.is_active });
   }
+
+  /**
+   * Reset all transactional operations and inventory levels while preserving core master data
+   */
+  public static async resetOperationsAndInventory(): Promise<void> {
+    await db.transaction('rw', [
+      db.sales_invoices,
+      db.sales_invoice_items,
+      db.sales_returns,
+      db.purchase_invoices,
+      db.purchase_invoice_items,
+      db.purchase_returns,
+      db.expenses,
+      db.financial_vouchers,
+      db.inventory_transactions,
+      db.stock_levels,
+      db.stocktake_sessions,
+      db.stocktake_items,
+      db.cashier_shifts,
+      db.sync_queue,
+      db.activity_logs
+    ], async () => {
+      await db.sales_invoices.clear();
+      await db.sales_invoice_items.clear();
+      await db.sales_returns.clear();
+      await db.purchase_invoices.clear();
+      await db.purchase_invoice_items.clear();
+      await db.purchase_returns.clear();
+      await db.expenses.clear();
+      await db.financial_vouchers.clear();
+      await db.inventory_transactions.clear();
+      await db.stock_levels.clear();
+      await db.stocktake_sessions.clear();
+      await db.stocktake_items.clear();
+      await db.cashier_shifts.clear();
+      await db.sync_queue.clear();
+      await db.activity_logs.clear();
+    });
+  }
+
+  /**
+   * Hard delete all records from all tables to wipe out the account locally
+   */
+  public static async deleteAccountEntirely(): Promise<void> {
+    const tables = [
+      db.organizations,
+      db.branches,
+      db.users,
+      db.app_settings,
+      db.product_categories,
+      db.product_brands,
+      db.product_types,
+      db.units,
+      db.products,
+      db.product_units,
+      db.product_batches,
+      db.warehouses,
+      db.stock_levels,
+      db.inventory_transactions,
+      db.stock_transfers,
+      db.stock_transfer_items,
+      db.contacts,
+      db.contact_transactions,
+      db.treasuries,
+      db.expense_categories,
+      db.expenses,
+      db.financial_vouchers,
+      db.cashier_shifts,
+      db.sales_invoices,
+      db.sales_invoice_items,
+      db.sales_returns,
+      db.purchase_invoices,
+      db.purchase_invoice_items,
+      db.purchase_returns,
+      db.stocktake_sessions,
+      db.stocktake_items,
+      db.sync_queue,
+      db.activity_logs
+    ];
+
+    await db.transaction('rw', tables, async () => {
+      for (const table of tables) {
+        await table.clear();
+      }
+    });
+  }
 }

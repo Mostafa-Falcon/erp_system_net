@@ -39,6 +39,12 @@ export class RealtimeSyncListener {
       'product_categories',
       'product_brands',
       'app_settings',
+      'employee_attendance',
+      'salary_statements',
+      'employee_leaves',
+      'activity_logs',
+      'accounts',
+      'journal_entries',
     ];
 
     let channel = supabase.channel(`falcon-inventory-realtime-${orgId}`);

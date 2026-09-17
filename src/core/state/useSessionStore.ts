@@ -12,24 +12,52 @@ interface SessionState {
   logout: () => void;
 }
 
-export const useSessionStore = create<SessionState>((set) => ({
-  currentUser: typeof window !== 'undefined' ? AuthRepository.getCurrentUser() : null,
-  activeBranchId: null,
-  activeShift: null,
+const getInitialUser = (): User | null => {
+  if (typeof window === 'undefined') return null;
+  return AuthRepository.getCurrentUser();
+};
 
-  setCurrentUser: (user) => {
-    if (user) {
-      AuthRepository.saveSession(user);
-    }
-    set({ currentUser: user, activeBranchId: user?.branch_id || null });
-  },
+const getInitialBranchId = (user: User | null): string | null => {
+  if (typeof window === 'undefined') return null;
+  return user?.branch_id || localStorage.getItem('falcon_active_branch_id') || null;
+};
 
-  setActiveBranchId: (branchId) => set({ activeBranchId: branchId }),
+export const useSessionStore = create<SessionState>((set) => {
+  const initialUser = getInitialUser();
+  const initialBranch = getInitialBranchId(initialUser);
 
-  setActiveShift: (shift) => set({ activeShift: shift }),
+  return {
+    currentUser: initialUser,
+    activeBranchId: initialBranch,
+    activeShift: null,
 
-  logout: () => {
-    AuthRepository.logout();
-    set({ currentUser: null, activeBranchId: null, activeShift: null });
-  },
-}));
+    setCurrentUser: (user) => {
+      if (user) {
+        AuthRepository.saveSession(user);
+      }
+      const bId = user?.branch_id || (typeof window !== 'undefined' ? localStorage.getItem('falcon_active_branch_id') : null) || null;
+      set({ currentUser: user, activeBranchId: bId });
+    },
+
+    setActiveBranchId: (branchId) => {
+      if (typeof window !== 'undefined') {
+        if (branchId) {
+          localStorage.setItem('falcon_active_branch_id', branchId);
+        } else {
+          localStorage.removeItem('falcon_active_branch_id');
+        }
+      }
+      set({ activeBranchId: branchId });
+    },
+
+    setActiveShift: (shift) => set({ activeShift: shift }),
+
+    logout: () => {
+      AuthRepository.logout();
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('falcon_active_branch_id');
+      }
+      set({ currentUser: null, activeBranchId: null, activeShift: null });
+    },
+  };
+});

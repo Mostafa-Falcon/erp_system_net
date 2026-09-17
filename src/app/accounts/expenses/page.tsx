@@ -8,10 +8,14 @@ import { Icons } from '@/components/ui/Icons';
 import { useSessionStore } from '@/core/state/useSessionStore';
 import { TreasuryRepository } from '@/modules/treasury/treasury_repository';
 import { formatNumber, formatDateTime } from '@/lib/format';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { Expense, ExpenseCategory, Treasury, User } from '@/types';
-
-const selectCls =
-  'h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#558b2f]';
 
 function ExpensesContent() {
   const { currentUser } = useSessionStore();
@@ -74,8 +78,8 @@ function ExpensesContent() {
 
   const filtered = useMemo(() => {
     return expenses.filter((e) => {
-      if (categoryFilter && e.category_id !== categoryFilter) return false;
-      if (treasuryFilter && e.treasury_id !== treasuryFilter) return false;
+      if (categoryFilter && categoryFilter !== 'all' && e.category_id !== categoryFilter) return false;
+      if (treasuryFilter && treasuryFilter !== 'all' && e.treasury_id !== treasuryFilter) return false;
       if (!search.trim()) return true;
       const q = search.trim().toLowerCase();
       const eCategoryName = categories.find((c) => c.id === e.category_id)?.name || '';
@@ -203,18 +207,41 @@ function ExpensesContent() {
                 icon={<Icons.Search />}
               />
             </div>
-            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className={selectCls + ' w-44'}>
-              <option value="">كل الفئات</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-            <select value={treasuryFilter} onChange={(e) => setTreasuryFilter(e.target.value)} className={selectCls + ' w-44'}>
-              <option value="">كل الخزائن</option>
-              {treasuries.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
+            <div className="w-44">
+              <Select value={categoryFilter || 'all'} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+                  <SelectValue placeholder="كل الفئات" />
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl max-h-60">
+                  <SelectItem value="all" className="">
+                    كل الفئات
+                  </SelectItem>
+                  {categories.map((c) => (
+                    <SelectItem key={c.id} value={c.id} className="">
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="w-44">
+              <Select value={treasuryFilter || 'all'} onValueChange={setTreasuryFilter}>
+                <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+                  <SelectValue placeholder="كل الخزائن" />
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+                  <SelectItem value="all" className="">
+                    كل الخزائن
+                  </SelectItem>
+                  {treasuries.map((t) => (
+                    <SelectItem key={t.id} value={t.id} className="">
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex-1" />
             <Button onClick={() => setShowCategories((v) => !v)} className="h-10 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold flex items-center gap-1.5">
               <Icons.Filter /> الفئات
@@ -261,21 +288,33 @@ function ExpensesContent() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
                 <div>
                   <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">الفئة</span>
-                  <select value={eCategoryId} onChange={(e) => setECategoryId(e.target.value)} className={selectCls + ' w-full'}>
-                    {activeCategories.length === 0 && <option value="">لا توجد فئات نشطة</option>}
-                    {activeCategories.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+                  <Select value={eCategoryId} onValueChange={setECategoryId}>
+                    <SelectTrigger className="w-full h-10 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+                      <SelectValue placeholder="اختر الفئة" />
+                    </SelectTrigger>
+                    <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl max-h-60">
+                      {activeCategories.map((c) => (
+                        <SelectItem key={c.id} value={c.id} className="">
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">الخزينة</span>
-                  <select value={eTreasuryId} onChange={(e) => setETreasuryId(e.target.value)} className={selectCls + ' w-full'}>
-                    {treasuries.length === 0 && <option value="">لا توجد خزائن</option>}
-                    {treasuries.map((t) => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </select>
+                  <Select value={eTreasuryId} onValueChange={setETreasuryId}>
+                    <SelectTrigger className="w-full h-10 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+                      <SelectValue placeholder="اختر الخزينة" />
+                    </SelectTrigger>
+                    <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+                      {treasuries.map((t) => (
+                        <SelectItem key={t.id} value={t.id} className="">
+                          {t.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">المبلغ</span>

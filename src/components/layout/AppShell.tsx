@@ -11,7 +11,7 @@ import { syncCoordinator } from '@/core/sync/sync_coordinator';
 import { ensureCleanLookupState } from '@/core/db/seed';
 
 interface AppShellProps {
-  title: string;
+  title?: string;
   subtitle?: string;
   actions?: React.ReactNode;
   children: React.ReactNode;
@@ -57,11 +57,11 @@ export const AppShell: React.FC<AppShellProps> = ({
 
   useGlobalShortcuts();
 
-  const mounted = useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false
-  );
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const isDark = useSyncExternalStore(
     subscribeTheme,
     getThemeSnapshot,

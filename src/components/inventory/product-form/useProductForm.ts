@@ -1,23 +1,18 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { v4 as uuidv4 } from 'uuid';
+import { db } from '@/core/db/app_database';
 import { ProductRepository } from '@/modules/inventory/product_repository';
-import type {
-  Product,
-  ProductCategory,
-  ProductBrand,
-  ProductTypeItem,
-  ProductUnit,
-  ProductBatch,
-} from '@/types';
+import type { ProductBatch } from '@/types';
 import type {
   ProductFormProps,
   UnitLevelItem,
   FormBatchEntry,
-  ModalType,
   ItemTypeMode,
 } from './types';
-import { generateSku, calculatePriceDetails } from './utils';
+import { useProductLookups } from './hooks/useProductLookups';
+import { useProductPricing } from './hooks/useProductPricing';
+import { useProductBatches } from './hooks/useProductBatches';
+import { saveProductData } from './services/productSaveService';
 
 export function useProductForm({
   orgId,
@@ -37,58 +32,32 @@ export function useProductForm({
   // =========================================================================
   // 1. شريط التخصيص العلوي
   // =========================================================================
-  const [showSpecs, setShowSpecs] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [showExpiry, setShowExpiry] = useState(false);
+  const [showSpecs, setShowSpecs] = useState(() => {
+    if (!initial) return false;
+    return !!(
+      initial.name_en ||
+      initial.scientific_name ||
+      initial.shelf_location ||
+      (initial.alternate_barcodes && initial.alternate_barcodes.length > 0)
+    );
+  });
+  const [showAdvanced, setShowAdvanced] = useState(() => {
+    if (!initial) return false;
+    return !!(
+      initial.is_taxable ||
+      (initial.min_stock_alert && initial.min_stock_alert > 0) ||
+      !initial.is_active ||
+      initial.is_quick_pos ||
+      initial.notes
+    );
+  });
+  const [showExpiry, setShowExpiry] = useState(() => {
+    if (!initial) return false;
+    return !!(initial.tracks_expiry || initial.tracks_batch);
+  });
 
   // =========================================================================
-  // 2. القوائم المنسدلة والربط مع المؤسسة
-  // =========================================================================
-  const [localBrands, setLocalBrands] = useState<ProductBrand[]>(brands);
-  const [localCategories, setLocalCategories] = useState<ProductCategory[]>(categories);
-  const [localProductTypes, setLocalProductTypes] = useState<ProductTypeItem[]>(productTypes || []);
-
-  useEffect(() => {
-    setLocalBrands(brands || []);
-  }, [brands]);
-
-  useEffect(() => {
-    setLocalCategories(categories || []);
-  }, [categories]);
-
-  useEffect(() => {
-    setLocalProductTypes(productTypes || []);
-  }, [productTypes]);
-
-  const uniqueProductTypes = useMemo(() => {
-    const map = new Map<string, ProductTypeItem>();
-    for (const item of localProductTypes) {
-      const key = item.name.trim();
-      if (!map.has(key)) map.set(key, item);
-    }
-    return Array.from(map.values());
-  }, [localProductTypes]);
-
-  const uniqueBrands = useMemo(() => {
-    const map = new Map<string, ProductBrand>();
-    for (const item of localBrands) {
-      const key = item.name.trim();
-      if (!map.has(key)) map.set(key, item);
-    }
-    return Array.from(map.values());
-  }, [localBrands]);
-
-  const uniqueCategories = useMemo(() => {
-    const map = new Map<string, ProductCategory>();
-    for (const item of localCategories) {
-      const key = item.name.trim();
-      if (!map.has(key)) map.set(key, item);
-    }
-    return Array.from(map.values());
-  }, [localCategories]);
-
-  // =========================================================================
-  // 3. بيانات الصنف الأساسية
+  // 2. بيانات الصنف الأساسية والتصنيفات
   // =========================================================================
   const [itemTypeMode, setItemTypeMode] = useState<ItemTypeMode>(
     initial?.measurement_type || 'unit'
@@ -120,19 +89,202 @@ export function useProductForm({
   const [isQuickPos, setIsQuickPos] = useState(initial?.is_quick_pos || false);
   const [productNotes, setProductNotes] = useState(initial?.notes || '');
 
-  // تتبع الصلاحية والتشغيلات
-  const [enableExpiryTracking, setEnableExpiryTracking] = useState(
-    initial?.tracks_expiry ?? false
-  );
-  const [batchEntries, setBatchEntries] = useState<FormBatchEntry[]>([]);
+  // =========================================================================
+  // 3. الخطافات الفرعية المعيارية (Sub-Hooks)
+  // =========================================================================
+  const {
+    uniqueBrands,
+    uniqueCategories,
+    uniqueProductTypes,
+    activeModal,
+    setActiveModal,
+    modalInputValue,
+    setModalInputValue,
+    isModalSaving,
+    handleModalSave,
+    handleDeleteLookupItem,
+  } = useProductLookups({
+    orgId,
+    brands,
+    categories,
+    productTypes,
+    brandId,
+    setBrandId,
+    categoryId,
+    setCategoryId,
+    productType,
+    setProductType,
+  });
 
-  // تحميل تشغيلات الصلاحية السابقة إن وجدت في وضع التعديل
+  const {
+    unitLevels,
+    setUnitLevels,
+    handleAddSmallerUnit,
+    updateUnitLevel,
+    removeUnitLevel,
+    weightUnitName,
+    scaleCode,
+    setScaleCode,
+    weightOpeningStock,
+    setWeightOpeningStock,
+    weightPurchasePrice,
+    setWeightPurchasePrice,
+    weightDiscount,
+    setWeightDiscount,
+    weightDiscountType,
+    setWeightDiscountType,
+    weightSalePrice,
+    setWeightSalePrice,
+    weightOldSalePrice,
+    setWeightOldSalePrice,
+    weightNewSalePrice,
+    setWeightNewSalePrice,
+    weightDualPricing,
+    setWeightDualPricing,
+  } = useProductPricing({
+    initial,
+    initialUnits,
+    units,
+  });
+
+  const {
+    enableExpiryTracking,
+    setEnableExpiryTracking,
+    batchEntries,
+    setBatchEntries,
+    handleAddBatch,
+    handleUpdateBatch,
+    handleRemoveBatch,
+  } = useProductBatches({
+    initial,
+    itemTypeMode,
+  });
+
+  const [isSaving, setIsSaving] = useState(false);
+
+  // =========================================================================
+  // 4. مزامنة بيانات الصنف عند الدخول في وضع التعديل (Edit Hydration)
+  // =========================================================================
   useEffect(() => {
-    if (initial?.id) {
+    if (!initial) return;
+
+    // 1. البيانات الأساسية
+    setItemTypeMode(initial.measurement_type || 'unit');
+    setName(initial.name || '');
+    setNameEn(initial.name_en || '');
+    setScientificName(initial.scientific_name || '');
+    setSku(initial.sku || '');
+    setAlternateBarcodes(initial.alternate_barcodes || []);
+    setShelfLocation(initial.shelf_location || '');
+    setImageUrl(initial.image_url || '');
+
+    // 2. التصنيفات
+    setCategoryId(initial.category_id || 'none');
+    setBrandId(initial.brand_id || 'none');
+    setProductType(initial.product_type || 'none');
+
+    // 3. الإعدادات المتقدمة
+    setIsTaxable(initial.is_taxable || false);
+    setEnableMinStockAlert((initial.min_stock_alert ?? 0) > 0);
+    setMinStockAlert(initial.min_stock_alert ? String(initial.min_stock_alert) : '5');
+    setIsActiveForSale(initial.is_active ?? true);
+    setIsQuickPos(initial.is_quick_pos || false);
+    setProductNotes(initial.notes || '');
+
+    // 4. أشرطة التخصيص العلوية
+    if (
+      initial.name_en ||
+      initial.scientific_name ||
+      initial.shelf_location ||
+      (initial.alternate_barcodes && initial.alternate_barcodes.length > 0)
+    ) {
+      setShowSpecs(true);
+    }
+    if (
+      initial.is_taxable ||
+      (initial.min_stock_alert && initial.min_stock_alert > 0) ||
+      !initial.is_active ||
+      initial.is_quick_pos ||
+      initial.notes
+    ) {
+      setShowAdvanced(true);
+    }
+    const hasExpiryTracking = !!(initial.tracks_expiry || initial.tracks_batch);
+    setShowExpiry(hasExpiryTracking);
+    setEnableExpiryTracking(hasExpiryTracking);
+
+    // 5. بيانات تسعير الوزن
+    setScaleCode(initial.scale_code || '');
+    const wPurchase = initial.raw_purchase_price !== undefined
+      ? String(initial.raw_purchase_price)
+      : (initial.purchase_price !== undefined ? String(initial.purchase_price) : '');
+    const wDisc = initial.purchase_discount_value !== undefined ? String(initial.purchase_discount_value) : '';
+    const wDiscType = initial.purchase_discount_type || 'percent';
+
+    setWeightPurchasePrice(wPurchase);
+    setWeightDiscount(wDisc);
+    setWeightDiscountType(wDiscType);
+    setWeightSalePrice(initial.sale_price !== undefined ? String(initial.sale_price) : '');
+    setWeightOldSalePrice(initial.old_sale_price !== undefined ? String(initial.old_sale_price) : '');
+    setWeightNewSalePrice(initial.sale_price !== undefined ? String(initial.sale_price) : '');
+    setWeightDualPricing(initial.has_dual_pricing ?? !!initial.old_sale_price);
+
+    // 6. بيانات وحدات القطع (الوحدة الأساسية والمستويات الفرعية)
+    const baseUnitName = units.find((u) => u.id === initial.base_unit_id)?.name || '';
+    const initialPurchase = initial.raw_purchase_price !== undefined
+      ? String(initial.raw_purchase_price)
+      : (initial.purchase_price !== undefined ? String(initial.purchase_price) : '');
+    const initialDiscount = initial.purchase_discount_value !== undefined
+      ? String(initial.purchase_discount_value)
+      : '';
+    const initialDiscType = initial.purchase_discount_type || 'percent';
+
+    const level1: UnitLevelItem = {
+      id: 'level-1',
+      unitName: baseUnitName,
+      conversionFactor: '1',
+      openingStock: '',
+      allowSale: true,
+      purchasePrice: initialPurchase,
+      discountValue: initialDiscount,
+      discountType: initialDiscType,
+      dualPricing: initial.has_dual_pricing ?? !!initial.old_sale_price,
+      salePrice: initial.sale_price !== undefined ? String(initial.sale_price) : '',
+      oldSalePrice: initial.old_sale_price !== undefined ? String(initial.old_sale_price) : '',
+      newSalePrice: initial.sale_price !== undefined ? String(initial.sale_price) : '',
+    };
+
+    const secondaryLevels: UnitLevelItem[] = (initialUnits || []).slice(0, 2).map((u, idx) => ({
+      id: u.id || `level-${idx + 2}`,
+      unitName: units.find((un) => un.id === u.unit_id)?.name || '',
+      conversionFactor: String(u.conversion_factor || 1),
+      openingStock: '',
+      allowSale: u.is_default_sale ?? true,
+      purchasePrice: u.raw_purchase_price !== undefined
+        ? String(u.raw_purchase_price)
+        : (u.purchase_price !== undefined ? String(u.purchase_price) : ''),
+      discountValue: u.purchase_discount_value !== undefined
+        ? String(u.purchase_discount_value)
+        : '',
+      discountType: (u.purchase_discount_type || 'percent') as 'percent' | 'amount',
+      dualPricing: u.has_dual_pricing ?? !!u.old_sale_price,
+      salePrice: u.sale_price !== undefined ? String(u.sale_price) : '',
+      oldSalePrice: u.old_sale_price !== undefined ? String(u.old_sale_price) : '',
+      newSalePrice: u.sale_price !== undefined ? String(u.sale_price) : '',
+    }));
+
+    setUnitLevels([level1, ...secondaryLevels]);
+
+    // 7. تحميل تشغيلات الصلاحية السابقة إن وُجدت وفقط إذا كان الصنف مفعّل به تتبع الصلاحية
+    if (hasExpiryTracking) {
       ProductRepository.getProductBatches(initial.id)
         .then((batches: ProductBatch[]) => {
-          if (batches && batches.length > 0) {
-            const mapped: FormBatchEntry[] = batches.map((b) => {
+          // استبعاد أي تشغيلات افتتاحية افتراضية ليس لها تاريخ صلاحية
+          const userBatches = (batches || []).filter(
+            (b) => b.expiry_date || !b.batch_number.startsWith('OPN-')
+          );
+          if (userBatches.length > 0) {
+            const mapped: FormBatchEntry[] = userBatches.map((b) => {
               let day = '';
               let month = '';
               let year = '';
@@ -147,7 +299,7 @@ export function useProductForm({
               return {
                 id: b.id,
                 quantity: String(b.current_quantity ?? b.initial_quantity ?? 1),
-                unitLevelId: itemTypeMode === 'unit' ? 'level-1' : 'weight',
+                unitLevelId: initial.measurement_type === 'weight' ? 'weight' : 'level-1',
                 day,
                 month,
                 year,
@@ -155,198 +307,41 @@ export function useProductForm({
               };
             });
             setBatchEntries(mapped);
-            setShowExpiry(true);
-            setEnableExpiryTracking(true);
+          } else {
+            setBatchEntries([]);
           }
         })
         .catch(console.error);
+    } else {
+      setBatchEntries([]);
     }
-  }, [initial?.id, itemTypeMode]);
 
-  // حالة النافذة المنبثقة (Modal Dialog) للإضافة والإدارة
-  const [activeModal, setActiveModal] = useState<ModalType>(null);
-  const [modalInputValue, setModalInputValue] = useState('');
-  const [isModalSaving, setIsModalSaving] = useState(false);
-
-  const handleModalSave = async () => {
-    if (!modalInputValue.trim()) return;
-    const val = modalInputValue.trim();
-    setIsModalSaving(true);
-    try {
-      if (activeModal === 'brand') {
-        const created = await ProductRepository.createBrand(val, orgId);
-        setLocalBrands((prev) => [...prev, created]);
-        setBrandId(created.id);
-        toast.success('تمت إضافة الشركة / الماركة بنجاح');
-      } else if (activeModal === 'category') {
-        const created = await ProductRepository.createCategory(val, orgId);
-        setLocalCategories((prev) => [...prev, created]);
-        setCategoryId(created.id);
-        toast.success('تمت إضافة المجموعة / التصنيف بنجاح');
-      } else if (activeModal === 'product_type') {
-        const created = await ProductRepository.createProductType(val, orgId);
-        setLocalProductTypes((prev) => [...prev, created]);
-        setProductType(created.name);
-        toast.success('تمت إضافة نوع المنتج بنجاح');
-      }
-      setModalInputValue('');
-    } catch (err) {
-      console.error(err);
-      toast.error('حدث خطأ أثناء الحفظ');
-    } finally {
-      setIsModalSaving(false);
-    }
-  };
-
-  const handleDeleteLookupItem = async (
-    type: 'brand' | 'category' | 'product_type',
-    id: string,
-    deletedName: string
-  ) => {
-    try {
-      if (type === 'brand') {
-        await ProductRepository.deleteBrand(id);
-        setLocalBrands((prev) => prev.filter((x) => x.id !== id));
-        if (brandId === id) setBrandId('none');
-        toast.info(`تم حذف "${deletedName}"`);
-      } else if (type === 'category') {
-        await ProductRepository.deleteCategory(id);
-        setLocalCategories((prev) => prev.filter((x) => x.id !== id));
-        if (categoryId === id) setCategoryId('none');
-        toast.info(`تم حذف "${deletedName}"`);
-      } else if (type === 'product_type') {
-        await ProductRepository.deleteProductType(id);
-        setLocalProductTypes((prev) => prev.filter((x) => x.id !== id));
-        if (productType === deletedName) setProductType('none');
-        toast.info(`تم حذف "${deletedName}"`);
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error('تعذر حذف العنصر');
-    }
-  };
+    // 8. جلب رصيد المخزون المسجل للصنف لوضعه في خانة الرصيد
+    db.stock_levels.where('product_id').equals(initial.id).toArray()
+      .then((levels) => {
+        const totalQty = levels.reduce((acc, l) => acc + (l.quantity || 0), 0);
+        if (totalQty > 0) {
+          setUnitLevels((prev) => {
+            if (prev.length === 0) return prev;
+            const updated = [...prev];
+            updated[0] = { ...updated[0], openingStock: String(totalQty) };
+            return updated;
+          });
+          setWeightOpeningStock(String(totalQty));
+        }
+      })
+      .catch(console.error);
+  }, [initial, initialUnits, units, setUnitLevels, setScaleCode, setWeightPurchasePrice, setWeightDiscount, setWeightDiscountType, setWeightSalePrice, setWeightOldSalePrice, setWeightNewSalePrice, setWeightDualPricing, setWeightOpeningStock, setBatchEntries]);
 
   // =========================================================================
-  // 4. حالة وحدات القطع
+  // 5. العمليات المساعدة (Barcode, Images, Reset, Submit)
   // =========================================================================
-  const [unitLevels, setUnitLevels] = useState<UnitLevelItem[]>(() => {
-    if (initialUnits.length > 0) {
-      return [
-        {
-          id: 'level-1',
-          unitName: units.find((u) => u.id === initial?.base_unit_id)?.name || '',
-          conversionFactor: '1',
-          openingStock: '',
-          allowSale: true,
-          purchasePrice: initial?.purchase_price ? String(initial.purchase_price) : '',
-          discountValue: '',
-          discountType: 'percent',
-          dualPricing: initial?.has_dual_pricing ?? !!initial?.old_sale_price,
-          salePrice: initial?.sale_price ? String(initial.sale_price) : '',
-          oldSalePrice: initial?.old_sale_price ? String(initial.old_sale_price) : '',
-          newSalePrice: initial?.sale_price ? String(initial.sale_price) : '',
-        },
-        ...initialUnits.slice(0, 2).map((u, idx) => ({
-          id: `level-${idx + 2}`,
-          unitName: units.find((un) => un.id === u.unit_id)?.name || '',
-          conversionFactor: String(u.conversion_factor || 1),
-          openingStock: '',
-          allowSale: u.is_default_sale ?? true,
-          purchasePrice: u.purchase_price ? String(u.purchase_price) : '',
-          discountValue: '',
-          discountType: 'percent' as const,
-          dualPricing: u.has_dual_pricing ?? !!u.old_sale_price,
-          salePrice: u.sale_price ? String(u.sale_price) : '',
-          oldSalePrice: u.old_sale_price ? String(u.old_sale_price) : '',
-          newSalePrice: u.sale_price ? String(u.sale_price) : '',
-        })),
-      ];
-    }
-    return [
-      {
-        id: 'level-1',
-        unitName: '',
-        conversionFactor: '1',
-        openingStock: '',
-        allowSale: true,
-        purchasePrice: '',
-        discountValue: '',
-        discountType: 'percent',
-        dualPricing: false,
-        salePrice: '',
-        oldSalePrice: '',
-        newSalePrice: '',
-      },
-    ];
-  });
-
-  // حالة الوزن (كيلو / ميزان إلكتروني)
-  const weightUnitName = 'كيلوجرام (كجم)';
-  const [scaleCode, setScaleCode] = useState(initial?.scale_code || '');
-  const [weightOpeningStock, setWeightOpeningStock] = useState('');
-  const [weightPurchasePrice, setWeightPurchasePrice] = useState('');
-  const [weightDiscount, setWeightDiscount] = useState('');
-  const [weightDiscountType, setWeightDiscountType] = useState<'percent' | 'amount'>('percent');
-  const [weightSalePrice, setWeightSalePrice] = useState('');
-  const [weightOldSalePrice, setWeightOldSalePrice] = useState('');
-  const [weightNewSalePrice, setWeightNewSalePrice] = useState('');
-  const [weightDualPricing, setWeightDualPricing] = useState(false);
-
-  const [isSaving, setIsSaving] = useState(false);
-
-  // إضافة مستوى وحدة أصغر (بحد أقصى 3 مستويات)
-  const handleAddSmallerUnit = () => {
-    if (unitLevels.length >= 3) {
-      toast.warning('الحد الأقصى للوحدات هو 3 مستويات فقط.');
-      return;
-    }
-
-    if (!unitLevels[0]?.unitName.trim()) {
-      toast.error('يرجى تحديد اسم الوحدة الأساسية أولاً قبل إضافة وحدات أصغر.');
-      return;
-    }
-
-    const nextNumber = unitLevels.length + 1;
-    const newLevel: UnitLevelItem = {
-      id: `level-${Date.now()}`,
-      unitName: '',
-      conversionFactor: '1',
-      openingStock: '',
-      allowSale: true,
-      purchasePrice: '',
-      discountValue: '',
-      discountType: 'percent',
-      dualPricing: false,
-      salePrice: '',
-      oldSalePrice: '',
-      newSalePrice: '',
-    };
-
-    setUnitLevels((prev) => [...prev, newLevel]);
-    toast.success(`تمت إضافة المستوى رقم (${nextNumber})`);
-  };
-
-  const updateUnitLevel = (idx: number, patch: Partial<UnitLevelItem>) => {
-    setUnitLevels((prev) => prev.map((item, i) => (i === idx ? { ...item, ...patch } : item)));
-  };
-
-  const removeUnitLevel = (idx: number) => {
-    if (idx === 0) {
-      toast.error('لا يمكن حذف الوحدة الأساسية الأولى.');
-      return;
-    }
-    setUnitLevels((prev) => prev.filter((_, i) => i !== idx));
-    toast.info('تم حذف المستوى.');
-  };
-
-  // توليد باركود تلقائي
   const handleGenerateRandomBarcode = () => {
     const rand = '628' + Math.floor(100000000 + Math.random() * 900000000).toString();
     setSku(rand);
     toast.success('تم توليد باركود تلقائي بنجاح');
   };
 
-  // إدارة الباركود البديل
   const handleAddAlternateBarcode = () => {
     setAlternateBarcodes((prev) => [...prev, '']);
   };
@@ -359,7 +354,6 @@ export function useProductForm({
     setAlternateBarcodes((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  // تحميل صورة الصنف
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -375,31 +369,6 @@ export function useProductForm({
     reader.readAsDataURL(file);
   };
 
-  // إضافة صف تاريخ صلاحية جديد
-  const handleAddBatch = () => {
-    const today = new Date();
-    const nextYear = today.getFullYear() + 1;
-    const newBatch: FormBatchEntry = {
-      id: uuidv4(),
-      quantity: '1',
-      unitLevelId: itemTypeMode === 'unit' ? 'level-1' : 'weight',
-      day: String(today.getDate()).padStart(2, '0'),
-      month: String(today.getMonth() + 1).padStart(2, '0'),
-      year: String(nextYear),
-      batchNumber: '',
-    };
-    setBatchEntries((prev) => [...prev, newBatch]);
-  };
-
-  const handleUpdateBatch = (idx: number, patch: Partial<FormBatchEntry>) => {
-    setBatchEntries((prev) => prev.map((item, i) => (i === idx ? { ...item, ...patch } : item)));
-  };
-
-  const handleRemoveBatch = (idx: number) => {
-    setBatchEntries((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  // تفريغ البيانات بالكامل
   const handleResetForm = () => {
     setName('');
     setNameEn('');
@@ -449,7 +418,6 @@ export function useProductForm({
     toast.info('تم تفريغ كافة حقول البيانات.');
   };
 
-  // حفظ الصنف
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -460,191 +428,45 @@ export function useProductForm({
 
     setIsSaving(true);
     try {
-      let baseU = units.find((u) =>
-        itemTypeMode === 'weight'
-          ? u.name.includes('كيلو') || u.symbol.toLowerCase() === 'kg'
-          : u.name === unitLevels[0].unitName
-      );
-
-      if (!baseU) {
-        const uName = itemTypeMode === 'weight' ? 'كيلوجرام' : unitLevels[0].unitName || 'قطعة';
-        baseU = await ProductRepository.createUnit(uName, uName.slice(0, 3), orgId);
-      }
-
-      const pPrice =
-        itemTypeMode === 'weight'
-          ? (calculatePriceDetails(
-              weightPurchasePrice,
-              weightSalePrice,
-              weightDiscount,
-              weightDiscountType
-            ).netCost || parseFloat(weightPurchasePrice) || 0)
-          : (calculatePriceDetails(
-              unitLevels[0].purchasePrice,
-              unitLevels[0].salePrice,
-              unitLevels[0].discountValue,
-              unitLevels[0].discountType
-            ).netCost || parseFloat(unitLevels[0].purchasePrice) || 0);
-
-      const sPrice =
-        itemTypeMode === 'weight'
-          ? (weightDualPricing && weightNewSalePrice ? parseFloat(weightNewSalePrice) : parseFloat(weightSalePrice)) || 0
-          : (unitLevels[0].dualPricing && unitLevels[0].newSalePrice
-              ? parseFloat(unitLevels[0].newSalePrice)
-              : parseFloat(unitLevels[0].salePrice)) || 0;
-
-      const oldSPrice =
-        itemTypeMode === 'weight'
-          ? weightDualPricing && weightOldSalePrice ? parseFloat(weightOldSalePrice) : undefined
-          : unitLevels[0].dualPricing && unitLevels[0].oldSalePrice
-          ? parseFloat(unitLevels[0].oldSalePrice)
-          : undefined;
-
-      const hasDual =
-        itemTypeMode === 'weight'
-          ? weightDualPricing
-          : unitLevels[0].dualPricing;
-
-      const cleanAlternateBarcodes = alternateBarcodes
-        .map((b) => b.trim())
-        .filter((b) => b.length > 0);
-
-      const targetWarehouseId =
-        warehouses.find((w) => w.is_main)?.id || warehouses[0]?.id || 'main-warehouse';
-
-      const baseProductData: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'sync_status'> = {
-        org_id: orgId,
-        sku: sku.trim() || generateSku(name),
-        name: name.trim(),
-        name_en: showSpecs && nameEn.trim() ? nameEn.trim() : undefined,
-        scientific_name: showSpecs && scientificName.trim() ? scientificName.trim() : undefined,
-        shelf_location: showSpecs && shelfLocation.trim() ? shelfLocation.trim() : undefined,
-        image_url: imageUrl || undefined,
-        alternate_barcodes: cleanAlternateBarcodes.length > 0 ? cleanAlternateBarcodes : undefined,
-        category_id: categoryId !== 'none' ? categoryId : null,
-        brand_id: brandId !== 'none' ? brandId : null,
-        item_type: 'storable',
-        product_type: productType !== 'none' ? productType : undefined,
-        measurement_type: itemTypeMode,
-        has_levels: itemTypeMode === 'unit' && unitLevels.length > 1,
-        scale_code: itemTypeMode === 'weight' && scaleCode.trim() ? scaleCode.trim() : undefined,
-        base_unit_id: baseU.id,
-        purchase_price: pPrice,
-        sale_price: sPrice,
-        old_sale_price: oldSPrice,
-        has_dual_pricing: hasDual,
-        tax_rate: isTaxable ? 14 : 0,
-        is_tax_inclusive: false,
-        is_taxable: isTaxable,
-        tracks_batch: showExpiry && enableExpiryTracking,
-        tracks_expiry: showExpiry && enableExpiryTracking,
-        min_stock_alert: enableMinStockAlert ? parseFloat(minStockAlert) || 5 : 0,
-        is_active: isActiveForSale,
-        is_quick_pos: isQuickPos,
-        notes: productNotes.trim() || undefined,
-      };
-
-      const secondaryUnitsData: Omit<
-        ProductUnit,
-        'id' | 'product_id' | 'created_at' | 'updated_at' | 'sync_status'
-      >[] = [];
-
-      if (itemTypeMode === 'unit' && unitLevels.length > 1) {
-        for (let i = 1; i < Math.min(3, unitLevels.length); i++) {
-          const lvl = unitLevels[i];
-          if (!lvl.unitName.trim()) continue;
-          let subU = units.find((u) => u.name === lvl.unitName);
-          if (!subU) {
-            subU = await ProductRepository.createUnit(lvl.unitName, lvl.unitName.slice(0, 3), orgId);
-          }
-          const secondarySale = lvl.dualPricing && lvl.newSalePrice
-            ? parseFloat(lvl.newSalePrice)
-            : (lvl.salePrice ? parseFloat(lvl.salePrice) : undefined);
-          const secondaryOldSale = lvl.dualPricing && lvl.oldSalePrice
-            ? parseFloat(lvl.oldSalePrice)
-            : undefined;
-
-          const secondaryCost = lvl.purchasePrice
-            ? (calculatePriceDetails(
-                lvl.purchasePrice,
-                lvl.salePrice,
-                lvl.discountValue,
-                lvl.discountType
-              ).netCost || parseFloat(lvl.purchasePrice))
-            : undefined;
-
-          secondaryUnitsData.push({
-            unit_id: subU.id,
-            conversion_factor: parseFloat(lvl.conversionFactor) || 1,
-            purchase_price: secondaryCost,
-            sale_price: secondarySale,
-            old_sale_price: secondaryOldSale,
-            has_dual_pricing: lvl.dualPricing,
-            is_default_sale: lvl.allowSale,
-            is_default_purchase: false,
-          });
-        }
-      }
-
-      const preparedBatches: Array<{
-        warehouse_id: string;
-        batch_number: string;
-        expiry_date?: string | null;
-        initial_quantity: number;
-        purchase_price?: number;
-      }> = [];
-
-      if (showExpiry && enableExpiryTracking && batchEntries.length > 0) {
-        for (let i = 0; i < batchEntries.length; i++) {
-          const b = batchEntries[i];
-          const rawQty = parseFloat(b.quantity) || 0;
-          if (rawQty <= 0) continue;
-
-          let factor = 1;
-          if (itemTypeMode === 'unit') {
-            if (b.unitLevelId === 'level-2' && unitLevels[1]) {
-              factor = 1 / (parseFloat(unitLevels[1].conversionFactor) || 1);
-            } else if (b.unitLevelId === 'level-3' && unitLevels[2]) {
-              const f2 = parseFloat(unitLevels[1]?.conversionFactor) || 1;
-              const f3 = parseFloat(unitLevels[2].conversionFactor) || 1;
-              factor = 1 / (f2 * f3);
-            }
-          }
-
-          let expiryIso: string | null = null;
-          if (b.year && b.month && b.day) {
-            const y = b.year.trim().padStart(4, '20');
-            const m = b.month.trim().padStart(2, '0');
-            const d = b.day.trim().padStart(2, '0');
-            expiryIso = `${y}-${m}-${d}`;
-          }
-
-          preparedBatches.push({
-            warehouse_id: targetWarehouseId,
-            batch_number: b.batchNumber.trim() || `BATCH-${Date.now().toString().slice(-4)}-${i + 1}`,
-            expiry_date: expiryIso,
-            initial_quantity: rawQty * factor,
-            purchase_price: pPrice,
-          });
-        }
-      }
-
-      if (isEdit && initial) {
-        await ProductRepository.updateProduct(initial.id, baseProductData);
-        await ProductRepository.replaceProductUnits(initial.id, secondaryUnitsData);
-        if (preparedBatches.length > 0) {
-          await ProductRepository.saveProductBatches(initial.id, orgId, preparedBatches);
-        }
-      } else {
-        const savedProduct = await ProductRepository.createProduct(
-          baseProductData,
-          secondaryUnitsData,
-          preparedBatches
-        );
-        if (preparedBatches.length > 0) {
-          await ProductRepository.saveProductBatches(savedProduct.id, orgId, preparedBatches);
-        }
-      }
+      await saveProductData({
+        orgId,
+        isEdit,
+        initial,
+        name,
+        nameEn,
+        scientificName,
+        shelfLocation,
+        imageUrl,
+        sku,
+        alternateBarcodes,
+        categoryId,
+        brandId,
+        productType,
+        itemTypeMode,
+        scaleCode,
+        isTaxable,
+        showSpecs,
+        showAdvanced,
+        showExpiry,
+        enableExpiryTracking,
+        enableMinStockAlert,
+        minStockAlert,
+        isActiveForSale,
+        isQuickPos,
+        productNotes,
+        units,
+        unitLevels,
+        weightOpeningStock,
+        weightPurchasePrice,
+        weightDiscount,
+        weightDiscountType,
+        weightSalePrice,
+        weightOldSalePrice,
+        weightNewSalePrice,
+        weightDualPricing,
+        batchEntries,
+        warehouses,
+      });
 
       toast.success('تم حفظ الصنف بنجاح!');
       onSaved();

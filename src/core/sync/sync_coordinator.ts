@@ -27,6 +27,15 @@ const TABLE_SYNC_ORDER: Record<string, number> = {
   sales_invoice_items: 16,
   purchase_invoices: 17,
   purchase_invoice_items: 18,
+  stocktake_sessions: 19,
+  stocktake_items: 20,
+  employee_attendance: 21,
+  salary_statements: 22,
+  employee_leaves: 23,
+  activity_logs: 24,
+  accounts: 25,
+  journal_entries: 26,
+  journal_entry_lines: 27,
 };
 
 /**
@@ -53,6 +62,9 @@ export function sanitizePayloadForCloud(table: string, payload: Record<string, u
       'is_quick_pos',
       'notes',
       'product_type',
+      'raw_purchase_price',
+      'purchase_discount_value',
+      'purchase_discount_type',
     ];
 
     for (const key of extendedKeys) {
@@ -147,6 +159,96 @@ export function sanitizePayloadForCloud(table: string, payload: Record<string, u
   } else if (table === 'app_settings') {
     const allowedColumns = new Set([
       'id', 'org_id', 'value', 'description', 'updated_at'
+    ]);
+    for (const k of Object.keys(clean)) {
+      if (!allowedColumns.has(k)) {
+        delete clean[k];
+      }
+    }
+  } else if (table === 'stocktake_sessions') {
+    const allowedColumns = new Set([
+      'id', 'org_id', 'branch_id', 'warehouse_id', 'session_number',
+      'status', 'notes', 'total_difference_value', 'created_by',
+      'created_at', 'completed_at'
+    ]);
+    for (const k of Object.keys(clean)) {
+      if (!allowedColumns.has(k)) {
+        delete clean[k];
+      }
+    }
+  } else if (table === 'stocktake_items') {
+    const allowedColumns = new Set([
+      'id', 'session_id', 'product_id', 'batch_id', 'expected_quantity',
+      'actual_quantity', 'difference_quantity', 'unit_cost', 'difference_value'
+    ]);
+    for (const k of Object.keys(clean)) {
+      if (!allowedColumns.has(k)) {
+        delete clean[k];
+      }
+    }
+  } else if (table === 'employee_attendance') {
+    const allowedColumns = new Set([
+      'id', 'org_id', 'branch_id', 'employee_id', 'date', 'check_in',
+      'check_out', 'work_hours', 'status', 'notes', 'created_at', 'updated_at'
+    ]);
+    for (const k of Object.keys(clean)) {
+      if (!allowedColumns.has(k)) {
+        delete clean[k];
+      }
+    }
+  } else if (table === 'salary_statements') {
+    const allowedColumns = new Set([
+      'id', 'org_id', 'employee_id', 'month', 'basic_salary', 'allowances',
+      'deductions', 'net_salary', 'status', 'paid_at', 'created_at', 'updated_at'
+    ]);
+    for (const k of Object.keys(clean)) {
+      if (!allowedColumns.has(k)) {
+        delete clean[k];
+      }
+    }
+  } else if (table === 'employee_leaves') {
+    const allowedColumns = new Set([
+      'id', 'org_id', 'branch_id', 'employee_id', 'leave_type', 'start_date',
+      'end_date', 'days_count', 'reason', 'status', 'approved_by', 'created_at', 'updated_at'
+    ]);
+    for (const k of Object.keys(clean)) {
+      if (!allowedColumns.has(k)) {
+        delete clean[k];
+      }
+    }
+  } else if (table === 'accounts') {
+    const allowedColumns = new Set([
+      'id', 'org_id', 'parent_id', 'code', 'name', 'name_en', 'type',
+      'account_type', 'current_balance', 'is_active', 'created_at', 'updated_at'
+    ]);
+    for (const k of Object.keys(clean)) {
+      if (!allowedColumns.has(k)) {
+        delete clean[k];
+      }
+    }
+  } else if (table === 'activity_logs') {
+    const allowedColumns = new Set([
+      'id', 'org_id', 'user_id', 'user_name', 'action', 'entity_type',
+      'entity_id', 'details', 'ip_address', 'created_at'
+    ]);
+    for (const k of Object.keys(clean)) {
+      if (!allowedColumns.has(k)) {
+        delete clean[k];
+      }
+    }
+  } else if (table === 'journal_entries') {
+    const allowedColumns = new Set([
+      'id', 'org_id', 'branch_id', 'entry_no', 'entry_date', 'type',
+      'description', 'total_amount', 'created_by', 'created_at'
+    ]);
+    for (const k of Object.keys(clean)) {
+      if (!allowedColumns.has(k)) {
+        delete clean[k];
+      }
+    }
+  } else if (table === 'journal_entry_lines') {
+    const allowedColumns = new Set([
+      'id', 'entry_id', 'account_id', 'debit', 'credit', 'description'
     ]);
     for (const k of Object.keys(clean)) {
       if (!allowedColumns.has(k)) {
@@ -295,6 +397,55 @@ export class SyncCoordinator {
 
       // تنقية البيانات لتطابق جداول Supabase 100%
       const payload = sanitizePayloadForCloud(item.entity_table, rawPayload);
+
+      // 🛡️ معالجة الأسبقية والعلاقات الأجنبية (Foreign Keys) لضمان عدم حدوث خطأ 409
+      if (item.entity_table === 'products') {
+        // تأكيد وجود الوحدة الأساسية في Supabase
+        const baseUnitId = payload.base_unit_id as string;
+        if (baseUnitId) {
+          const localUnit = await db.units.get(baseUnitId);
+          if (localUnit) {
+            const cleanUnit = sanitizePayloadForCloud('units', localUnit as unknown as Record<string, unknown>);
+            await supabase.from('units').upsert(cleanUnit, { onConflict: 'id' });
+          }
+        }
+        // تأكيد وجود التصنيف في Supabase
+        const catId = payload.category_id as string;
+        if (catId && catId !== 'none') {
+          const localCat = await db.product_categories.get(catId);
+          if (localCat) {
+            const cleanCat = sanitizePayloadForCloud('product_categories', localCat as unknown as Record<string, unknown>);
+            await supabase.from('product_categories').upsert(cleanCat, { onConflict: 'id' });
+          }
+        }
+        // تأكيد وجود الماركة / الشركة في Supabase
+        const brandId = payload.brand_id as string;
+        if (brandId && brandId !== 'none') {
+          const localBrand = await db.product_brands.get(brandId);
+          if (localBrand) {
+            const cleanBrand = sanitizePayloadForCloud('product_brands', localBrand as unknown as Record<string, unknown>);
+            await supabase.from('product_brands').upsert(cleanBrand, { onConflict: 'id' });
+          }
+        }
+      } else if (item.entity_table === 'product_units') {
+        const unitId = payload.unit_id as string;
+        if (unitId) {
+          const localUnit = await db.units.get(unitId);
+          if (localUnit) {
+            const cleanUnit = sanitizePayloadForCloud('units', localUnit as unknown as Record<string, unknown>);
+            await supabase.from('units').upsert(cleanUnit, { onConflict: 'id' });
+          }
+        }
+      } else if (item.entity_table === 'product_batches' || item.entity_table === 'stock_levels') {
+        const whId = payload.warehouse_id as string;
+        if (whId) {
+          const localWh = await db.warehouses.get(whId);
+          if (localWh) {
+            const cleanWh = sanitizePayloadForCloud('warehouses', localWh as unknown as Record<string, unknown>);
+            await supabase.from('warehouses').upsert(cleanWh, { onConflict: 'id' });
+          }
+        }
+      }
 
       let error: { message: string } | null = null;
 

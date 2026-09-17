@@ -53,19 +53,22 @@ export class ScaleManager {
   }
 
   /**
-   * Save scale configuration to app_settings
+   * Save scale configuration to app_settings (supports partial updates)
    */
-  public static async saveConfig(orgId: string, cfg: ScaleConfig): Promise<void> {
+  public static async saveConfig(orgId: string, cfg: Partial<ScaleConfig>): Promise<void> {
+    const current = await this.getConfig(orgId);
+    const merged: ScaleConfig = { ...current, ...cfg };
+
     await Promise.all([
-      SettingsRepository.setSetting(orgId, 'scale_enabled', String(cfg.enabled), 'تفعيل الربط مع الموازين الإلكترونية'),
-      SettingsRepository.setSetting(orgId, 'scale_mode', cfg.mode, 'نمط تشغيل الميزان (باركود / مباشر / كلاهما)'),
-      SettingsRepository.setSetting(orgId, 'scale_prefix', cfg.barcodePrefix.trim(), 'بادئة باركود الميزان (EAN-13 Prefix)'),
-      SettingsRepository.setSetting(orgId, 'scale_type', cfg.barcodeType, 'نوع تشفير باركود الميزان (بالوزن أو بالسعر)'),
-      SettingsRepository.setSetting(orgId, 'scale_plu_length', String(cfg.pluLength), 'عدد خانات كود الصنف بالميزان (PLU)'),
-      SettingsRepository.setSetting(orgId, 'scale_weight_decimals', String(cfg.weightDecimals), 'عدد الخانات العشرية للوزن'),
-      SettingsRepository.setSetting(orgId, 'scale_ip', cfg.scaleIp.trim(), 'عنوان IP الميزان بالشبكة'),
-      SettingsRepository.setSetting(orgId, 'scale_port', cfg.scalePort.trim(), 'منفذ الميزان بالشبكة'),
-      SettingsRepository.setSetting(orgId, 'scale_baud_rate', String(cfg.baudRate), 'سرعة منفذ السيريال للميزان المباشر (Baud Rate)'),
+      SettingsRepository.setSetting(orgId, 'scale_enabled', String(merged.enabled), 'تفعيل الربط مع الموازين الإلكترونية'),
+      SettingsRepository.setSetting(orgId, 'scale_mode', merged.mode, 'نمط تشغيل الميزان (باركود / مباشر / كلاهما)'),
+      SettingsRepository.setSetting(orgId, 'scale_prefix', merged.barcodePrefix.trim(), 'بادئة باركود الميزان (EAN-13 Prefix)'),
+      SettingsRepository.setSetting(orgId, 'scale_type', merged.barcodeType, 'نوع تشفير باركود الميزان (بالوزن أو بالسعر)'),
+      SettingsRepository.setSetting(orgId, 'scale_plu_length', String(merged.pluLength), 'عدد خانات كود الصنف بالميزان (PLU)'),
+      SettingsRepository.setSetting(orgId, 'scale_weight_decimals', String(merged.weightDecimals), 'عدد الخانات العشرية للوزن'),
+      SettingsRepository.setSetting(orgId, 'scale_ip', merged.scaleIp.trim(), 'عنوان IP الميزان بالشبكة'),
+      SettingsRepository.setSetting(orgId, 'scale_port', merged.scalePort.trim(), 'منفذ الميزان بالشبكة'),
+      SettingsRepository.setSetting(orgId, 'scale_baud_rate', String(merged.baudRate), 'سرعة منفذ السيريال للميزان المباشر (Baud Rate)'),
     ]);
   }
 

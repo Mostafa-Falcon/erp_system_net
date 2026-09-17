@@ -1,0 +1,606 @@
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Package,
+  Star,
+  MoreVertical,
+  Eye,
+  IdCard,
+  Edit,
+  Barcode,
+  Boxes,
+  Trash2,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Layers,
+  Copy,
+  Check,
+  Building2,
+  Tag,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+} from 'lucide-react';
+import { formatNumber } from '@/lib/format';
+import { cn } from '@/lib/utils';
+import type {
+  Product,
+  ProductBrand,
+  ProductUnit,
+  Unit,
+} from '@/types';
+import type { VisibleColumns, SortField, SortDirection } from './types';
+import { toast } from 'sonner';
+
+interface ItemTableProps {
+  products: Product[];
+  isLoading: boolean;
+  selectedIds: Set<string>;
+  toggleSelectAll: () => void;
+  toggleSelectRow: (id: string) => void;
+  visibleColumns: VisibleColumns;
+  sortField: SortField | null;
+  sortDirection: SortDirection;
+  onSort: (field: SortField) => void;
+  brands: ProductBrand[];
+  unitsById: Record<string, Unit>;
+  productUnitsByProduct: Record<string, ProductUnit[]>;
+  stockMap: Record<string, number>;
+  catName: (id?: string | null) => string;
+  unitName: (id?: string | null) => string;
+  onResetFilters: () => void;
+  onOpenDetail: (p: Product) => void;
+  onOpenItemCard: (p: Product) => void;
+  onOpenOpeningStock: (p: Product) => void;
+  onToggleQuickPos: (p: Product) => void;
+  onArchive: (p: Product) => void;
+  density?: 'compact' | 'medium' | 'relaxed';
+}
+
+export function ItemTable({
+  products,
+  isLoading,
+  selectedIds,
+  toggleSelectAll,
+  toggleSelectRow,
+  visibleColumns,
+  sortField,
+  sortDirection,
+  onSort,
+  brands,
+  unitsById,
+  productUnitsByProduct,
+  stockMap,
+  catName,
+  unitName,
+  onResetFilters,
+  onOpenDetail,
+  onOpenItemCard,
+  onOpenOpeningStock,
+  onToggleQuickPos,
+  onArchive,
+  density = 'medium',
+}: ItemTableProps) {
+  const [copiedSku, setCopiedSku] = React.useState<string | null>(null);
+
+  const handleCopySku = (sku: string) => {
+    navigator.clipboard.writeText(sku);
+    setCopiedSku(sku);
+    toast.success(`تم نسخ الباركود: ${sku}`);
+    setTimeout(() => setCopiedSku(null), 2000);
+  };
+
+  const rowPadding =
+    density === 'compact'
+      ? 'py-2 px-3'
+      : density === 'relaxed'
+      ? 'py-4 px-4'
+      : 'py-3 px-3.5';
+
+  // Sort icon indicator
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field || sortDirection === 'none') {
+      return <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60 inline-block mr-1" />;
+    }
+    if (sortDirection === 'asc') {
+      return <ArrowUp className="w-3 h-3 text-emerald-600 inline-block mr-1" />;
+    }
+    return <ArrowDown className="w-3 h-3 text-emerald-600 inline-block mr-1" />;
+  };
+
+  // Stock Badge renderer with clean status & unit breakdown
+  const renderStockBadge = (p: Product) => {
+    const stock = stockMap[p.id] || 0;
+    if (p.item_type !== 'storable') {
+      return (
+        <Badge
+          variant="secondary"
+          className="text-[11px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 border-0 px-2.5 py-0.5 rounded-full"
+        >
+          خدمي
+        </Badge>
+      );
+    }
+
+    const baseUName = unitName(p.base_unit_id);
+    const secUnits = productUnitsByProduct[p.id] || [];
+    const secUnit = secUnits[0];
+
+    let stockText = '';
+    if (secUnit && secUnit.conversion_factor && secUnit.conversion_factor > 1) {
+      const factor = secUnit.conversion_factor;
+      const baseQty = Math.floor(stock / factor);
+      const remQty = Math.round(stock % factor);
+      const secUName = unitsById[secUnit.unit_id]?.name || 'وحدة';
+      stockText = `${baseQty} ${baseUName} + ${remQty} ${secUName}`;
+    } else {
+      stockText = `${formatNumber(stock)} ${baseUName}`;
+    }
+
+    // Colors matching stock health
+    let badgeClass =
+      'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800';
+    let icon = <CheckCircle2 className="w-3 h-3 text-emerald-600" />;
+
+    if (stock <= 0) {
+      badgeClass =
+        'bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800';
+      icon = <XCircle className="w-3 h-3 text-rose-500" />;
+    } else if (stock <= (p.min_stock_alert || 0)) {
+      badgeClass =
+        'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800';
+      icon = <AlertTriangle className="w-3 h-3 text-amber-600" />;
+    }
+
+    return (
+      <div
+        className={cn(
+          'inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-mono font-black shadow-2xs transition-all hover:scale-105 select-none',
+          badgeClass
+        )}
+      >
+        {icon}
+        <span>{stockText}</span>
+      </div>
+    );
+  };
+
+  return (
+    <div className="bg-white dark:bg-[#111726] rounded-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-sm print:border-none">
+      <div className="overflow-x-auto">
+        <Table className="w-full">
+          <TableHeader className="bg-slate-50/90 dark:bg-slate-900/90 border-b border-slate-200/80 dark:border-slate-800 text-right select-none">
+            <TableRow>
+              {/* Checkbox */}
+              <TableHead className="w-12 text-center">
+                <Checkbox
+                  checked={products.length > 0 && selectedIds.size === products.length}
+                  onCheckedChange={toggleSelectAll}
+                  aria-label="تحديد جميع الأصناف"
+                />
+              </TableHead>
+
+              {/* 1. الصنف */}
+              <TableHead
+                onClick={() => onSort('name')}
+                className="text-xs font-black uppercase text-slate-700 dark:text-slate-300 cursor-pointer hover:text-emerald-600 transition-colors min-w-[220px]"
+              >
+                <div className="flex items-center gap-1">
+                  <span>الصنف</span>
+                  {renderSortIcon('name')}
+                </div>
+              </TableHead>
+
+              {/* 2. English Name */}
+              {visibleColumns.nameEn && (
+                <TableHead
+                  onClick={() => onSort('name_en')}
+                  className="text-xs font-black uppercase text-slate-700 dark:text-slate-300 cursor-pointer hover:text-emerald-600 transition-colors min-w-[140px]"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>English Name</span>
+                    {renderSortIcon('name_en')}
+                  </div>
+                </TableHead>
+              )}
+
+              {/* 3. سعر الشراء */}
+              {visibleColumns.purchasePrice && (
+                <TableHead
+                  onClick={() => onSort('purchase_price')}
+                  className="text-xs font-black uppercase text-slate-700 dark:text-slate-300 text-center cursor-pointer hover:text-emerald-600 transition-colors min-w-[110px]"
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    <span>سعر الشراء</span>
+                    {renderSortIcon('purchase_price')}
+                  </div>
+                </TableHead>
+              )}
+
+              {/* 4. سعر البيع */}
+              {visibleColumns.salePrice && (
+                <TableHead
+                  onClick={() => onSort('sale_price')}
+                  className="text-xs font-black uppercase text-slate-700 dark:text-slate-300 text-center cursor-pointer hover:text-emerald-600 transition-colors min-w-[140px]"
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    <span>سعر البيع</span>
+                    {renderSortIcon('sale_price')}
+                  </div>
+                </TableHead>
+              )}
+
+              {/* 5. المخزون الحالي */}
+              {visibleColumns.stock && (
+                <TableHead
+                  onClick={() => onSort('stock')}
+                  className="text-xs font-black uppercase text-slate-700 dark:text-slate-300 text-center cursor-pointer hover:text-emerald-600 transition-colors min-w-[140px]"
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    <span>المخزون الحالي</span>
+                    {renderSortIcon('stock')}
+                  </div>
+                </TableHead>
+              )}
+
+              {/* 6. المجموعة / القسم */}
+              {visibleColumns.category && (
+                <TableHead
+                  onClick={() => onSort('category')}
+                  className="text-xs font-black uppercase text-slate-700 dark:text-slate-300 text-center cursor-pointer hover:text-emerald-600 transition-colors min-w-[120px]"
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    <span>المجموعة</span>
+                    {renderSortIcon('category')}
+                  </div>
+                </TableHead>
+              )}
+
+              {/* 7. SKU / الباركود */}
+              {visibleColumns.barcode && (
+                <TableHead
+                  onClick={() => onSort('sku')}
+                  className="text-xs font-black uppercase text-slate-700 dark:text-slate-300 text-center cursor-pointer hover:text-emerald-600 transition-colors min-w-[140px]"
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    <span>SKU / الباركود</span>
+                    {renderSortIcon('sku')}
+                  </div>
+                </TableHead>
+              )}
+
+              {/* 8. الخيارات */}
+              <TableHead className="w-20 text-center text-xs font-black uppercase text-slate-700 dark:text-slate-300">
+                الخيارات
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+
+          <TableBody className="text-xs font-bold divide-y divide-slate-100 dark:divide-slate-800/60">
+            {isLoading ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell colSpan={9} className="py-4 px-4">
+                    <Skeleton className="h-10 w-full opacity-60 rounded-xl" />
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : products.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} className="py-20 text-center">
+                  <div className="flex flex-col items-center gap-3 text-slate-400">
+                    <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800/80 flex items-center justify-center text-slate-400">
+                      <Package className="w-7 h-7 opacity-40" />
+                    </div>
+                    <span className="text-sm font-black text-slate-600 dark:text-slate-300">
+                      لا توجد أصناف تطابق شروط التصفية المحددة
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onResetFilters}
+                      className="rounded-xl text-xs font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
+                    >
+                      إعادة ضبط الفلاتر
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : (
+              products.map((p) => {
+                const secUnits = productUnitsByProduct[p.id] || [];
+                const secUnit = secUnits[0];
+                const isSelected = selectedIds.has(p.id);
+                const brand = p.brand_id ? brands.find((b) => b.id === p.brand_id) : null;
+
+                return (
+                  <TableRow
+                    key={p.id}
+                    className={cn(
+                      'hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors group',
+                      isSelected && 'bg-emerald-50/40 dark:bg-emerald-950/20'
+                    )}
+                  >
+                    {/* Checkbox */}
+                    <TableCell className={cn('text-center', rowPadding)}>
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelectRow(p.id)}
+                        aria-label={`تحديد ${p.name}`}
+                      />
+                    </TableCell>
+
+                    {/* 1. اسم الصنف مع الأيقونة والبيانات الفرعية */}
+                    <TableCell className={rowPadding}>
+                      <div className="flex items-center gap-3">
+                        {/* Product Icon Box */}
+                        <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 dark:border-emerald-900/60 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition-transform shadow-2xs">
+                          <Package className="w-4 h-4" />
+                        </div>
+
+                        <div className="flex flex-col min-w-0">
+                          {/* Name & Quick Badges */}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span
+                              onClick={() => onOpenDetail(p)}
+                              title="اضغط لعرض تفاصيل الصنف"
+                              className="font-black text-slate-900 dark:text-white group-hover:text-emerald-600 transition-colors text-sm cursor-pointer hover:underline truncate"
+                            >
+                              {p.name}
+                            </span>
+
+                            {/* Fast Moving Badge */}
+                            {p.is_quick_pos && (
+                              <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-none text-[10px] font-black h-4 px-1.5 rounded-md flex items-center gap-0.5 shadow-2xs">
+                                <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
+                                <span>سريع</span>
+                              </Badge>
+                            )}
+
+                            {!p.is_active && (
+                              <Badge variant="destructive" className="h-4 px-1 text-[9px] font-bold">
+                                معطل
+                              </Badge>
+                            )}
+                          </div>
+
+                          {/* Brand / Note subline */}
+                          <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium mt-0.5">
+                            {brand && (
+                              <span className="flex items-center gap-0.5 text-slate-500 dark:text-slate-400">
+                                <Building2 className="w-3 h-3 text-slate-400" />
+                                <span>{brand.name}</span>
+                              </span>
+                            )}
+                            {p.item_type !== 'storable' && (
+                              <span className="text-[10px] text-blue-500 font-bold">صنف خدمي</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+
+                    {/* 2. English Name */}
+                    {visibleColumns.nameEn && (
+                      <TableCell className={cn('text-slate-500 dark:text-slate-400 font-medium font-sans text-xs', rowPadding)}>
+                        {p.name_en ? (
+                          <span className="truncate block max-w-[180px]">{p.name_en}</span>
+                        ) : (
+                          <span className="text-slate-300 dark:text-slate-600">—</span>
+                        )}
+                      </TableCell>
+                    )}
+
+                    {/* 3. سعر الشراء */}
+                    {visibleColumns.purchasePrice && (
+                      <TableCell className={cn('text-center font-mono text-xs text-slate-700 dark:text-slate-300', rowPadding)}>
+                        <span className="font-bold">{formatNumber(p.purchase_price)}</span>{' '}
+                        <span className="text-[10px] text-slate-400 font-sans">ج.م</span>
+                      </TableCell>
+                    )}
+
+                    {/* 4. سعر البيع والوحدة الصغرى */}
+                    {visibleColumns.salePrice && (
+                      <TableCell className={cn('text-center', rowPadding)}>
+                        <div className="flex flex-col items-center">
+                          <span className="font-black text-sm text-emerald-600 dark:text-emerald-400 font-mono">
+                            {formatNumber(p.sale_price)}{' '}
+                            <span className="text-[10px] font-sans font-bold text-slate-400">
+                              ج.م / {unitName(p.base_unit_id)}
+                            </span>
+                          </span>
+                          {secUnit && secUnit.sale_price && (
+                            <span className="text-[10px] font-mono text-slate-400 font-bold mt-0.5">
+                              {formatNumber(secUnit.sale_price)} ج.م / {unitsById[secUnit.unit_id]?.name || 'فرعي'}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                    )}
+
+                    {/* 5. المخزون الحالي */}
+                    {visibleColumns.stock && (
+                      <TableCell className={cn('text-center', rowPadding)}>
+                        {renderStockBadge(p)}
+                      </TableCell>
+                    )}
+
+                    {/* 6. المجموعة / القسم */}
+                    {visibleColumns.category && (
+                      <TableCell className={cn('text-center', rowPadding)}>
+                        <Badge
+                          variant="secondary"
+                          className="font-bold text-xs bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200/60 dark:border-slate-700 px-2.5 py-1 rounded-xl shadow-2xs"
+                        >
+                          <Tag className="w-3 h-3 text-slate-400 ml-1 inline-block" />
+                          <span>{catName(p.category_id)}</span>
+                        </Badge>
+                      </TableCell>
+                    )}
+
+                    {/* 7. SKU / الباركود */}
+                    {visibleColumns.barcode && (
+                      <TableCell className={cn('text-center', rowPadding)}>
+                        {p.sku ? (
+                          <div
+                            onClick={() => handleCopySku(p.sku)}
+                            title="اضغط لنسخ الباركود"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-xs font-mono font-bold text-slate-700 dark:text-slate-300 hover:border-emerald-400 hover:text-emerald-600 transition-all cursor-pointer group/sku"
+                          >
+                            <Barcode className="w-3.5 h-3.5 text-slate-400 group-hover/sku:text-emerald-500" />
+                            <span>{p.sku}</span>
+                            {copiedSku === p.sku ? (
+                              <Check className="w-3 h-3 text-emerald-600 animate-in zoom-in-50" />
+                            ) : (
+                              <Copy className="w-3 h-3 text-slate-400 opacity-0 group-hover/sku:opacity-100 transition-opacity" />
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-300 dark:text-slate-600">—</span>
+                        )}
+                      </TableCell>
+                    )}
+
+                    {/* 8. الخيارات (Action Menu) */}
+                    <TableCell className={cn('text-center', rowPadding)}>
+                      <div className="flex items-center justify-center gap-1">
+                        {/* Quick View Button */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onOpenDetail(p)}
+                          title="عرض تفاصيل الصنف"
+                          className="w-7 h-7 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 cursor-pointer hidden sm:inline-flex"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </Button>
+
+                        {/* Quick Edit Button */}
+                        <Link href={`/items/new?edit=${p.id}`}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="تعديل الصنف"
+                            className="w-7 h-7 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 cursor-pointer hidden sm:inline-flex"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </Button>
+                        </Link>
+
+                        {/* Full Popover Menu */}
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            className="w-52 p-1.5 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl z-50 text-right space-y-0.5"
+                            dir="rtl"
+                          >
+                            {/* 1. تفاصيل الصنف */}
+                            <button
+                              onClick={() => onOpenDetail(p)}
+                              className="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 text-right cursor-pointer"
+                            >
+                              <Eye className="w-4 h-4 text-blue-500" />
+                              <span>تفاصيل الصنف</span>
+                            </button>
+
+                            {/* 2. كرت الصنف */}
+                            <button
+                              onClick={() => onOpenItemCard(p)}
+                              className="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 text-right cursor-pointer"
+                            >
+                              <IdCard className="w-4 h-4 text-emerald-600" />
+                              <span>كرت الصنف</span>
+                            </button>
+
+                            {/* 3. طباعة ملصق */}
+                            <Link
+                              href={`/items/barcode?id=${p.id}`}
+                              prefetch={false}
+                              className="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 text-right"
+                            >
+                              <Barcode className="w-4 h-4 text-indigo-500" />
+                              <span>طباعة ملصق</span>
+                            </Link>
+
+                            {/* 4. تعديل */}
+                            <Link
+                              href={`/items/new?edit=${p.id}`}
+                              className="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 text-right"
+                            >
+                              <Edit className="w-4 h-4 text-amber-500" />
+                              <span>تعديل الصنف</span>
+                            </Link>
+
+                            {/* 5. إضافة للأصناف السريعة */}
+                            <button
+                              onClick={() => onToggleQuickPos(p)}
+                              className="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-amber-600 dark:text-amber-400 text-right cursor-pointer"
+                            >
+                              <Star
+                                className={cn('w-4 h-4 text-amber-500', p.is_quick_pos && 'fill-amber-500')}
+                              />
+                              <span>
+                                {p.is_quick_pos ? 'إزالة من الأصناف السريعة' : 'إضافة للأصناف السريعة'}
+                              </span>
+                            </button>
+
+                            {/* 6. إضافة كميات افتتاحية */}
+                            <button
+                              onClick={() => onOpenOpeningStock(p)}
+                              className="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-blue-600 dark:text-blue-400 text-right cursor-pointer"
+                            >
+                              <Boxes className="w-4 h-4 text-blue-500" />
+                              <span>إضافة كميات افتتاحية</span>
+                            </button>
+
+                            {/* 7. أرشفة / حذف */}
+                            <button
+                              onClick={() => onArchive(p)}
+                              className="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-bold text-rose-600 dark:text-rose-400 text-right cursor-pointer border-t border-slate-100 dark:border-slate-800 mt-1 pt-2"
+                            >
+                              <Trash2 className="w-4 h-4 text-rose-500" />
+                              <span>أرشفة / حذف</span>
+                            </button>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}

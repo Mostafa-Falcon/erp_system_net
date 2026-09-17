@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Cairo } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/sonner';
+import { DirectionProvider } from '@radix-ui/react-direction';
 
 const cairo = Cairo({
   subsets: ['arabic', 'latin'],
@@ -22,8 +23,10 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" className={cairo.className} suppressHydrationWarning>
       <body>
-        {children}
-        <Toaster />
+        <DirectionProvider dir="rtl">
+          {children}
+          <Toaster />
+        </DirectionProvider>
       </body>
     </html>
   );

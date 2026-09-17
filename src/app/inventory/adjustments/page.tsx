@@ -1,11 +1,8 @@
 'use client';
-
-import React, { useEffect, useState } from 'react';
-import { Suspense } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/button';
-import { Icons } from '@/components/ui/Icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -20,7 +17,10 @@ import {
 import { useSessionStore } from '@/core/state/useSessionStore';
 import { InventoryRepository } from '@/modules/inventory/inventory_repository';
 import { formatNumber, formatDate, formatDateTime } from '@/lib/format';
+import { cn } from '@/lib/utils';
+import { Plus, ClipboardList, Eye, Trash2 } from 'lucide-react';
 import type { StocktakeSession, Warehouse, User } from '@/types';
+import { toast } from 'sonner';
 
 function StocktakeListPage() {
   const { currentUser } = useSessionStore();
@@ -58,6 +58,23 @@ function StocktakeListPage() {
   const warehouseName = (id: string) => warehouses.find((w) => w.id === id)?.name || '—';
   const userName = (id: string) => users.find((u) => u.id === id)?.full_name || users.find((u) => u.id === id)?.username || '—';
 
+  const handleDelete = async (sessionId: string, sessionNumber: string) => {
+    if (!confirm(`هل أنت متأكد من حذف مسودة الجرد رقم ${sessionNumber}؟`)) return;
+
+    try {
+      const res = await InventoryRepository.deleteStocktakeSession(sessionId);
+      if (!res.success) {
+        toast.error(res.error || 'فشل حذف مسودة الجرد.');
+        return;
+      }
+      toast.success('تم حذف مسودة الجرد بنجاح.');
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      toast.error('حدث خطأ أثناء محاولة الحذف.');
+    }
+  };
+
   return (
     <AppShell
       title="الجرد المخزوني"
@@ -65,7 +82,7 @@ function StocktakeListPage() {
       actions={
         <Link href="/inventory/adjustments/new">
           <Button className="h-10 px-5 bg-[#558b2f] hover:bg-[#436d25] text-white text-xs font-black rounded-xl shadow-xs flex items-center gap-2">
-            <Icons.Plus className="w-4 h-4" /> جرد جديد
+            <Plus className="w-4 h-4" /> جرد جديد
           </Button>
         </Link>
       }
@@ -98,7 +115,7 @@ function StocktakeListPage() {
                 <TableRow>
                   <TableCell colSpan={8} className="py-24 text-center">
                     <div className="flex flex-col items-center gap-3 text-slate-400">
-                      <Icons.ClipboardList className="w-12 h-12 opacity-20" />
+                      <ClipboardList className="w-12 h-12 opacity-20" />
                       <span className="text-sm font-black">لا توجد عمليات جرد سابقة.</span>
                       <Link href="/inventory/adjustments/new">
                         <Button variant="outline" className="mt-2 text-[11px] font-black rounded-lg">ابدأ أول جلسة جرد الآن</Button>
@@ -136,12 +153,14 @@ function StocktakeListPage() {
                     <TableCell className="text-slate-600 dark:text-slate-400">{userName(s.created_by)}</TableCell>
                     <TableCell>
                       <div className="flex items-center justify-center gap-1.5">
-                        <Button size="icon" variant="ghost" className="w-8 h-8 rounded-lg text-slate-400 hover:text-[#2563eb] hover:bg-blue-50">
-                          <Icons.Eye className="w-4 h-4" />
-                        </Button>
+                        <Link href={`/inventory/adjustments/${s.id}`}>
+                          <Button size="icon" variant="ghost" title="عرض التفاصيل" className="w-8 h-8 rounded-lg text-slate-400 hover:text-[#2563eb] hover:bg-blue-50">
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </Link>
                         {s.status === 'draft' && (
-                          <Button size="icon" variant="ghost" className="w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50">
-                            <Icons.Trash className="w-4 h-4" />
+                          <Button size="icon" variant="ghost" title="حذف المسودة" onClick={() => handleDelete(s.id, s.session_number)} className="w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50">
+                            <Trash2 className="w-4 h-4" />
                           </Button>
                         )}
                       </div>

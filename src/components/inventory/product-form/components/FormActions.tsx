@@ -35,7 +35,7 @@ export const FormActions: React.FC<FormActionsProps> = ({
           type="button"
           variant="outline"
           onClick={onCancel}
-          className="h-12 px-6 rounded-xl border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 text-xs font-bold cursor-pointer"
+          className="h-12 px-6 rounded-xl border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 text-xs font-black cursor-pointer"
         >
           إلغاء
         </Button>
@@ -44,7 +44,7 @@ export const FormActions: React.FC<FormActionsProps> = ({
       <Button
         type="button"
         onClick={handleResetForm}
-        className="h-12 px-6 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer flex items-center gap-2"
+        className="h-12 px-6 bg-red-600 hover:bg-red-700 text-white text-xs font-black rounded-xl shadow-xs cursor-pointer flex items-center gap-2"
       >
         <Trash2 className="w-4 h-4" />
         <span>تفريغ البيانات</span>

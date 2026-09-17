@@ -13,6 +13,7 @@ export interface CashierShift {
   shift_number: number;
   opened_at: ISODateString;
   closed_at?: ISODateString | null;
+  closed_by_user_id?: EntityId | null;
   opening_balance: number;
   total_sales_cash: number;
   total_sales_card: number;
@@ -21,6 +22,8 @@ export interface CashierShift {
   total_expenses: number;
   expected_closing_balance: number;
   actual_closing_balance?: number | null;
+  actual_card_balance?: number | null;
+  destination_treasury_id?: EntityId | null;
   difference?: number | null; // deficit or surplus (عجز أو زيادة)
   status: 'open' | 'closed';
   notes?: string;
@@ -56,6 +59,10 @@ export interface SalesInvoice {
   treasury_id: EntityId;
   status: InvoiceStatus;
   notes?: string;
+  is_deleted?: boolean;
+  deleted_at?: ISODateString;
+  deleted_by?: EntityId;
+  delete_reason?: string;
   created_by: EntityId;
   created_at: ISODateString;
   updated_at: ISODateString;

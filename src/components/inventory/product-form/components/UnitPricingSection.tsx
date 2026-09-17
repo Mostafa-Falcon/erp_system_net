@@ -38,7 +38,7 @@ export const UnitPricingSection: React.FC<UnitPricingSectionProps> = ({
         return (
           <Card
             key={lvl.id}
-            className="border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#131b2e] shadow-xs overflow-hidden"
+            className="border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#131b2e] shadow-xs overflow-hidden rounded-2xl"
           >
             <CardContent className="p-5 space-y-4">
               {/* السطر 1: الشارة، اسم الوحدة، معامل التفكيك، الرصيد، سويتش مسموح بالبيع */}
@@ -55,7 +55,7 @@ export const UnitPricingSection: React.FC<UnitPricingSectionProps> = ({
                   </div>
 
                   <div className="flex-1">
-                    <Label className="block text-[11px] font-bold text-slate-500 mb-1">
+                    <Label className="block text-[11px] font-black text-slate-500 mb-1">
                       اسم الوحدة {isFirst ? '(الأساسية / الكبرى)' : `(المستوى ${idx + 1})`}
                     </Label>
                     <Input
@@ -75,7 +75,7 @@ export const UnitPricingSection: React.FC<UnitPricingSectionProps> = ({
 
                   {!isFirst && (
                     <div className="w-32">
-                      <Label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      <Label className="block text-[11px] font-black text-slate-600 dark:text-slate-400 mb-1">
                         معامل التفكيك
                       </Label>
                       <div className="relative">
@@ -92,22 +92,24 @@ export const UnitPricingSection: React.FC<UnitPricingSectionProps> = ({
                           className="h-10 text-xs font-mono font-bold pr-3 pl-8"
                         />
                         {lvl.conversionFactor && (
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="icon"
                             onClick={() =>
                               updateUnitLevel(idx, { conversionFactor: '' })
                             }
-                            className="absolute left-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                            className="absolute left-1 top-1 w-8 h-8 text-slate-400 hover:text-slate-600 cursor-pointer rounded-lg"
                           >
                             <X className="w-3.5 h-3.5" />
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </div>
                   )}
 
                   <div className="w-28">
-                    <Label className="block text-[11px] font-bold text-slate-500 mb-1">
+                    <Label className="block text-[11px] font-black text-slate-500 mb-1">
                       الرصيد الافتتاحي
                     </Label>
                     <div className="relative">
@@ -122,15 +124,17 @@ export const UnitPricingSection: React.FC<UnitPricingSectionProps> = ({
                         className="h-10 text-xs font-mono font-bold pr-3 pl-8"
                       />
                       {lvl.openingStock !== '' && (
-                        <button
+                        <Button
                           type="button"
+                          variant="ghost"
+                          size="icon"
                           onClick={() =>
                             updateUnitLevel(idx, { openingStock: '' })
                           }
-                          className="absolute left-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                          className="absolute left-1 top-1 w-8 h-8 text-slate-400 hover:text-slate-600 cursor-pointer rounded-lg"
                         >
                           <X className="w-3.5 h-3.5" />
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -147,7 +151,7 @@ export const UnitPricingSection: React.FC<UnitPricingSectionProps> = ({
                     />
                     <Label
                       htmlFor={`allow-sale-${idx}`}
-                      className="text-xs font-bold text-emerald-700 dark:text-emerald-400 cursor-pointer"
+                      className="text-xs font-black text-emerald-700 dark:text-emerald-400 cursor-pointer"
                     >
                       مسموح بالبيع
                     </Label>
@@ -171,7 +175,7 @@ export const UnitPricingSection: React.FC<UnitPricingSectionProps> = ({
               {/* السطر 2: سعر الشراء، الخصم، وسويتش تسعير مزدوج */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
                 <div>
-                  <Label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                  <Label className="block text-[11px] font-black text-slate-600 dark:text-slate-400 mb-1">
                     سعر الشراء
                   </Label>
                   <Input
@@ -188,7 +192,7 @@ export const UnitPricingSection: React.FC<UnitPricingSectionProps> = ({
                 </div>
 
                 <div>
-                  <Label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                  <Label className="block text-[11px] font-black text-slate-600 dark:text-slate-400 mb-1">
                     الخصم
                   </Label>
                   <div className="flex gap-1.5">
@@ -231,7 +235,7 @@ export const UnitPricingSection: React.FC<UnitPricingSectionProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between p-2 h-10 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
-                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                  <span className="text-xs font-black text-slate-600 dark:text-slate-400">
                     تسعير مزدوج
                   </span>
                   <Switch
@@ -248,7 +252,7 @@ export const UnitPricingSection: React.FC<UnitPricingSectionProps> = ({
                 {lvl.dualPricing ? (
                   <>
                     <div className="sm:col-span-5">
-                      <Label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      <Label className="block text-[11px] font-black text-slate-600 dark:text-slate-400 mb-1">
                         سعر البيع القديم
                       </Label>
                       <Input
@@ -265,7 +269,7 @@ export const UnitPricingSection: React.FC<UnitPricingSectionProps> = ({
                     </div>
 
                     <div className="sm:col-span-5">
-                      <Label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      <Label className="block text-[11px] font-black text-slate-700 dark:text-slate-300 mb-1">
                         سعر البيع الجديد *
                       </Label>
                       <Input
@@ -287,7 +291,7 @@ export const UnitPricingSection: React.FC<UnitPricingSectionProps> = ({
                   </>
                 ) : (
                   <div className="sm:col-span-10">
-                    <Label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    <Label className="block text-[11px] font-black text-slate-700 dark:text-slate-300 mb-1">
                       سعر البيع الحالي *
                     </Label>
                     <Input

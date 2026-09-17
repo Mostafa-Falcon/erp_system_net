@@ -13,7 +13,7 @@ export class ContactsRepository {
     const results = await collection.and((c) => c.is_active).toArray();
     if (!type) return results;
 
-    return results.filter((c) => c.type === type || c.type === 'both');
+    return results.filter((c) => c.type === type);
   }
 
   /**

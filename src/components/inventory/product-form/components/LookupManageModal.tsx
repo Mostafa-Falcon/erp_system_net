@@ -48,7 +48,7 @@ export const LookupManageModal: React.FC<LookupManageModalProps> = ({
             <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 shadow-2xs">
               <SquarePen className="w-5 h-5" />
             </div>
-            <DialogTitle className="text-base font-bold text-slate-900 dark:text-slate-100">
+            <DialogTitle className="text-base font-black text-slate-900 dark:text-slate-100">
               {activeModal === 'brand' && 'إدارة وإضافة الشركات المصنعة / الماركات'}
               {activeModal === 'category' && 'إدارة وإضافة المجموعات / التصنيفات'}
               {activeModal === 'product_type' && 'إدارة وإضافة أنواع المنتجات'}
@@ -67,7 +67,7 @@ export const LookupManageModal: React.FC<LookupManageModalProps> = ({
 
         {/* إضافة جديد */}
         <div className="mt-4 space-y-2 text-right" dir="rtl">
-          <Label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+          <Label className="block text-xs font-black text-slate-700 dark:text-slate-300">
             إضافة اسم جديد
           </Label>
           <div className="flex gap-2">
@@ -89,7 +89,7 @@ export const LookupManageModal: React.FC<LookupManageModalProps> = ({
               type="button"
               disabled={isModalSaving || !modalInputValue.trim()}
               onClick={handleModalSave}
-              className="h-11 px-6 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs cursor-pointer disabled:opacity-50 shrink-0"
+              className="h-11 px-6 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs cursor-pointer disabled:opacity-50 shrink-0"
             >
               {isModalSaving ? 'إضافة...' : 'إضافة'}
             </Button>
@@ -98,7 +98,7 @@ export const LookupManageModal: React.FC<LookupManageModalProps> = ({
 
         {/* قائمة العناصر الحالية مع زر الحذف للتخلص من أي بيانات تجريبية أو قديمة */}
         <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 text-right" dir="rtl">
-          <Label className="block text-xs font-bold text-slate-500 mb-2">
+          <Label className="block text-xs font-black text-slate-500 mb-2">
             العناصر المسجلة حالياً (يمكنك حذف أي عنصر):
           </Label>
           <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
@@ -111,7 +111,7 @@ export const LookupManageModal: React.FC<LookupManageModalProps> = ({
                     key={b.id}
                     className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700 text-xs"
                   >
-                    <span className="font-bold text-slate-800 dark:text-slate-200">{b.name}</span>
+                    <span className="font-black text-slate-800 dark:text-slate-200">{b.name}</span>
                     <Button
                       type="button"
                       variant="ghost"
@@ -135,7 +135,7 @@ export const LookupManageModal: React.FC<LookupManageModalProps> = ({
                     key={c.id}
                     className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700 text-xs"
                   >
-                    <span className="font-bold text-slate-800 dark:text-slate-200">{c.name}</span>
+                    <span className="font-black text-slate-800 dark:text-slate-200">{c.name}</span>
                     <Button
                       type="button"
                       variant="ghost"
@@ -159,7 +159,7 @@ export const LookupManageModal: React.FC<LookupManageModalProps> = ({
                     key={t.id}
                     className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700 text-xs"
                   >
-                    <span className="font-bold text-slate-800 dark:text-slate-200">{t.name}</span>
+                    <span className="font-black text-slate-800 dark:text-slate-200">{t.name}</span>
                     <Button
                       type="button"
                       variant="ghost"
@@ -181,7 +181,7 @@ export const LookupManageModal: React.FC<LookupManageModalProps> = ({
             type="button"
             variant="outline"
             onClick={() => setActiveModal(null)}
-            className="h-10 px-6 rounded-xl text-slate-600 dark:text-slate-300 font-bold text-xs cursor-pointer"
+            className="h-10 px-6 rounded-xl text-slate-600 dark:text-slate-300 font-black text-xs cursor-pointer"
           >
             إغلاق
           </Button>

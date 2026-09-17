@@ -1,0 +1,171 @@
+import React from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Menu,
+  ArrowRight,
+  Calendar,
+  Bell,
+  Headphones,
+  HardDrive,
+  Calculator,
+  Clock,
+  Plus,
+  Moon,
+  Sun,
+} from 'lucide-react';
+import { formatNumber } from '@/lib/format';
+import { toast } from 'sonner';
+import type { CashierShift, User as UserType } from '@/types';
+
+interface PosHeaderProps {
+  currentUser: UserType | null;
+  activeShift: CashierShift | null;
+  onOpenShiftModal: () => void;
+  onOpenSupportModal: () => void;
+  onOpenCalcModal: () => void;
+  isDark: boolean;
+  onToggleTheme: () => void;
+}
+
+export function PosHeader({
+  currentUser,
+  activeShift,
+  onOpenShiftModal,
+  onOpenSupportModal,
+  onOpenCalcModal,
+  isDark,
+  onToggleTheme,
+}: PosHeaderProps) {
+  const router = useRouter();
+
+  return (
+    <header className="h-14 bg-white dark:bg-[#111726] border-b border-slate-200/90 dark:border-slate-800 px-4 flex items-center justify-between shadow-2xs shrink-0">
+      {/* Right side: Brand & Page Title */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => router.push('/')}
+          title="القائمة الرئيسية"
+          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        <button
+          onClick={() => router.push('/')}
+          title="العودة للرئيسية"
+          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+        >
+          <ArrowRight className="w-5 h-5" />
+        </button>
+
+        <h1 className="text-base font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+          <span>نقطة البيع (الكاشير)</span>
+        </h1>
+
+        <span className="hidden sm:inline-flex text-[11px] font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-900/60 rounded-md px-2.5 py-0.5 mr-2">
+          لوجيسكا سيستمز | نظام إدارة الصيدلية v1
+        </span>
+      </div>
+
+      {/* Left side: Controls, Status, Quick Tools, Date */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Date Indicator */}
+        <div className="hidden lg:flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700 px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300">
+          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+          <span>{new Date().toISOString().slice(0, 10)}</span>
+        </div>
+
+        {/* Notifications */}
+        <button
+          title="الإشعارات"
+          className="relative p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+        >
+          <Bell className="w-4 h-4" />
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black px-1 rounded-full">
+            +99
+          </span>
+        </button>
+
+        {/* Support Headset */}
+        <button
+          title="الدعم الفني المباشر"
+          onClick={onOpenSupportModal}
+          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+        >
+          <Headphones className="w-4 h-4" />
+        </button>
+
+        {/* Cash Drawer Tool */}
+        <button
+          title="فتح درج النقدية"
+          onClick={() => toast.success('تم إرسال أمر فتح درج النقدية الكهرومغناطيسي')}
+          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+        >
+          <HardDrive className="w-4 h-4" />
+        </button>
+
+        {/* Calculator Tool */}
+        <button
+          title="الآلة الحاسبة"
+          onClick={onOpenCalcModal}
+          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+        >
+          <Calculator className="w-4 h-4" />
+        </button>
+
+        {/* Online Badge */}
+        <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 text-xs font-bold px-2.5 py-1 rounded-full">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>متصل</span>
+        </div>
+
+        {/* Shift Status Badge */}
+        {activeShift ? (
+          <div className="flex items-center gap-1 bg-purple-50 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800 rounded-lg px-2.5 py-1 text-xs">
+            <button
+              onClick={() => router.push('/sales/shifts/close')}
+              title="عرض وتدقيق وإغلاق الوردية"
+              className="flex items-center gap-1.5 font-bold text-purple-700 dark:text-purple-300 hover:underline cursor-pointer"
+            >
+              <Clock className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+              <span>وردية #{activeShift.shift_number}</span>
+              <span className="font-mono text-[11px] text-purple-600 dark:text-purple-400">
+                ({formatNumber(activeShift.expected_closing_balance)} ج.م)
+              </span>
+            </button>
+            <button
+              onClick={() => router.push('/sales/shifts/close')}
+              title="إغلاق الوردية الحالية"
+              className="mr-1 text-[10px] font-black bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-950/80 dark:hover:bg-red-900/80 dark:text-red-300 px-1.5 py-0.5 rounded cursor-pointer transition-colors"
+            >
+              إغلاق
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={onOpenShiftModal}
+            className="flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow-xs transition-colors cursor-pointer animate-pulse"
+            title="فتح وردية كاشير جديدة"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>فتح وردية</span>
+          </button>
+        )}
+
+        {/* Theme Toggle */}
+        <button
+          onClick={onToggleTheme}
+          title="تبديل الوضع الليلي"
+          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+        >
+          {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
+        </button>
+
+        {/* User Initial Circle */}
+        <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 font-bold flex items-center justify-center text-xs border border-emerald-300 dark:border-emerald-700">
+          {currentUser?.full_name ? currentUser.full_name.charAt(0) : 'ع'}
+        </div>
+      </div>
+    </header>
+  );
+}

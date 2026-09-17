@@ -69,6 +69,10 @@ export interface Product {
   
   // Pricing
   purchase_price: number;
+  cost_price?: number; // Alias for purchase_price
+  raw_purchase_price?: number; // سعر الشراء الأصلي قبل الخصم
+  purchase_discount_value?: number; // قيمة أو نسبة الخصم عند الشراء
+  purchase_discount_type?: 'percent' | 'amount'; // نوع الخصم: نسبة مئوية أو مبلغ ثابت
   sale_price: number;
   old_sale_price?: number; // سعر البيع القديم في حالة التسعير المزدوج
   has_dual_pricing?: boolean; // هل الصنف مفعل به التسعير المزدوج
@@ -91,6 +95,7 @@ export interface Product {
   scientific_name?: string; // الاسم العلمي / الوصف الإضافي / المادة الفعالة
   shelf_location?: string; // المكان / الرف
   alternate_barcodes?: string[]; // باركود بديل
+  substitute_ids?: EntityId[]; // معرفات الأصناف البديلة المدخلة بواسطة صاحب المنشأة
   is_taxable?: boolean; // صنف ضريبي
   is_quick_pos?: boolean; // صنف سريع في شاشة البيع POS Quick Access
   notes?: string; // ملاحظات الصنف
@@ -113,6 +118,10 @@ export interface ProductUnit {
   conversion_factor: number; // How many base units in this unit (explicitly set)
   barcode?: string;
   purchase_price?: number; // Independent purchase price
+  cost_price?: number; // Alias for purchase_price
+  raw_purchase_price?: number; // سعر الشراء الأصلي قبل الخصم
+  purchase_discount_value?: number; // قيمة أو نسبة الخصم
+  purchase_discount_type?: 'percent' | 'amount'; // نوع الخصم
   sale_price?: number; // Independent sale price
   old_sale_price?: number; // سعر البيع القديم للمستوى
   has_dual_pricing?: boolean; // هل المستوى مفعل به التسعير المزدوج
@@ -134,6 +143,7 @@ export interface ProductBatch {
   expiry_date?: ISODateString | null;
   initial_quantity: number; // in base units
   current_quantity: number; // in base units
+  quantity_in?: number; // Alias for current_quantity
   purchase_price?: number;
   created_at: ISODateString;
   updated_at: ISODateString;
@@ -159,6 +169,7 @@ export interface StockLevel {
   org_id: EntityId;
   warehouse_id: EntityId;
   product_id: EntityId;
+  batch_id?: EntityId | null;
   quantity: number; // Total in base unit
   reserved_quantity: number;
   available_quantity: number;
@@ -168,7 +179,8 @@ export interface StockLevel {
 
 export type InventoryTransactionType = 
   | 'opening_stock' 
-  | 'purchase' 
+  | 'opening_balance'
+  | 'purchase'
   | 'sale' 
   | 'sale_return' 
   | 'purchase_return' 
@@ -185,7 +197,7 @@ export interface InventoryTransaction {
   product_id: EntityId;
   batch_id?: EntityId | null;
   transaction_type: InventoryTransactionType;
-  reference_type?: 'sale_invoice' | 'purchase_invoice' | 'transfer' | 'manual';
+  reference_type?: 'sale_invoice' | 'purchase_invoice' | 'transfer' | 'manual' | 'adjustment';
   reference_id?: EntityId | null;
   quantity: number;
   unit_id: EntityId;
@@ -206,11 +218,15 @@ export interface StockTransfer {
   transfer_no: string;
   from_warehouse_id: EntityId;
   to_warehouse_id: EntityId;
-  status: 'draft' | 'pending' | 'completed' | 'cancelled';
+  from_branch_id?: EntityId;
+  to_branch_id?: EntityId;
+  status: 'draft' | 'pending' | 'in_transit' | 'completed' | 'cancelled';
   notes?: string;
   created_by: EntityId;
   created_at: ISODateString;
   completed_at?: ISODateString | null;
+  items_count?: number;
+  items?: (StockTransferItem & { product_name?: string; unit_name?: string; batch_number?: string })[];
   sync_status?: 'synced' | 'pending' | 'failed';
 }
 
@@ -225,4 +241,31 @@ export interface StockTransferItem {
   base_quantity: number; // quantity * conversion_factor
   unit_cost: number;
   total_cost: number;
+}
+
+export interface StocktakeSession {
+  id: EntityId;
+  org_id: EntityId;
+  branch_id: EntityId;
+  warehouse_id: EntityId;
+  session_number: string;
+  status: 'draft' | 'completed' | 'cancelled';
+  notes?: string;
+  total_difference_value: number;
+  created_by: EntityId;
+  created_at: ISODateString;
+  completed_at?: ISODateString | null;
+  sync_status?: 'synced' | 'pending' | 'failed';
+}
+
+export interface StocktakeItem {
+  id: EntityId;
+  session_id: EntityId;
+  product_id: EntityId;
+  batch_id?: EntityId | null;
+  expected_quantity: number;
+  actual_quantity: number;
+  difference_quantity: number;
+  unit_cost: number;
+  difference_value: number;
 }

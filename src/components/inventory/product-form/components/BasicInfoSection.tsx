@@ -59,12 +59,12 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   setShelfLocation,
 }) => {
   return (
-    <Card className="border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#131b2e] shadow-xs overflow-hidden">
+    <Card className="border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#131b2e] shadow-xs overflow-hidden rounded-2xl">
       <CardContent className="p-5">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           {/* صندوق صورة الصنف */}
           <div className="lg:col-span-3 flex flex-col items-center justify-center">
-            <input
+            <Input
               type="file"
               ref={fileInputRef}
               accept="image/*"
@@ -123,7 +123,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               } gap-3`}
             >
               <div>
-                <Label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                <Label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5">
                   اسم الصنف *
                 </Label>
                 <Input
@@ -139,7 +139,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               {showSpecs && (
                 <>
                   <div>
-                    <Label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    <Label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5">
                       الوصف الإضافي / المواصفات
                     </Label>
                     <Input
@@ -152,7 +152,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                   </div>
 
                   <div>
-                    <Label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    <Label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5">
                       اسم الصنف (بالإنجليزي)
                     </Label>
                     <Input
@@ -172,7 +172,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start">
               <div className={showSpecs ? 'sm:col-span-7' : 'sm:col-span-12'}>
                 <div className="flex items-center justify-between mb-1.5">
-                  <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <Label className="text-xs font-black text-slate-700 dark:text-slate-300">
                     الباركود الرئيسي
                   </Label>
                   <Button
@@ -241,7 +241,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
 
               {showSpecs && (
                 <div className="sm:col-span-5">
-                  <Label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  <Label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5">
                     مكان التخزين / الرف / القسم
                   </Label>
                   <div className="relative">

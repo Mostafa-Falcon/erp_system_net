@@ -12,8 +12,13 @@ import { SalesRepository } from '@/modules/sales/sales_repository';
 import { formatNumber, formatDateTime } from '@/lib/format';
 import type { Contact, InventoryTransaction, Product, SalesReturn, Treasury, Unit, Warehouse } from '@/types';
 
-const selectCls =
-  'h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#558b2f]';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 function ReturnsContent() {
   const { currentUser } = useSessionStore();
@@ -87,7 +92,7 @@ function ReturnsContent() {
 
   const filtered = useMemo(() => {
     return returns.filter((ret) => {
-      if (customerFilter && ret.customer_id !== customerFilter) return false;
+      if (customerFilter && customerFilter !== 'all' && ret.customer_id !== customerFilter) return false;
       if (!search.trim()) return true;
       const q = search.trim().toLowerCase();
       const custName = (customers.find((x) => x.id === ret.customer_id)?.name || 'نقدي').toLowerCase();
@@ -129,12 +134,23 @@ function ReturnsContent() {
                   icon={<Icons.Search />}
                 />
               </div>
-              <select value={customerFilter} onChange={(e) => setCustomerFilter(e.target.value)} className={selectCls + ' w-44'}>
-                <option value="">كل العملاء</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+              <div className="w-48">
+                <Select value={customerFilter || 'all'} onValueChange={setCustomerFilter}>
+                  <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+                    <SelectValue placeholder="كل العملاء" />
+                  </SelectTrigger>
+                  <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl max-h-60">
+                    <SelectItem value="all" className="">
+                      كل العملاء
+                    </SelectItem>
+                    {customers.map((c) => (
+                      <SelectItem key={c.id} value={c.id} className="">
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <Button onClick={() => router.push('/sales/returns/new')} className="h-10 px-4 bg-[#558b2f] hover:bg-[#436d25] text-white rounded-lg text-xs font-bold flex items-center gap-1.5">
               <Icons.Plus /> مرتجع جديد

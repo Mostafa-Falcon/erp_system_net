@@ -6,6 +6,14 @@ import { AppShell } from '@/components/layout/AppShell';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/ui/Icons';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useSessionStore } from '@/core/state/useSessionStore';
 import { ProductRepository } from '@/modules/inventory/product_repository';
 import { InventoryRepository } from '@/modules/inventory/inventory_repository';
@@ -187,20 +195,33 @@ function DamagesContent() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           <div>
             <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">المخزن</span>
-            <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} className={selectCls + ' w-full'}>
-              {warehouses.map((w) => (
-                <option key={w.id} value={w.id}>{w.name}</option>
-              ))}
-            </select>
+            <Select value={warehouseId} onValueChange={setWarehouseId}>
+              <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+                <SelectValue placeholder="اختر المخزن" />
+              </SelectTrigger>
+              <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+                {warehouses.map((w) => (
+                  <SelectItem key={w.id} value={w.id} className="">
+                    {w.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="md:col-span-2">
             <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">الصنف التالف</span>
-            <select value={productId} onChange={(e) => onProductChange(e.target.value)} className={selectCls + ' w-full bg-white dark:bg-slate-800'}>
-              <option value="">— اختر الصنف —</option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
-              ))}
-            </select>
+            <Select value={productId} onValueChange={onProductChange}>
+              <SelectTrigger className="w-full h-10 rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-800 text-xs font-bold">
+                <SelectValue placeholder="— اختر الصنف —" />
+              </SelectTrigger>
+              <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl max-h-60">
+                {products.map((p) => (
+                  <SelectItem key={p.id} value={p.id} className="">
+                    {p.name} ({p.sku})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">الكمية التالفة</span>
@@ -208,31 +229,52 @@ function DamagesContent() {
           </div>
           <div>
             <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">وحدة القياس</span>
-            <select
+            <Select
               value={unitId}
-              onChange={(e) => setUnitId(e.target.value)}
-              className={selectCls + ' w-full'}
+              onValueChange={setUnitId}
               disabled={!currentProduct}
             >
-              {currentProduct && unitsById[currentProduct.base_unit_id] && (
-                <option value={currentProduct.base_unit_id}>{unitsById[currentProduct.base_unit_id].symbol}</option>
-              )}
-              {Object.values(unitsById).map((u) => (
-                <option key={u.id} value={u.id}>{u.symbol}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+                <SelectValue placeholder="اختر الوحدة" />
+              </SelectTrigger>
+              <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+                {currentProduct && unitsById[currentProduct.base_unit_id] && (
+                  <SelectItem key={currentProduct.base_unit_id} value={currentProduct.base_unit_id} className="">
+                    {unitsById[currentProduct.base_unit_id].symbol}
+                  </SelectItem>
+                )}
+                {Object.values(unitsById).map((u) => (
+                  <SelectItem key={u.id} value={u.id} className="">
+                    {u.symbol}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">سبب التوالف</span>
-            <select value={reason} onChange={(e) => setReason(e.target.value)} className={selectCls + ' w-full'}>
-              {REASON_OPTIONS.map((r) => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </select>
+            <Select value={reason} onValueChange={setReason}>
+              <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+                <SelectValue placeholder="اختر السبب" />
+              </SelectTrigger>
+              <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+                {REASON_OPTIONS.map((r) => (
+                  <SelectItem key={r} value={r} className="">
+                    {r}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="md:col-span-2 lg:col-span-3">
             <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">ملاحظات إضافية</span>
-            <Input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} className="h-10 bg-slate-50 dark:bg-slate-900 text-sm" placeholder="تفاصيل إضافية (اختياري)" />
+            <Textarea
+              rows={2}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full min-h-[64px] resize-none text-xs font-bold bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+              placeholder="تفاصيل إضافية (اختياري)"
+            />
           </div>
         </div>
 

@@ -5,14 +5,31 @@ import { Suspense } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/ui/Icons';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { useSessionStore } from '@/core/state/useSessionStore';
 import { ProductRepository } from '@/modules/inventory/product_repository';
 import { InventoryRepository } from '@/modules/inventory/inventory_repository';
 import { formatNumber } from '@/lib/format';
 import type { Product, ProductCategory, StockLevel, Unit, Warehouse } from '@/types';
-
-const selectCls =
-  'h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#558b2f]';
 
 function ValuationContent() {
   const { currentUser } = useSessionStore();
@@ -110,41 +127,69 @@ function ValuationContent() {
     >
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-          <span className="text-xs font-bold text-slate-400">قيمة المخزون الإجمالية</span>
-          <div className="text-xl font-black text-[#558b2f] mt-1">{formatNumber(totals.value)}</div>
+        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm border-r-4 border-r-[#558b2f]">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">قيمة المخزون الإجمالية</span>
+          <div className="text-2xl font-black text-[#558b2f] mt-1">{formatNumber(totals.value)}</div>
         </div>
-        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-          <span className="text-xs font-bold text-slate-400">إجمالي الكميات</span>
-          <div className="text-xl font-black text-slate-900 dark:text-white mt-1">{formatNumber(totals.qty)}</div>
+        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">إجمالي الكميات</span>
+          <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">{formatNumber(totals.qty)}</div>
         </div>
-        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-          <span className="text-xs font-bold text-slate-400">عدد المخازن</span>
-          <div className="text-xl font-black text-slate-900 dark:text-white mt-1">{formatNumber(totals.warehouseCount)}</div>
+        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">عدد المخازن</span>
+          <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">{formatNumber(totals.warehouseCount)}</div>
         </div>
       </div>
 
+      <Separator className="my-2 opacity-50" />
+
       {/* Filters */}
-      <div className="flex flex-col lg:flex-row gap-3 flex-wrap items-end bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-        <select value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)} className={selectCls}>
-          <option value="all">كل المخازن</option>
-          {warehouses.map((w) => (
-            <option key={w.id} value={w.id}>{w.name}</option>
-          ))}
-        </select>
-        <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className={selectCls}>
-          <option value="all">كل الفئات</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="بحث بالاسم أو الكود..."
-          className="h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#558b2f] lg:w-52"
-        />
+      <div className="flex flex-col lg:flex-row gap-3 flex-wrap items-center bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+        <div className="w-full sm:w-48">
+          <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
+            <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+              <SelectValue placeholder="المخزن" />
+            </SelectTrigger>
+            <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+              <SelectItem value="all" className="">
+                كل المخازن
+              </SelectItem>
+              {warehouses.map((w) => (
+                <SelectItem key={w.id} value={w.id} className="">
+                  {w.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="w-full sm:w-48">
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+              <SelectValue placeholder="الفئة" />
+            </SelectTrigger>
+            <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+              <SelectItem value="all" className="">
+                كل الفئات
+              </SelectItem>
+              {categories.map((c) => (
+                <SelectItem key={c.id} value={c.id} className="">
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="w-full sm:w-56">
+          <Input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="بحث بالاسم أو الكود..."
+            className="h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold"
+          />
+        </div>
         <div className="flex items-center gap-2 lg:mr-auto">
           <span className="text-[11px] font-bold text-slate-400">حسب الفئة:</span>
           {Object.entries(totals.byCategory).map(([catId, v]) => (
@@ -156,51 +201,63 @@ function ValuationContent() {
       </div>
 
       {/* Valuation table */}
-      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden print:border-0">
-        <div className="overflow-x-auto">
-          <table className="w-full text-right border-collapse">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                <th className="py-3.5 px-4">الصنف</th>
-                <th className="py-3.5 px-4">الكود</th>
-                <th className="py-3.5 px-4">الفئة</th>
-                <th className="py-3.5 px-4">المخزن</th>
-                <th className="py-3.5 px-4">الرصيد</th>
-                <th className="py-3.5 px-4">الوحدة</th>
-                <th className="py-3.5 px-4">تكلفة الوحدة</th>
-                <th className="py-3.5 px-4">القيمة</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
+      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-md print:border-0">
+        <ScrollArea className="h-[calc(100vh-450px)] min-h-[400px]">
+          <Table>
+            <TableHeader className="sticky top-0 z-10 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm shadow-sm">
+              <TableRow>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">الصنف</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">الكود</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">الفئة</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">المخزن</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">الرصيد</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">الوحدة</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">تكلفة الوحدة</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider text-left">القيمة</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="text-xs font-bold">
               {isLoading ? (
-                <tr><td colSpan={8} className="py-12 text-center text-slate-400 font-semibold">جاري تحميل الأرصدة...</td></tr>
+                Array.from({ length: 8 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={8} className="py-4 px-4">
+                      <Skeleton className="h-6 w-full opacity-50" />
+                    </TableCell>
+                  </TableRow>
+                ))
               ) : rows.length === 0 ? (
-                <tr><td colSpan={8} className="py-12 text-center text-slate-400 font-semibold">لا توجد أرصدة مطابقة للفلاتر المحددة.</td></tr>
+                <TableRow>
+                  <TableCell colSpan={8} className="py-20 text-center text-slate-400 font-bold">
+                    لا توجد أرصدة مطابقة للفلاتر المحددة.
+                  </TableCell>
+                </TableRow>
               ) : (
                 rows.map(({ level, product }) => (
-                  <tr key={level.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                    <td className="py-3 px-4 font-bold text-slate-900 dark:text-white">{product.name}</td>
-                    <td className="py-3 px-4 font-mono text-slate-500">{product.sku}</td>
-                    <td className="py-3 px-4">{catName(product.category_id)}</td>
-                    <td className="py-3 px-4 font-bold text-slate-700 dark:text-slate-300">{warehouseName(level.warehouse_id)}</td>
-                    <td className="py-3 px-4 font-black">{formatNumber(level.quantity)}</td>
-                    <td className="py-3 px-4 text-slate-500">{unitSymbol(product.base_unit_id)}</td>
-                    <td className="py-3 px-4">{formatNumber(product.purchase_price || 0)}</td>
-                    <td className="py-3 px-4 font-black text-[#558b2f]">{formatNumber(level.quantity * (product.purchase_price || 0))}</td>
-                  </tr>
+                  <TableRow key={level.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors group">
+                    <TableCell className="font-black text-slate-900 dark:text-white py-3">{product.name}</TableCell>
+                    <TableCell className="font-mono text-[10px] text-slate-500">{product.sku}</TableCell>
+                    <TableCell className="text-slate-600 dark:text-slate-400">{catName(product.category_id)}</TableCell>
+                    <TableCell className="font-bold text-slate-700 dark:text-slate-300">{warehouseName(level.warehouse_id)}</TableCell>
+                    <TableCell className="font-black text-sm">{formatNumber(level.quantity)}</TableCell>
+                    <TableCell className="text-slate-500 font-medium">{unitSymbol(product.base_unit_id)}</TableCell>
+                    <TableCell className="font-mono">{formatNumber(product.purchase_price || 0)}</TableCell>
+                    <TableCell className="font-black text-[#558b2f] text-left text-sm bg-slate-50/30 dark:bg-slate-800/20 transition-colors group-hover:bg-emerald-50/50 dark:group-hover:bg-emerald-950/20">
+                      {formatNumber(level.quantity * (product.purchase_price || 0))}
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
-            </tbody>
-            {rows.length > 0 && (
-              <tfoot>
-                <tr className="border-t-2 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 font-black text-sm">
-                  <td colSpan={7} className="py-3 px-4 text-slate-700 dark:text-slate-200">الإجمالي</td>
-                  <td className="py-3 px-4 text-[#558b2f]">{formatNumber(totals.value)}</td>
-                </tr>
-              </tfoot>
+            </TableBody>
+            {rows.length > 0 && !isLoading && (
+              <TableFooter className="sticky bottom-0 z-10 bg-slate-50 dark:bg-slate-900 font-black text-sm border-t-2">
+                <TableRow>
+                  <TableCell colSpan={7} className="py-4 text-slate-700 dark:text-slate-200">الإجمالي الكلي للقيمة</TableCell>
+                  <TableCell className="py-4 text-[#558b2f] text-left text-lg">{formatNumber(totals.value)}</TableCell>
+                </TableRow>
+              </TableFooter>
             )}
-          </table>
-        </div>
+          </Table>
+        </ScrollArea>
       </div>
     </AppShell>
   );

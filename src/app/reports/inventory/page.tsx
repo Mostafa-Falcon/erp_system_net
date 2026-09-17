@@ -6,9 +6,37 @@ import { AppShell } from '@/components/layout/AppShell';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/ui/Icons';
+import { AlertTriangle } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { DatePicker } from '@/components/ui/date-picker';
+import { Label } from '@/components/ui/label';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { useSessionStore } from '@/core/state/useSessionStore';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { formatNumber, formatDateTime, MOVEMENT_TYPE_LABELS } from '@/lib/format';
 import type { InventoryTransaction, InventoryTransactionType, Product, Unit, Warehouse } from '@/types';
+import { format } from 'date-fns';
 
 const TYPE_STYLES: Record<string, string> = {
   opening_stock: 'bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300',
@@ -114,95 +142,189 @@ function InventoryReportContent() {
     >
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-          <span className="text-xs font-bold text-slate-400">إجمالي الوارد</span>
-          <div className="text-xl font-black text-emerald-600 mt-1">{formatNumber(totals.inbound)}</div>
+        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">إجمالي الوارد</span>
+          <div className="text-2xl font-black text-emerald-600 mt-1">{formatNumber(totals.inbound)}</div>
         </div>
-        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-          <span className="text-xs font-bold text-slate-400">إجمالي الصادر</span>
-          <div className="text-xl font-black text-red-600 mt-1">{formatNumber(totals.outbound)}</div>
+        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">إجمالي الصادر</span>
+          <div className="text-2xl font-black text-red-600 mt-1">{formatNumber(totals.outbound)}</div>
         </div>
-        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-          <span className="text-xs font-bold text-slate-400">صافي الحركة</span>
-          <div className={`text-xl font-black mt-1 ${totals.net >= 0 ? 'text-[#558b2f]' : 'text-red-600'}`}>
+        <div className="bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm border-l-4 border-l-[#558b2f]">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">صافي الحركة</span>
+          <div className={`text-2xl font-black mt-1 ${totals.net >= 0 ? 'text-[#558b2f]' : 'text-red-600'}`}>
             {formatNumber(totals.net)}
           </div>
         </div>
       </div>
 
+      <Separator className="my-2 opacity-50" />
+
       {/* Filters */}
-      <div className="flex flex-col lg:flex-row gap-3 flex-wrap bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-        <select value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)} className={selectCls}>
-          <option value="all">كل المخازن</option>
-          {warehouses.map((w) => (
-            <option key={w.id} value={w.id}>{w.name}</option>
-          ))}
-        </select>
-        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className={selectCls}>
-          <option value="all">كل أنواع الحركة</option>
-          {(Object.keys(MOVEMENT_TYPE_LABELS) as InventoryTransactionType[]).map((t) => (
-            <option key={t} value={t}>{MOVEMENT_TYPE_LABELS[t]}</option>
-          ))}
-        </select>
-        <select value={productFilter} onChange={(e) => setProductFilter(e.target.value)} className={selectCls + ' lg:min-w-52'}>
-          <option value="all">كل الأصناف</option>
-          {products.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
-        <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-10 bg-slate-50 dark:bg-slate-900 text-xs w-40" />
-        <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-10 bg-slate-50 dark:bg-slate-900 text-xs w-40" />
+      <div className="flex flex-col lg:flex-row gap-3 items-center flex-wrap bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+        <div className="w-full sm:w-48">
+          <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
+            <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+              <SelectValue placeholder="المخزن" />
+            </SelectTrigger>
+            <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+              <SelectItem value="all" className="">
+                كل المخازن
+              </SelectItem>
+              {warehouses.map((w) => (
+                <SelectItem key={w.id} value={w.id} className="">
+                  {w.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="w-full sm:w-52">
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+              <SelectValue placeholder="نوع الحركة" />
+            </SelectTrigger>
+            <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+              <SelectItem value="all" className="">
+                كل أنواع الحركة
+              </SelectItem>
+              {(Object.keys(MOVEMENT_TYPE_LABELS) as InventoryTransactionType[]).map((t) => (
+                <SelectItem key={t} value={t} className="">
+                  {MOVEMENT_TYPE_LABELS[t]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="w-full sm:w-60">
+          <Select value={productFilter} onValueChange={setProductFilter}>
+            <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+              <SelectValue placeholder="الصنف" />
+            </SelectTrigger>
+            <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl max-h-60">
+              <SelectItem value="all" className="">
+                كل الأصناف
+              </SelectItem>
+              {products.map((p) => (
+                <SelectItem key={p.id} value={p.id} className="">
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <DatePicker
+            date={dateFrom}
+            onSelect={(d) => setDateFrom(d ? format(d, 'yyyy-MM-dd') : '')}
+            placeholder="من تاريخ"
+            className="w-36 rounded-xl font-bold"
+          />
+          <Label className="text-[10px] text-slate-400 font-bold px-1">إلى</Label>
+          <DatePicker
+            date={dateTo}
+            onSelect={(d) => setDateTo(d ? format(d, 'yyyy-MM-dd') : '')}
+            placeholder="إلى تاريخ"
+            className="w-36 rounded-xl font-bold"
+          />
+        </div>
       </div>
 
       {/* Ledger */}
-      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden print:border-0">
-        <div className="overflow-x-auto">
-          <table className="w-full text-right border-collapse">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                <th className="py-3.5 px-4">التاريخ</th>
-                <th className="py-3.5 px-4">المخزن</th>
-                <th className="py-3.5 px-4">الصنف</th>
-                <th className="py-3.5 px-4">نوع الحركة</th>
-                <th className="py-3.5 px-4">الكمية</th>
-                <th className="py-3.5 px-4">الوحدة</th>
-                <th className="py-3.5 px-4">التكلفة</th>
-                <th className="py-3.5 px-4">الرصيد بعد الحركة</th>
-                <th className="py-3.5 px-4">ملاحظات</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
+      <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden print:border-0 shadow-md">
+        <ScrollArea className="h-[calc(100vh-420px)] min-h-[400px]">
+          <Table>
+            <TableHeader className="sticky top-0 z-10 shadow-sm">
+              <TableRow className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800">
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">التاريخ</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">المخزن</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">الصنف</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">نوع الحركة</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">الكمية</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">الوحدة</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">التكلفة</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">الرصيد</TableHead>
+                <TableHead className="text-[11px] font-black uppercase tracking-wider">ملاحظات</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="text-xs">
               {isLoading ? (
-                <tr><td colSpan={9} className="py-12 text-center text-slate-400 font-semibold">جاري تحميل الحركات...</td></tr>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={9} className="py-4 px-4">
+                      <Skeleton className="h-6 w-full opacity-50" />
+                    </TableCell>
+                  </TableRow>
+                ))
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={9} className="py-12 text-center text-slate-400 font-semibold">لا توجد حركات مطابقة للفلاتر المحددة.</td></tr>
+                <TableRow>
+                  <TableCell colSpan={9} className="py-20 text-center">
+                    <div className="flex flex-col items-center gap-2 text-slate-400">
+                      <AlertTriangle className="w-8 h-8 opacity-20" />
+                      <span className="font-bold">لا توجد حركات مطابقة للفلاتر المحددة.</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
               ) : (
-                filtered.map((t) => {
-                  const isInbound = t.base_quantity >= 0;
-                  return (
-                    <tr key={t.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                      <td className="py-3 px-4 text-slate-500 whitespace-nowrap">{formatDateTime(t.created_at)}</td>
-                      <td className="py-3 px-4 font-bold text-slate-700 dark:text-slate-300">{warehouseName(t.warehouse_id)}</td>
-                      <td className="py-3 px-4 font-bold text-slate-900 dark:text-white">{productName(t.product_id)}</td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${TYPE_STYLES[t.transaction_type] || TYPE_STYLES.damaged}`}>
-                          {MOVEMENT_TYPE_LABELS[t.transaction_type] || t.transaction_type}
-                        </span>
-                      </td>
-                      <td className={`py-3 px-4 font-black ${isInbound ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {isInbound ? '+' : ''}{formatNumber(t.base_quantity)}
-                      </td>
-                      <td className="py-3 px-4 text-slate-500">{unitSymbol(t.unit_id)}</td>
-                      <td className="py-3 px-4">{formatNumber(t.unit_cost)}</td>
-                      <td className="py-3 px-4 font-mono font-bold text-slate-700 dark:text-slate-200">{formatNumber(t.balance_after)}</td>
-                      <td className="py-3 px-4 text-slate-400 max-w-48 truncate">{t.notes || '—'}</td>
-                    </tr>
-                  );
-                })
+                <TooltipProvider>
+                  {filtered.map((t) => {
+                    const isInbound = t.base_quantity >= 0;
+                    return (
+                      <TableRow key={t.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors group">
+                        <TableCell className="text-slate-500 whitespace-nowrap py-3 font-medium">
+                          {formatDateTime(t.created_at)}
+                        </TableCell>
+                        <TableCell className="font-bold text-slate-700 dark:text-slate-300">
+                          {warehouseName(t.warehouse_id)}
+                        </TableCell>
+                        <TableCell className="font-bold text-slate-900 dark:text-white">
+                          {productName(t.product_id)}
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-black shadow-xs transition-transform group-hover:scale-105 inline-block ${
+                              TYPE_STYLES[t.transaction_type] || TYPE_STYLES.damaged
+                            }`}
+                          >
+                            {MOVEMENT_TYPE_LABELS[t.transaction_type] || t.transaction_type}
+                          </span>
+                        </TableCell>
+                        <TableCell className={`font-black text-sm ${isInbound ? 'text-emerald-600' : 'text-red-600'}`}>
+                          {isInbound ? '+' : ''}
+                          {formatNumber(t.base_quantity)}
+                        </TableCell>
+                        <TableCell className="text-slate-500 font-medium">{unitSymbol(t.unit_id)}</TableCell>
+                        <TableCell className="font-mono text-[11px]">{formatNumber(t.unit_cost)}</TableCell>
+                        <TableCell className="font-mono font-black text-slate-700 dark:text-slate-200 bg-slate-50/30 dark:bg-slate-800/20">
+                          {formatNumber(t.balance_after)}
+                        </TableCell>
+                        <TableCell className="text-slate-400 max-w-40">
+                          {t.notes ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="truncate block cursor-help italic hover:text-slate-600 transition-colors underline decoration-dotted decoration-slate-300">
+                                  {t.notes}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs font-bold text-[11px] p-2 leading-relaxed">
+                                {t.notes}
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <span className="opacity-20">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TooltipProvider>
               )}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </ScrollArea>
       </div>
     </AppShell>
   );

@@ -5,6 +5,13 @@ import { Suspense } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/ui/Icons';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useSessionStore } from '@/core/state/useSessionStore';
 import { ProductRepository } from '@/modules/inventory/product_repository';
 import { InventoryRepository } from '@/modules/inventory/inventory_repository';
@@ -117,14 +124,25 @@ function ReorderContent() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col lg:flex-row gap-3 bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-        <select value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)} className={selectCls}>
-          <option value="all">كل المخازن</option>
-          {warehouses.map((w) => (
-            <option key={w.id} value={w.id}>{w.name}</option>
-          ))}
-        </select>
-        <span className="text-[11px] font-bold text-slate-400 self-center">
+      <div className="flex flex-col lg:flex-row gap-3 items-center bg-white dark:bg-[#131b2e] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+        <div className="w-full lg:w-60">
+          <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
+            <SelectTrigger className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+              <SelectValue placeholder="اختر المخزن" />
+            </SelectTrigger>
+            <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+              <SelectItem value="all" className="">
+                كل المخازن
+              </SelectItem>
+              {warehouses.map((w) => (
+                <SelectItem key={w.id} value={w.id} className="">
+                  {w.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <span className="text-[11px] font-bold text-slate-400">
           الكمية المطلوبة = حد التنبيه (min) − الرصيد الحالي
         </span>
       </div>

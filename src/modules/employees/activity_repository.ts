@@ -26,4 +26,12 @@ export class ActivityRepository {
       return matchesType && matchesQuery;
     });
   }
+
+  public static async deleteLog(id: string): Promise<void> {
+    await db.activity_logs.delete(id);
+  }
+
+  public static async clearAll(orgId: string): Promise<void> {
+    await db.activity_logs.where('org_id').equals(orgId).delete();
+  }
 }

@@ -5,7 +5,17 @@ import * as SelectPrimitive from '@radix-ui/react-select';
 import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const Select = SelectPrimitive.Root;
+const Select = (props: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>) => {
+  const { value, ...rest } = props;
+  const isControlled = 'value' in props;
+  return (
+    <SelectPrimitive.Root
+      dir="rtl"
+      {...rest}
+      {...(isControlled ? { value: value ?? '' } : {})}
+    />
+  );
+};
 
 const SelectGroup = SelectPrimitive.Group;
 
@@ -98,7 +108,7 @@ const SelectLabel = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.Label
     ref={ref}
-    className={cn('py-1.5 pr-8 pl-2 text-xs font-black text-slate-400', className)}
+    className={cn('py-1.5 ps-8 pe-2 text-right text-xs font-black text-slate-400', className)}
     {...props}
   />
 ));
@@ -111,12 +121,12 @@ const SelectItem = React.forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      'relative flex w-full cursor-pointer select-none items-center rounded-xl py-2 pr-8 pl-2 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-slate-100 dark:focus:bg-slate-800 focus:text-slate-900 dark:focus:text-white data-[disabled]:pointer-events-none data-[disabled]:opacity-50 transition-colors',
+      'relative flex w-full cursor-pointer select-none items-center justify-start rounded-xl py-2 ps-8 pe-2 text-right text-xs font-bold text-slate-700 dark:text-slate-200 outline-none hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-slate-100 dark:focus:bg-slate-800 focus:text-slate-900 dark:focus:text-white data-[disabled]:pointer-events-none data-[disabled]:opacity-50 transition-colors',
       className
     )}
     {...props}
   >
-    <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
+    <span className="absolute start-2 flex h-3.5 w-3.5 items-center justify-center">
       <SelectPrimitive.ItemIndicator>
         <Check className="h-4 w-4 text-[#558b2f]" />
       </SelectPrimitive.ItemIndicator>

@@ -37,7 +37,7 @@ export const ExpiryBatchesSection: React.FC<ExpiryBatchesSectionProps> = ({
   handleRemoveBatch,
 }) => {
   return (
-    <Card className="border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#131b2e] shadow-xs">
+    <Card className="border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#131b2e] shadow-xs rounded-2xl">
       <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-black text-slate-800 dark:text-slate-200 flex items-center gap-2">
@@ -45,7 +45,7 @@ export const ExpiryBatchesSection: React.FC<ExpiryBatchesSectionProps> = ({
             <span>تواريخ الصلاحية والتشغيلات</span>
           </CardTitle>
           <div className="flex items-center gap-2.5">
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+            <span className="text-xs font-black text-slate-700 dark:text-slate-300">
               تفعيل تتبع الصلاحية والتشغيلات
             </span>
             <Switch
@@ -94,7 +94,7 @@ export const ExpiryBatchesSection: React.FC<ExpiryBatchesSectionProps> = ({
                       </Button>
 
                       <div className="w-28 shrink-0">
-                        <Label className="block text-[11px] font-bold text-slate-500 mb-1">
+                        <Label className="block text-[11px] font-black text-slate-500 mb-1">
                           الكمية
                         </Label>
                         <Input
@@ -112,7 +112,7 @@ export const ExpiryBatchesSection: React.FC<ExpiryBatchesSectionProps> = ({
 
                       {/* الوحدة المرتبطة: تدعم الوحدات المتعددة للقطع أو الميزان */}
                       <div className="flex-1 min-w-[200px]">
-                        <Label className="block text-[11px] font-bold text-slate-500 mb-1">
+                        <Label className="block text-[11px] font-black text-slate-500 mb-1">
                           الوحدة المرتبطة
                         </Label>
                         <Select
@@ -158,7 +158,7 @@ export const ExpiryBatchesSection: React.FC<ExpiryBatchesSectionProps> = ({
 
                       {/* تاريخ الصلاحية: اختيار من shadcn Popover Calendar مع الحقول الرقمية المزامنة */}
                       <div className="flex-1 min-w-[260px]">
-                        <Label className="block text-[11px] font-bold text-slate-500 mb-1">
+                        <Label className="block text-[11px] font-black text-slate-500 mb-1">
                           تاريخ الصلاحية
                         </Label>
                         <div className="flex items-center gap-1.5">
@@ -228,7 +228,7 @@ export const ExpiryBatchesSection: React.FC<ExpiryBatchesSectionProps> = ({
 
                       {/* رقم التشغيلة */}
                       <div className="w-36 shrink-0">
-                        <Label className="block text-[11px] font-bold text-slate-500 mb-1">
+                        <Label className="block text-[11px] font-black text-slate-500 mb-1">
                           رقم التشغيلة
                         </Label>
                         <Input

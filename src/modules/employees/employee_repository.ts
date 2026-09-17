@@ -14,6 +14,11 @@ export interface CreateEmployeeDTO {
   role: UserRole;
   pin_code?: string;
   password?: string;
+  basic_salary?: number;
+  salary_cycle?: 'monthly' | 'weekly' | 'daily' | 'hourly';
+  deductions?: number;
+  allowances?: number;
+  permissions?: string[];
 }
 
 export class EmployeeRepository {
@@ -41,6 +46,11 @@ export class EmployeeRepository {
       phone: dto.phone?.trim() || undefined,
       role: dto.role,
       pin_code_hash: dto.pin_code?.trim() || '1234',
+      basic_salary: dto.basic_salary,
+      salary_cycle: dto.salary_cycle || 'monthly',
+      deductions: dto.deductions || 0,
+      allowances: dto.allowances || 0,
+      permissions: dto.permissions || [],
       is_active: true,
       created_at: now,
       updated_at: now,
