@@ -12,6 +12,8 @@ export class RealtimeSyncListener {
   private static instance: RealtimeSyncListener;
   private channel: RealtimeChannel | null = null;
   private isSubscribed = false;
+  private isStarting = false;
+  private currentOrgId: string | null = null;
 
   private constructor() {}
 
@@ -26,9 +28,15 @@ export class RealtimeSyncListener {
    * بدء الاستماع اللحظي لتغييرات الأصناف والمخزون
    */
   public start(orgId: string): void {
-    if (this.isSubscribed || !isSupabaseConfigured() || !orgId) {
+    if (!isSupabaseConfigured() || !orgId) {
       return;
     }
+    if (this.currentOrgId === orgId && (this.isSubscribed || this.isStarting || this.channel)) {
+      return;
+    }
+    this.stop();
+    this.currentOrgId = orgId;
+    this.isStarting = true;
 
     const tablesToListen = [
       'organizations',
@@ -90,6 +98,7 @@ export class RealtimeSyncListener {
     }
 
     channel.subscribe((status) => {
+      this.isStarting = false;
       if (status === 'SUBSCRIBED') {
         this.isSubscribed = true;
       }
@@ -174,8 +183,10 @@ export class RealtimeSyncListener {
     if (this.channel) {
       supabase.removeChannel(this.channel).catch(console.error);
       this.channel = null;
-      this.isSubscribed = false;
     }
+    this.isSubscribed = false;
+    this.isStarting = false;
+    this.currentOrgId = null;
   }
 }
 
