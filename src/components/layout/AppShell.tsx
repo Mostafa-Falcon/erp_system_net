@@ -9,6 +9,7 @@ import { useGlobalShortcuts } from '@/core/hooks/useGlobalShortcuts';
 import { realtimeSyncListener } from '@/core/sync/realtime_sync_listener';
 import { syncCoordinator } from '@/core/sync/sync_coordinator';
 import { PullSyncService } from '@/core/sync/pull_sync_service';
+import { notifyCloudDataChanged } from '@/core/sync/sync_events';
 import { networkListener } from '@/core/sync/network_listener';
 import { restoreOrgTransportToken } from '@/core/supabase/supabase_client';
 import { ensureCleanLookupState } from '@/core/db/seed';
@@ -114,6 +115,7 @@ export const AppShell: React.FC<AppShellProps> = ({
     const reconcile = async () => {
       await PullSyncService.pullAll(orgId).catch(console.warn);
       await syncCoordinator.triggerSync().catch(console.error);
+      notifyCloudDataChanged();
     };
 
     ensureCleanLookupState().catch(console.warn);

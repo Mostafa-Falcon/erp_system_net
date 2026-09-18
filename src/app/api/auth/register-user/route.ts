@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase-admin';
 
 export async function POST(req: Request) {
   try {
@@ -27,15 +27,7 @@ export async function POST(req: Request) {
     const cleanFullName = fullName?.trim() || 'مدير النظام';
     const now = new Date().toISOString();
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://swsmmnuisefafzofezus.supabase.co';
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3c21tbnVpc2VmYWZ6b2ZlenVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4ODgyODE4NCwiZXhwIjoyMTA0NDA0MTg0fQ._lFOC1AQUPuu7O3m96_ltI-RQ-inqHlKc86Ew-vWOos';
-
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    const supabaseAdmin = createAdminClient();
 
     // 1. Create or update user in Supabase auth.users directly via admin API
     let authUserId: string | null = null;

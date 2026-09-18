@@ -25,6 +25,11 @@ export class AuthRepository {
 
       if (networkListener.getStatus() && isSupabaseConfigured()) {
         PullSyncService.pullAll(user.org_id).catch(() => {});
+        // Best-effort Supabase Auth session (works when PIN == auth password), so
+        // Realtime RLS can resolve the org from the JWT on this device too.
+        if (user.email) {
+          this.establishAuthSession(user.email, cleanPin).catch(() => {});
+        }
       }
 
       return user;
@@ -48,6 +53,9 @@ export class AuthRepository {
           );
 
           this.saveSession(data.user);
+          if (data.user.email) {
+            this.establishAuthSession(data.user.email, cleanPin).catch(() => {});
+          }
           return data.user;
         }
       } catch (err) {
@@ -56,6 +64,82 @@ export class AuthRepository {
     }
 
     return null;
+  }
+
+  /**
+   * يربط الجهاز بجلسة Supabase Auth حقيقية (JWT يحمل user_metadata.org_id)
+   * حتى تمر أحداث Realtime من فلتر RLS وتصل للأجهزة الأخرى فوراً.
+   */
+  private static async establishAuthSession(identifier: string, password: string): Promise<void> {
+    const targetEmail = identifier.trim().toLowerCase();
+    if (!networkListener.getStatus() || !isSupabaseConfigured() || !targetEmail.includes('@')) {
+      return;
+    }
+
+    try {
+      const { data: existing } = await supabase.auth.getSession();
+      if (existing?.session?.user?.email?.toLowerCase() === targetEmail) {
+        await this.ensureOrgInAuthMetadata(existing.session.user, password);
+        return;
+      }
+
+      await supabase.auth.signOut().catch(() => {});
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: targetEmail,
+        password,
+      });
+
+      if (error || !data.session?.user) {
+        console.warn('[AuthRepository] Supabase session establish failed:', error?.message);
+        return;
+      }
+
+      await this.ensureOrgInAuthMetadata(data.session.user, password);
+    } catch (err) {
+      console.warn('[AuthRepository] Supabase session establish error:', err);
+    }
+  }
+
+  /**
+   * يضمن وجود org_id في user_metadata ليرتبط JWT بالمؤسسة (مهم لحسابات قديمة
+   * أُنشئت قبل إضافة التعريف، أو لحسابات غير متطابقة المعرفات مع public.users).
+   */
+  private static async ensureOrgInAuthMetadata(
+    authUser: { email?: string | null; user_metadata?: Record<string, unknown> },
+    password?: string
+  ): Promise<void> {
+    if (!authUser?.email) return;
+    const currentUser = this.getCurrentUser();
+    if (!currentUser?.org_id) return;
+
+    const meta = (authUser.user_metadata || {}) as Record<string, unknown>;
+    const orgOk = meta.org_id === currentUser.org_id;
+    const nameOk = meta.full_name === currentUser.full_name;
+
+    if (orgOk && nameOk) return;
+
+    try {
+      const res = await fetch('/api/auth/provision-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'ensure',
+          email: authUser.email,
+          orgId: currentUser.org_id,
+          fullName: currentUser.full_name,
+          role: currentUser.role,
+        }),
+      });
+      if (res.ok && password) {
+        // إعادة إنشاء الجلسة ليتحدث JWT ويحمل org_id الجديد فوراً
+        await supabase.auth.signOut().catch(() => {});
+        await supabase.auth
+          .signInWithPassword({ email: authUser.email!, password })
+          .catch((err: unknown) => console.warn('[AuthRepository] Session reissue after metadata update failed:', err));
+      }
+    } catch (err) {
+      console.warn('[AuthRepository] Ensure org metadata failed:', err);
+    }
   }
 
   /**
@@ -82,6 +166,7 @@ export class AuthRepository {
         // If online, perform background sync to capture updates from other devices
         if (networkListener.getStatus() && isSupabaseConfigured()) {
           PullSyncService.pullAll(localUser.org_id).catch(() => {});
+          await this.establishAuthSession(cleanIdentifier, cleanPassword);
         }
 
         return { user: localUser };
@@ -105,6 +190,7 @@ export class AuthRepository {
             );
 
             this.saveSession(data.user);
+            await this.establishAuthSession(data.user.email || cleanIdentifier, cleanPassword);
             return { user: data.user };
           } else if (data && !data.success) {
             return { user: null, error: data.error };
@@ -128,6 +214,7 @@ export class AuthRepository {
             if (user) {
               await restoreOrgTransportToken();
               this.saveSession(user);
+              this.ensureOrgInAuthMetadata(authData.user, cleanPassword).catch(() => {});
               return { user };
             }
           }

@@ -1,6 +1,7 @@
 import { db } from '@/core/db/app_database';
 import { supabase, isSupabaseConfigured } from '@/core/supabase/supabase_client';
 import { unpackCloudProduct } from './sync_coordinator';
+import { notifyCloudDataChanged } from './sync_events';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 /**
@@ -129,6 +130,7 @@ export class RealtimeSyncListener {
         const idToDelete = oldRecord?.id;
         if (idToDelete) {
           await localTable.delete(idToDelete);
+          notifyCloudDataChanged();
         }
         return;
       }
@@ -158,6 +160,7 @@ export class RealtimeSyncListener {
 
         // تحديث محلي مباشر بدون إدخال في طابور المزامنة لتفادي التكرار اللانهائي
         await localTable.put(recordToStore);
+        notifyCloudDataChanged();
 
         // إذا كان الحدث في إعدادات المؤسسة ويخص أنواع المنتجات، نحدث جدول product_types محلياً
         if (tableName === 'app_settings' && newRecord.id === 'custom_product_types' && typeof newRecord.value === 'string') {

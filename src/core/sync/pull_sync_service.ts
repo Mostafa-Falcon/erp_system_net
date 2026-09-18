@@ -2,6 +2,7 @@ import { db } from '@/core/db/app_database';
 import { supabase, isSupabaseConfigured } from '@/core/supabase/supabase_client';
 import { networkListener } from './network_listener';
 import { unpackCloudProduct } from './sync_coordinator';
+import { notifyCloudDataChanged } from './sync_events';
 
 /**
  * 🦅 Falcon ERP - Cloud Pull Sync Service
@@ -266,6 +267,8 @@ export class PullSyncService {
     } else {
       await localTable.bulkPut(recordsToStore);
     }
+
+    notifyCloudDataChanged();
   }
 
   private static async pullChildren(childTable: string, fkColumn: string, parentIds: string[]): Promise<number> {

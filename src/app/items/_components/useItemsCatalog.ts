@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useSessionStore } from '@/core/state/useSessionStore';
 import { ProductRepository } from '@/modules/inventory/product_repository';
 import { InventoryRepository } from '@/modules/inventory/inventory_repository';
+import { CLOUD_DATA_CHANGED_EVENT } from '@/core/sync/sync_events';
 import { isExpired, daysToExpiry } from '@/lib/format';
 import { toast } from 'sonner';
 import type {
@@ -135,6 +136,24 @@ export function useItemsCatalog() {
   useEffect(() => {
     if (!orgId) return;
     loadData();
+  }, [orgId]);
+
+  // الاستجابة لتغييرات السحابة (realtime أو reconcile) لإعادة قراءة دليل الأصناف
+  useEffect(() => {
+    if (!orgId) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const onCloudDataChanged = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        loadData();
+      }, 350);
+    };
+    window.addEventListener(CLOUD_DATA_CHANGED_EVENT, onCloudDataChanged);
+    return () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener(CLOUD_DATA_CHANGED_EVENT, onCloudDataChanged);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId]);
 
   // Statistics for KPI Cards

@@ -26,6 +26,29 @@ export interface CreateEmployeeDTO {
 
 export class EmployeeRepository {
   /**
+   * يُنشئ / يُحدّث / يُجمّد حساب Supabase Auth للموظف (كل الحسابات في auth.users
+   * مع user_metadata.org_id حتى يعمل Realtime على كل الأجهزة).
+   */
+  private static provisionAuthAccount(payload: Record<string, unknown>): void {
+    try {
+      const res = fetch('/api/auth/provision-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      res
+        .then((r) => {
+          if (!r.ok) {
+            return r.text().then((t) => console.warn('[EmployeeAuth] Provision failed:', t));
+          }
+        })
+        .catch((err: unknown) => console.warn('[EmployeeAuth] Provision error:', err));
+    } catch (err) {
+      console.warn('[EmployeeAuth] Provision sync error:', err);
+    }
+  }
+
+  /**
    * Get all employees belonging to a specific business owner's organization
    */
   public static async getEmployeesByOrg(orgId: string): Promise<User[]> {
@@ -70,6 +93,18 @@ export class EmployeeRepository {
       await SyncQueueManager.enqueue('users', userId, 'insert', newEmployee);
     });
 
+    // 2. Provision the matching Supabase Auth account (best-effort online)
+    if (newEmployee.email) {
+      this.provisionAuthAccount({
+        action: 'ensure',
+        email: newEmployee.email,
+        password: dto.password,
+        fullName: newEmployee.full_name,
+        orgId: newEmployee.org_id,
+        role: newEmployee.role,
+      });
+    }
+
     return newEmployee;
   }
 
@@ -83,6 +118,8 @@ export class EmployeeRepository {
     const now = new Date().toISOString();
     const cleanUpdates = { ...updates, updated_at: now, sync_status: 'pending' as const };
 
+    const prevUser = await db.users.get(userId);
+
     await db.transaction('rw', [db.users, db.sync_queue], async () => {
       await db.users.update(userId, cleanUpdates);
       const updatedUser = await db.users.get(userId);
@@ -90,6 +127,23 @@ export class EmployeeRepository {
         await SyncQueueManager.enqueue('users', userId, 'update', updatedUser);
       }
     });
+
+    // إذا تغيّر البريد الإلكتروني نزامن حساب auth (نقل من oldEmail إلى الجديد)
+    const updatedUser = await db.users.get(userId);
+    if (
+      updatedUser?.email &&
+      prevUser &&
+      prevUser.email?.toLowerCase() !== updatedUser.email.toLowerCase()
+    ) {
+      this.provisionAuthAccount({
+        action: 'ensure',
+        email: updatedUser.email,
+        oldEmail: prevUser.email,
+        fullName: updatedUser.full_name,
+        orgId: updatedUser.org_id,
+        role: updatedUser.role,
+      });
+    }
   }
 
   /**
@@ -98,6 +152,14 @@ export class EmployeeRepository {
   public static async toggleStatus(userId: string, currentStatus: boolean): Promise<boolean> {
     const nextStatus = !currentStatus;
     await this.updateEmployee(userId, { is_active: nextStatus });
+
+    const employee = await db.users.get(userId);
+    if (employee?.email) {
+      this.provisionAuthAccount({
+        action: nextStatus ? 'unban' : 'ban',
+        email: employee.email,
+      });
+    }
     return nextStatus;
   }
 
@@ -105,9 +167,15 @@ export class EmployeeRepository {
    * Delete an employee
    */
   public static async deleteEmployee(userId: string): Promise<void> {
+    const existing = await db.users.get(userId);
     await db.transaction('rw', [db.users, db.sync_queue], async () => {
       await db.users.delete(userId);
       await SyncQueueManager.enqueue('users', userId, 'delete', { id: userId });
     });
+
+    // إلغاء وصول حساب auth نهائياً
+    if (existing?.email) {
+      this.provisionAuthAccount({ action: 'ban', email: existing.email });
+    }
   }
 }
