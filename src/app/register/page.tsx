@@ -240,21 +240,7 @@ export default function RegisterPage() {
             throw rpcError;
           }
 
-          // 2. Sync the remaining bootstrap records (RLS approves via transport token)
-          await supabase
-            .from('branches')
-            .upsert(newBranch, { onConflict: 'id' });
-          await supabase
-            .from('warehouses')
-            .upsert(newWarehouse, { onConflict: 'id' });
-          await supabase
-            .from('treasuries')
-            .upsert(newTreasury, { onConflict: 'id' });
-          await supabase
-            .from('users')
-            .upsert(newUser, { onConflict: 'id' });
-
-          // 3. Register user in Supabase Auth (auth.users) via server API route
+          // 2. Provision in cloud database via backend admin API route
           try {
             await fetch('/api/auth/register-user', {
               method: 'POST',
@@ -264,12 +250,30 @@ export default function RegisterPage() {
                 password: password.trim(),
                 fullName: fullName.trim(),
                 orgId,
+                orgName: derivedOrgName,
+                activityType,
+                transportToken,
+                branchId,
+                warehouseId,
+                treasuryId,
+                userId,
                 role: 'super_admin',
               }),
             });
           } catch (apiErr) {
-            console.warn('Backend auth registration fallback:', apiErr);
+            console.warn('Backend auth registration error:', apiErr);
           }
+
+          // 3. Direct client fallback upsert (strip offline-only sync_status)
+          const { sync_status: _s1, ...cleanBranch } = newBranch;
+          const { sync_status: _s2, ...cleanWarehouse } = newWarehouse;
+          const { sync_status: _s3, ...cleanTreasury } = newTreasury;
+          const { sync_status: _s4, ...cleanUser } = newUser;
+
+          await supabase.from('branches').upsert(cleanBranch, { onConflict: 'id' });
+          await supabase.from('warehouses').upsert(cleanWarehouse, { onConflict: 'id' });
+          await supabase.from('treasuries').upsert(cleanTreasury, { onConflict: 'id' });
+          await supabase.from('users').upsert(cleanUser, { onConflict: 'id' });
 
           // 4. Attach session in Supabase Auth client if supported
           try {
