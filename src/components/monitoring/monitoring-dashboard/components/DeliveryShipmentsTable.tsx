@@ -40,7 +40,7 @@ export const DeliveryShipmentsTable: React.FC<DeliveryShipmentsTableProps> = ({
             الشحنات والتوصيل المنزلي
           </h2>
           <span className="px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400 font-bold text-[10px]">
-            {filteredDeliveries.length} شحنة
+            {filteredDeliveries.length} صنف
           </span>
         </div>
 
@@ -161,7 +161,7 @@ export const DeliveryShipmentsTable: React.FC<DeliveryShipmentsTableProps> = ({
       {/* Deliveries Pagination Footer */}
       <div className="flex items-center justify-between pt-2 text-xs font-semibold text-slate-500">
         <span>
-          عرض 1 إلى {filteredDeliveries.length} من إجمالي {deliveryShipments.length} شحنة
+          عرض 1 إلى {filteredDeliveries.length} من إجمالي {deliveryShipments.length} صنف
         </span>
         <div className="flex items-center gap-1.5">
           <button className="w-7 h-7 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 hover:text-slate-800 cursor-pointer">

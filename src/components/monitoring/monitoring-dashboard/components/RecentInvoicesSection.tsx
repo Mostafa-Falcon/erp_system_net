@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Layers,
   Search,
@@ -6,6 +5,8 @@ import {
   Inbox,
   ChevronRight,
   ChevronLeft,
+  Printer,
+  Download,
 } from 'lucide-react';
 import type { RecentInvoiceItem } from '../types';
 import {
@@ -39,7 +40,7 @@ export const RecentInvoicesSection: React.FC<RecentInvoicesSectionProps> = ({
 }) => {
   return (
     <div className="bg-white dark:bg-[#131b2e] rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-5 flex flex-col gap-4">
-      {/* Header & Tabs */}
+      {/* Header & Export Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-2.5">
           <Layers className="w-5 h-5 text-blue-600" />
@@ -47,15 +48,36 @@ export const RecentInvoicesSection: React.FC<RecentInvoicesSectionProps> = ({
             العمليات والطلبات الأخيرة
           </h2>
           <span className="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-bold text-[10px]">
-            {displayedRecent.length} فاتورة
+            {displayedRecent.length} صنف
           </span>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-900 rounded-xl">
+        {/* Export Actions Toolbar */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => window.print()}
+            className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>طباعة</span>
+          </button>
+          <button className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-1.5 transition-colors cursor-pointer">
+            <Download className="w-3.5 h-3.5" />
+            <span>Excel</span>
+          </button>
+          <button className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-1.5 transition-colors cursor-pointer">
+            <Download className="w-3.5 h-3.5" />
+            <span>CSV</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Tab Switcher Centered */}
+      <div className="flex items-center justify-center w-full">
+        <div className="inline-flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-900 rounded-xl">
           <button
             onClick={() => setRecentTab('sales')}
-            className={`h-8 px-3.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`h-8 px-4 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               recentTab === 'sales'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
@@ -65,7 +87,7 @@ export const RecentInvoicesSection: React.FC<RecentInvoicesSectionProps> = ({
           </button>
           <button
             onClick={() => setRecentTab('purchases')}
-            className={`h-8 px-3.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`h-8 px-4 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               recentTab === 'purchases'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'

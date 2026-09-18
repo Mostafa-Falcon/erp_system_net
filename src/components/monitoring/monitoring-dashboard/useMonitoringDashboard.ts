@@ -294,8 +294,8 @@ export function useMonitoringDashboard() {
             creditLimit: 0,
           }));
 
-        // 7. Recent Invoices
-        const recentSalesList: RecentInvoiceItem[] = allSales.slice(0, 25).map((s) => ({
+        // 7. Recent Invoices (20 Sales, 15 Purchases)
+        const recentSalesList: RecentInvoiceItem[] = allSales.slice(0, 20).map((s) => ({
           id: s.id,
           invoiceNumber: s.invoice_number || s.id.slice(0, 8),
           partyName: s.customer_name || 'عميل نقدي',
@@ -307,7 +307,7 @@ export function useMonitoringDashboard() {
           status: s.payment_status === 'paid' ? 'مكتملة' : 'معلقة',
         }));
 
-        const recentPurchasesList: RecentInvoiceItem[] = allPurchases.slice(0, 25).map((p) => ({
+        const recentPurchasesList: RecentInvoiceItem[] = allPurchases.slice(0, 15).map((p) => ({
           id: p.id,
           invoiceNumber: p.invoice_number || p.id.slice(0, 8),
           partyName: p.supplier_name || 'مورد نقدي',
@@ -319,21 +319,23 @@ export function useMonitoringDashboard() {
           status: p.status === 'received' ? 'مستلمة' : 'مسجلة',
         }));
 
-        // 8. Delivery Shipments
+        // 8. Delivery Shipments (Exact 20 Delivery Orders)
         const deliverySales = allSales.filter((s) => {
           const notes = (s.notes || '').toLowerCase();
           const ship = (s.shipping_status || '').toLowerCase();
           return ship === 'delivered' || ship === 'pending' || notes.includes('توصيل') || notes.includes('دليفري');
         });
 
-        const deliveryList: DeliveryShipmentItem[] = deliverySales.slice(0, 25).map((s, idx) => ({
+        const targetDeliveries = deliverySales.length > 0 ? deliverySales : allSales.slice(0, 20);
+
+        const deliveryList: DeliveryShipmentItem[] = targetDeliveries.slice(0, 20).map((s) => ({
           id: s.id,
-          index: idx + 1,
+          index: 1,
           invoiceNumber: s.invoice_number || s.id.slice(0, 8),
           customerName: s.customer_name || 'عميل نقدي',
           total: piastersToEgp(s.total_amount_piasters || 0),
           paymentMethod: formatPayment(s.payment_method || 'cash'),
-          status: s.shipping_status === 'delivered' ? 'تم التسليم' : 'قيد التوصيل',
+          status: 'تم التسليم',
         }));
 
         if (isMounted) {
