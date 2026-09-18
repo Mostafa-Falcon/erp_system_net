@@ -42,7 +42,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: Home,
     href: '/',
     subItems: [
-      { label: 'لوحة المتابعة', href: '/' },
+      { label: 'لوحة المتابعة', href: '/monitoring' },
     ],
   },
   {
@@ -292,11 +292,18 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onClose }) => {
                           className={cn(
                             'flex items-center gap-2 py-1.5 px-2.5 rounded-md text-[11px] font-semibold transition-colors',
                             isSubActive
-                              ? 'text-[#1d4ed8] dark:text-blue-400 bg-blue-50/80 dark:bg-blue-950/40 font-bold'
+                              ? 'text-[#1d4ed8] dark:text-blue-300 bg-[#eaf1fb] dark:bg-blue-950/60 font-bold border-r-4 border-[#1d4ed8]'
                               : 'text-slate-500 dark:text-slate-400 hover:text-[#1d4ed8] hover:bg-slate-50 dark:hover:bg-slate-800/40'
                           )}
                         >
-                          {isHome && <Activity className="w-3.5 h-3.5 text-slate-400" />}
+                          {isHome && (
+                            <Activity
+                              className={cn(
+                                'w-3.5 h-3.5',
+                                isSubActive ? 'text-[#1d4ed8] dark:text-blue-400' : 'text-slate-400'
+                              )}
+                            />
+                          )}
                           <span>{sub.label}</span>
                         </Link>
                       );
