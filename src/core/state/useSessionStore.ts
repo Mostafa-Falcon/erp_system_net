@@ -9,7 +9,7 @@ interface SessionState {
   setCurrentUser: (user: User | null) => void;
   setActiveBranchId: (branchId: string | null) => void;
   setActiveShift: (shift: CashierShift | null) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const getInitialUser = (): User | null => {
@@ -52,8 +52,8 @@ export const useSessionStore = create<SessionState>((set) => {
 
     setActiveShift: (shift) => set({ activeShift: shift }),
 
-    logout: () => {
-      AuthRepository.logout();
+    logout: async () => {
+      await AuthRepository.logout();
       if (typeof window !== 'undefined') {
         localStorage.removeItem('falcon_active_branch_id');
       }

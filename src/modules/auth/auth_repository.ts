@@ -2,6 +2,7 @@ import { db } from '@/core/db/app_database';
 import { supabase, isSupabaseConfigured, setOrgTransportToken, restoreOrgTransportToken } from '@/core/supabase/supabase_client';
 import { networkListener } from '@/core/sync/network_listener';
 import { PullSyncService } from '@/core/sync/pull_sync_service';
+import { syncCoordinator } from '@/core/sync/sync_coordinator';
 import type { User, Organization, Branch } from '@/types';
 
 export class AuthRepository {
@@ -322,7 +323,17 @@ export class AuthRepository {
       setOrgTransportToken(transportToken);
     }
 
-    // 2. Persist organization, branch, user, and transport setting in local Dexie
+    // 2. Clear local Dexie database if logging into a different organization to prevent data leaks
+    const currentStoredUser = this.getCurrentUser();
+    if (currentStoredUser && currentStoredUser.org_id !== cloudUser.org_id) {
+      try {
+        await Promise.all(db.tables.map((table) => table.clear()));
+      } catch (err) {
+        console.warn('[AuthRepository] Failed to purge old org local data:', err);
+      }
+    }
+
+    // 3. Persist organization, branch, user, and transport setting in local Dexie
     await db.transaction(
       'rw',
       [db.organizations, db.branches, db.users, db.app_settings],
@@ -383,10 +394,12 @@ export class AuthRepository {
       }
     );
 
-    // 3. Trigger immediate pull sync for all organizational data (products, invoices, etc.)
-    PullSyncService.pullAll(cloudUser.org_id).catch((err) => {
+    // 4. Await complete pull sync for all organizational data (products, invoices, categories, etc.)
+    try {
+      await PullSyncService.pullAll(cloudUser.org_id);
+    } catch (err) {
       console.warn('[AuthRepository] Initial multi-device background pull failed:', err);
-    });
+    }
   }
 
   public static saveSession(user: User): void {
@@ -407,13 +420,35 @@ export class AuthRepository {
     }
   }
 
-  public static logout(): void {
+  public static async logout(): Promise<void> {
+    // 1. المزامنة الفورية اللحظية لكافة الطوابير المعلقة قبل الخروج
+    try {
+      if (networkListener.getStatus() && isSupabaseConfigured()) {
+        await Promise.race([
+          syncCoordinator.triggerSync(),
+          new Promise((resolve) => setTimeout(resolve, 3000)),
+        ]);
+      }
+    } catch (err) {
+      console.warn('[AuthRepository] Pre-logout sync error:', err);
+    }
+
+    // 2. تفريغ وتنظيف كافة جداول التخزين المحلي Dexie لحماية البيانات ومنع التداخل بين الحسابات
+    try {
+      await Promise.all(db.tables.map((table) => table.clear()));
+    } catch (err) {
+      console.warn('[AuthRepository] Dexie database clear error:', err);
+    }
+
+    // 3. حذف الجلسة والملفات المؤقتة والتسجيل السحابي
     if (typeof window !== 'undefined') {
       localStorage.removeItem(this.SESSION_STORAGE_KEY);
+      localStorage.removeItem('falcon_active_branch_id');
       document.cookie = 'falcon_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
     }
+
     if (isSupabaseConfigured()) {
-      supabase.auth.signOut().catch(() => {});
+      await supabase.auth.signOut().catch(() => {});
     }
   }
 }

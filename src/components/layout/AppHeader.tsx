@@ -59,8 +59,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     }
   }, [currentUser, loadNotifications]);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     router.replace('/login');
   };
 
