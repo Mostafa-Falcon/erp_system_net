@@ -24,6 +24,16 @@ export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKe
     autoRefreshToken: true,
     detectSessionInUrl: true,
   },
+  global: {
+    fetch: (url, options = {}) => {
+      const token = getStoredTransportToken();
+      const headers = new Headers(options?.headers);
+      if (token) {
+        headers.set(HEADER_NAME, token);
+      }
+      return fetch(url, { ...options, headers });
+    },
+  },
   realtime: {
     params: {
       eventsPerSecond: 10,
@@ -62,17 +72,20 @@ export const generateOrgTransportToken = (): string => {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`.slice(0, 24);
 };
 
-interface RestClientWithHeaders {
-  rest: { headers: Headers };
-}
-
 const updateTransportHeader = (): void => {
   const token = getStoredTransportToken();
-  const restHeaders = (supabase as unknown as RestClientWithHeaders).rest.headers;
-  if (token) {
-    restHeaders.set(HEADER_NAME, token);
-  } else {
-    restHeaders.delete(HEADER_NAME);
+  try {
+    const sb = supabase as unknown as { headers?: Record<string, string>; rest?: { headers?: Record<string, string> } };
+    if (sb.headers) {
+      if (token) sb.headers[HEADER_NAME] = token;
+      else delete sb.headers[HEADER_NAME];
+    }
+    if (sb.rest?.headers) {
+      if (token) sb.rest.headers[HEADER_NAME] = token;
+      else delete sb.rest.headers[HEADER_NAME];
+    }
+  } catch (err) {
+    console.warn('updateTransportHeader notice:', err);
   }
 };
 

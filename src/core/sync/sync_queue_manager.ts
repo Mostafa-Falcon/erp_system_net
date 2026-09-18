@@ -67,14 +67,24 @@ export class SyncQueueManager {
   }
 
   /**
-   * Retrieves pending sync items ordered by creation time.
+   * Retrieves pending sync items ordered by creation time (including failed items ready for retry).
    */
   public static async getPendingItems(limit = 50): Promise<SyncQueueItem[]> {
-    return await db.sync_queue
-      .where('status')
-      .equals('pending')
+    const now = Date.now();
+    const items = await db.sync_queue
+      .filter((item) => {
+        if (item.status === 'pending') return true;
+        if (item.status === 'failed') return true;
+        if (item.status === 'in_flight') {
+          const age = now - new Date(item.updated_at || item.created_at).getTime();
+          return age > 15000; // stuck in flight for over 15s
+        }
+        return false;
+      })
       .limit(limit)
-      .sortBy('created_at');
+      .toArray();
+
+    return items.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
   }
 
   /**

@@ -239,6 +239,35 @@ export function sanitizePayloadForCloud(table: string, payload: Record<string, u
   const clean = { ...payload };
   delete clean.sync_status;
 
+  // تنقية حقول UUID لتجنب أخطاء PostgREST مثل ("all" or "none" or "")
+  const isValidUuid = (v: unknown): boolean =>
+    typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+
+  const uuidFields = [
+    'category_id',
+    'brand_id',
+    'base_unit_id',
+    'parent_id',
+    'warehouse_id',
+    'branch_id',
+    'customer_id',
+    'supplier_id',
+    'treasury_id',
+    'user_id',
+    'created_by',
+    'shift_id',
+    'unit_id',
+    'product_id',
+    'batch_id',
+    'account_id',
+  ];
+
+  for (const field of uuidFields) {
+    if (clean[field] !== undefined && clean[field] !== null && !isValidUuid(clean[field])) {
+      clean[field] = null;
+    }
+  }
+
   // حالات خاصة قبل القائمة العامة
   if (table === 'products') {
     const extendedMeta: Record<string, unknown> = {};
@@ -403,52 +432,56 @@ export class SyncCoordinator {
    * التأكد من وجود السجلات الأبوية في السحابة قبل رفع السجلات التابعة
    */
   private async ensureParentRefs(table: string, payload: Record<string, unknown>): Promise<void> {
-    const ensureUpsert = async (parentTable: string, parentId: string | null | undefined, localParent: object | undefined): Promise<void> => {
-      if (!parentId || parentId === 'none') return;
-      if (!localParent) return;
-      const clean = sanitizePayloadForCloud(parentTable, localParent as unknown as Record<string, unknown>);
-      const { error } = await supabase.from(parentTable).upsert(clean, { onConflict: 'id' });
-      if (error) {
-        console.warn(`[Sync] Parent ensure failed ${parentTable}(${parentId}):`, error.message);
+    const safeGetAndUpsert = async (parentTable: string, parentId: unknown): Promise<void> => {
+      if (!parentId || typeof parentId !== 'string' || parentId === 'none' || parentId === 'all' || parentId === 'null') {
+        return;
+      }
+      try {
+        const localTable = (db as unknown as Record<string, { get: (id: string) => Promise<object | undefined> }>)[parentTable];
+        if (!localTable) return;
+        const localParent = await localTable.get(parentId);
+        if (!localParent) return;
+
+        const clean = sanitizePayloadForCloud(parentTable, localParent as Record<string, unknown>);
+        const { error } = await supabase.from(parentTable).upsert(clean, { onConflict: 'id' });
+        if (error) {
+          console.warn(`[Sync] Parent ensure failed ${parentTable}(${parentId}):`, error.message);
+        }
+      } catch (e) {
+        console.warn(`[Sync] Parent lookup notice ${parentTable}(${parentId}):`, e);
       }
     };
 
     if (table === 'products') {
-      const baseUnitId = payload.base_unit_id as string;
-      if (baseUnitId) {
-        await ensureUpsert('units', baseUnitId, await db.units.get(baseUnitId));
-      }
-      await ensureUpsert('product_categories', payload.category_id as string, await db.product_categories.get(payload.category_id as string));
-      await ensureUpsert('product_brands', payload.brand_id as string, await db.product_brands.get(payload.brand_id as string));
+      await safeGetAndUpsert('units', payload.base_unit_id);
+      await safeGetAndUpsert('product_categories', payload.category_id);
+      await safeGetAndUpsert('product_brands', payload.brand_id);
     } else if (table === 'product_units') {
-      await ensureUpsert('units', payload.unit_id as string, await db.units.get(payload.unit_id as string));
+      await safeGetAndUpsert('units', payload.unit_id);
     } else if (table === 'product_batches' || table === 'stock_levels' || table === 'inventory_transactions') {
-      await ensureUpsert('warehouses', payload.warehouse_id as string, await db.warehouses.get(payload.warehouse_id as string));
+      await safeGetAndUpsert('warehouses', payload.warehouse_id);
       if (table === 'inventory_transactions') {
-        await ensureUpsert('products', payload.product_id as string, await db.products.get(payload.product_id as string));
+        await safeGetAndUpsert('products', payload.product_id);
       }
     } else if (table === 'stock_transfer_items') {
-      const transfer = payload.transfer_id ? await db.stock_transfers.get(payload.transfer_id as string) : undefined;
-      if (transfer) {
-        await ensureUpsert('stock_transfers', transfer.id, transfer);
-      }
-      await ensureUpsert('products', payload.product_id as string, await db.products.get(payload.product_id as string));
+      await safeGetAndUpsert('stock_transfers', payload.transfer_id);
+      await safeGetAndUpsert('products', payload.product_id);
     } else if (table === 'stocktake_items') {
-      await ensureUpsert('stocktake_sessions', payload.session_id as string, await db.stocktake_sessions.get(payload.session_id as string));
-      await ensureUpsert('products', payload.product_id as string, await db.products.get(payload.product_id as string));
+      await safeGetAndUpsert('stocktake_sessions', payload.session_id);
+      await safeGetAndUpsert('products', payload.product_id);
     } else if (table === 'sales_invoice_items') {
-      await ensureUpsert('sales_invoices', payload.invoice_id as string, await db.sales_invoices.get(payload.invoice_id as string));
+      await safeGetAndUpsert('sales_invoices', payload.invoice_id);
     } else if (table === 'purchase_invoice_items') {
-      await ensureUpsert('purchase_invoices', payload.invoice_id as string, await db.purchase_invoices.get(payload.invoice_id as string));
+      await safeGetAndUpsert('purchase_invoices', payload.invoice_id);
     } else if (table === 'expenses' || table === 'financial_vouchers' || table === 'cashier_shifts' || table === 'sales_invoices' || table === 'purchase_invoices' || table === 'sales_returns') {
-      await ensureUpsert('treasuries', payload.treasury_id as string, await db.treasuries.get(payload.treasury_id as string));
+      await safeGetAndUpsert('treasuries', payload.treasury_id);
     } else if (table === 'contact_transactions') {
-      await ensureUpsert('contacts', payload.contact_id as string, await db.contacts.get(payload.contact_id as string));
+      await safeGetAndUpsert('contacts', payload.contact_id);
     } else if (table === 'journal_entry_lines') {
-      await ensureUpsert('journal_entries', payload.entry_id as string, await db.journal_entries.get(payload.entry_id as string));
-      await ensureUpsert('accounts', payload.account_id as string, await db.accounts.get(payload.account_id as string));
+      await safeGetAndUpsert('journal_entries', payload.entry_id);
+      await safeGetAndUpsert('accounts', payload.account_id);
     } else if (table === 'salary_statements' || table === 'employee_advances' || table === 'employee_documents') {
-      await ensureUpsert('users', payload.employee_id as string, await db.users.get(payload.employee_id as string));
+      await safeGetAndUpsert('users', payload.employee_id);
     }
   }
 
