@@ -23,6 +23,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -54,10 +55,13 @@ export default function LoginPage() {
     window.dispatchEvent(new Event('falcon_theme_change'));
   };
 
-  // If already authenticated, redirect to home
+  // If already authenticated, redirect to home and prevent returning to login
   useEffect(() => {
-    if (currentUser) {
-      router.push('/');
+    const storedUser = AuthRepository.getCurrentUser();
+    if (storedUser || currentUser) {
+      router.replace('/');
+    } else {
+      setIsCheckingAuth(false);
     }
   }, [currentUser, router]);
 
@@ -72,7 +76,7 @@ export default function LoginPage() {
         if (userByPin) {
           toast.success(`مرحباً بك مجدداً يا ${userByPin.full_name}`);
           setCurrentUser(userByPin);
-          router.push('/');
+          router.replace('/');
           return;
         }
       }
@@ -82,7 +86,7 @@ export default function LoginPage() {
       if (result.user) {
         toast.success(`تم تسجيل الدخول بنجاح! مرحباً بك يا ${result.user.full_name}`);
         setCurrentUser(result.user);
-        router.push('/');
+        router.replace('/');
       } else {
         toast.error(result.error || 'فشل تسجيل الدخول. يرجى التحقق من البيانات.');
       }
@@ -93,6 +97,17 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
+  if (isCheckingAuth || currentUser) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-[#070b18]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-bold text-slate-500 dark:text-slate-400">جاري التحقق من الجلسة...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-slate-50 dark:bg-[#070b18] select-none overflow-x-hidden transition-colors duration-300">

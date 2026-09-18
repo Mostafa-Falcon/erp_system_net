@@ -236,6 +236,7 @@ export class AuthRepository {
   public static saveSession(user: User): void {
     if (typeof window !== 'undefined') {
       localStorage.setItem(this.SESSION_STORAGE_KEY, JSON.stringify(user));
+      document.cookie = 'falcon_session_active=1; path=/; max-age=2592000; SameSite=Lax';
     }
   }
 
@@ -253,6 +254,7 @@ export class AuthRepository {
   public static logout(): void {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(this.SESSION_STORAGE_KEY);
+      document.cookie = 'falcon_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
     }
     if (isSupabaseConfigured()) {
       supabase.auth.signOut().catch(() => {});

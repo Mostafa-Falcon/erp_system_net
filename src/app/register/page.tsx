@@ -17,12 +17,13 @@ import { AccountingRepository } from '@/modules/accounting/accounting_repository
 import { useSessionStore } from '@/core/state/useSessionStore';
 import type { Organization, Branch, User, Warehouse, Treasury } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AuthRepository } from '@/modules/auth/auth_repository';
 import { toast } from 'sonner';
 import { Sun, Moon, Layers, UserPlus, User as UserIcon, Mail, Lock, ShieldCheck, Eye, EyeOff, Store } from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { setCurrentUser } = useSessionStore();
+  const { currentUser, setCurrentUser } = useSessionStore();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -33,6 +34,17 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  // If already authenticated, redirect to home and prevent returning to register
+  useEffect(() => {
+    const storedUser = AuthRepository.getCurrentUser();
+    if (storedUser || currentUser) {
+      router.replace('/');
+    } else {
+      setIsCheckingAuth(false);
+    }
+  }, [currentUser, router]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -299,7 +311,7 @@ export default function RegisterPage() {
       // Establish session and enter application
       toast.success('تم إنشاء حساب المنشأة بنجاح! مرحباً بك في منظومتك');
       setCurrentUser(newUser);
-      router.push('/');
+      router.replace('/');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'حدث خطأ أثناء إنشاء الحساب.';
       toast.error(msg);
@@ -307,6 +319,17 @@ export default function RegisterPage() {
       setIsLoading(false);
     }
   };
+
+  if (isCheckingAuth || currentUser) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-[#070b18]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-bold text-slate-500 dark:text-slate-400">جاري التحقق من الجلسة...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-slate-50 dark:bg-[#070b18] select-none overflow-x-hidden transition-colors duration-300">
