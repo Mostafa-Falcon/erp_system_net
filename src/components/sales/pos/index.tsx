@@ -572,30 +572,55 @@ export function POS() {
         {/* Resizable Left Quick Items Sidebar */}
         {isQuickSidebarOpen && (
           <>
-            {/* Drag Resizer Handle */}
-            <div
-              onMouseDown={startResizing}
-              title="اسحب لتغيير حجم قائمة الأصناف السريعة"
-              className={`w-2 hover:w-2.5 bg-slate-200 hover:bg-amber-400 dark:bg-slate-800 dark:hover:bg-amber-500 cursor-col-resize transition-all shrink-0 select-none flex items-center justify-center group ${
-                isResizing ? 'bg-amber-500 w-2.5' : ''
-              }`}
-            >
-              <div className="w-0.5 h-8 bg-slate-400 dark:bg-slate-600 group-hover:bg-white rounded-full" />
+            {/* Mobile Slide-Over Drawer (< 768px) */}
+            <div className="md:hidden fixed inset-0 z-50 flex animate-in fade-in duration-200">
+              {/* Backdrop */}
+              <div
+                className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+                onClick={() => setIsQuickSidebarOpen(false)}
+              />
+              {/* Drawer Container */}
+              <div className="relative z-10 w-[88vw] max-w-sm h-full bg-white dark:bg-[#111726] shadow-2xl flex flex-col animate-in slide-in-from-left duration-200">
+                <PosQuickItemsSidebar
+                  products={products}
+                  unitsById={unitsById}
+                  availableFor={availableFor}
+                  onAddToCart={(p) => {
+                    addToCart(p);
+                  }}
+                  onClose={() => setIsQuickSidebarOpen(false)}
+                  orgId={orgId}
+                />
+              </div>
             </div>
 
-            {/* Sidebar Box */}
-            <div
-              style={{ width: `${sidebarWidth}px` }}
-              className="shrink-0 h-full border-r border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#111726] flex flex-col overflow-hidden shadow-sm animate-in slide-in-from-left duration-200"
-            >
-              <PosQuickItemsSidebar
-                products={products}
-                unitsById={unitsById}
-                availableFor={availableFor}
-                onAddToCart={addToCart}
-                onClose={() => setIsQuickSidebarOpen(false)}
-                orgId={orgId}
-              />
+            {/* Desktop Resizable Sidebar (>= 768px) */}
+            <div className="hidden md:flex flex-row h-full">
+              {/* Drag Resizer Handle */}
+              <div
+                onMouseDown={startResizing}
+                title="اسحب لتغيير حجم قائمة الأصناف السريعة"
+                className={`w-2 hover:w-2.5 bg-slate-200 hover:bg-amber-400 dark:bg-slate-800 dark:hover:bg-amber-500 cursor-col-resize transition-all shrink-0 select-none flex items-center justify-center group ${
+                  isResizing ? 'bg-amber-500 w-2.5' : ''
+                }`}
+              >
+                <div className="w-0.5 h-8 bg-slate-400 dark:bg-slate-600 group-hover:bg-white rounded-full" />
+              </div>
+
+              {/* Sidebar Box */}
+              <div
+                style={{ width: `${sidebarWidth}px` }}
+                className="shrink-0 h-full border-r border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#111726] flex flex-col overflow-hidden shadow-sm animate-in slide-in-from-left duration-200"
+              >
+                <PosQuickItemsSidebar
+                  products={products}
+                  unitsById={unitsById}
+                  availableFor={availableFor}
+                  onAddToCart={addToCart}
+                  onClose={() => setIsQuickSidebarOpen(false)}
+                  orgId={orgId}
+                />
+              </div>
             </div>
           </>
         )}

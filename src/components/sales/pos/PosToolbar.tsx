@@ -58,9 +58,9 @@ export function PosToolbar({
   const router = useRouter();
 
   return (
-    <div className="bg-white/90 dark:bg-[#111726]/90 border-b border-slate-200/80 dark:border-slate-800 px-3 sm:px-4 py-1.5 shrink-0 overflow-x-auto custom-scrollbar select-none">
+    <div className="bg-white/95 dark:bg-[#111726]/95 border-b border-slate-200/80 dark:border-slate-800 px-2 sm:px-4 py-1.5 shrink-0 overflow-x-auto scroll-smooth no-scrollbar sm:custom-scrollbar select-none">
       {/* Horizontal Scrollable Row for ALL POS Action Pills */}
-      <div className="flex flex-nowrap items-center gap-2 min-w-max">
+      <div className="flex flex-nowrap items-center gap-1.5 sm:gap-2 min-w-max">
         {/* Home Icon Square Button */}
         <Link
           href="/"

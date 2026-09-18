@@ -82,8 +82,210 @@ export function PosCartTable({
   }, [lastAddedKey]);
 
   return (
-    <main className="flex-1 overflow-y-auto px-4 py-3">
-      <div className="bg-white dark:bg-[#111726] border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
+    <main className="flex-1 overflow-y-auto px-2.5 sm:px-4 py-2 sm:py-3">
+      {/* 1. Mobile Cards View (< 768px) */}
+      <div className="md:hidden space-y-2.5">
+        {cart.length === 0 ? (
+          <div className="py-14 px-4 text-center bg-white dark:bg-[#111726] border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-2xs">
+            <Barcode className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600 stroke-[1.5] mb-2.5" />
+            <p className="font-black text-sm text-slate-700 dark:text-slate-200">
+              الفاتورة فارغة حالياً
+            </p>
+            <p className="text-[11px] text-slate-400 mt-1 max-w-xs mx-auto leading-relaxed">
+              امسح الباركود أو ابحث عن صنف لإضافته مباشرة إلى الفاتورة.
+            </p>
+          </div>
+        ) : (
+          cart.map((line, index) => {
+            const product = lineProduct(line);
+            const opts = product ? unitOptions[product.id] || [] : [];
+            const totalLineVal = lineTotal(line);
+            const avail = product
+              ? availableFor(product.id, line.unitId, line.factor, line.batchId)
+              : 0;
+            const prodBatches = product
+              ? (batches[product.id] || []).filter((b) => b.current_quantity > 0)
+              : [];
+            const hasBatches = product?.tracks_batch && prodBatches.length > 0;
+
+            return (
+              <div
+                key={line.key}
+                className="bg-white dark:bg-[#111726] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3 shadow-2xs flex flex-col gap-2.5"
+              >
+                {/* Header: Item Title, SKU, Return Badge & Action buttons */}
+                <div className="flex items-start justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-500 flex items-center justify-center shrink-0">
+                        {index + 1}
+                      </span>
+                      <h3 className="font-black text-xs text-slate-900 dark:text-white leading-tight truncate">
+                        {product?.name || 'صنف غير معروف'}
+                      </h3>
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-mono mt-1 flex items-center gap-2">
+                      <span>كود: {product?.sku || line.productId}</span>
+                      {line.isReturnLine && (
+                        <Badge variant="destructive" className="h-4 px-1 text-[9px]">
+                          مرتجع
+                        </Badge>
+                      )}
+                      <span
+                        className={`font-bold ${
+                          avail <= 0
+                            ? 'text-rose-600 dark:text-rose-400'
+                            : avail <= 5
+                            ? 'text-amber-600 dark:text-amber-400'
+                            : 'text-emerald-600 dark:text-emerald-400'
+                        }`}
+                      >
+                        (المتاح: {avail})
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Actions: Discount & Delete */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={onOpenDiscountsModal}
+                      title="خصم الصنف"
+                      className="w-8 h-8 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center transition-colors cursor-pointer"
+                    >
+                      <Tag className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onRemoveLine(line.key)}
+                      title="حذف الصنف"
+                      className="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 flex items-center justify-center transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Batch & Unit Selector Row (if applicable) */}
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Unit Selector */}
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 block mb-1">الوحدة:</label>
+                    <Select
+                      value={line.unitId}
+                      onValueChange={(newU) => {
+                        const matched = opts.find((o) => o.unitId === newU);
+                        onUnitChange(line.key, newU, matched?.factor || 1, matched?.price);
+                      }}
+                    >
+                      <SelectTrigger className="h-8 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-bold">
+                        <SelectValue placeholder="الوحدة" />
+                      </SelectTrigger>
+                      <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+                        {opts.map((o) => (
+                          <SelectItem key={o.unitId} value={o.unitId} className="text-xs font-bold py-1.5 px-2.5">
+                            {unitsById[o.unitId]?.name || o.unitId}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Batch Selector or Info */}
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 block mb-1">الدفعة والصلاحية:</label>
+                    {hasBatches ? (
+                      <Select
+                        value={line.batchId || prodBatches[0]?.id || ''}
+                        onValueChange={(newBatchId) => {
+                          if (onSetLineBatch) {
+                            onSetLineBatch(line.key, newBatchId);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="h-8 rounded-xl bg-amber-50/60 dark:bg-amber-950/30 border-amber-200/80 dark:border-amber-800/80 text-xs font-mono font-bold text-amber-900 dark:text-amber-200">
+                          <SelectValue placeholder="اختر الدفعة" />
+                        </SelectTrigger>
+                        <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl max-h-56">
+                          {prodBatches.map((b) => {
+                            const expDate = b.expiry_date || 'بدون تاريخ';
+                            const exp = b.expiry_date ? isExpired(b.expiry_date) : false;
+                            const batchQtyInUnit = Number((b.current_quantity / line.factor).toFixed(2));
+                            return (
+                              <SelectItem key={b.id} value={b.id} className="text-xs font-bold py-1.5 px-2.5">
+                                <div className="flex items-center justify-between gap-1 w-full">
+                                  <span className={exp ? 'text-rose-600 line-through' : ''}>{expDate}</span>
+                                  <span className="text-[9px] text-slate-400 font-mono">({batchQtyInUnit})</span>
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="h-8 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 text-slate-400 text-xs font-bold flex items-center px-2.5">
+                        بدون تاريخ
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Stepper + Price & Total Row */}
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/60">
+                  {/* Stepper */}
+                  <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5 border border-slate-200/80 dark:border-slate-700">
+                    <button
+                      type="button"
+                      onClick={() => onUpdateQty(line.key, -1)}
+                      className="w-8 h-8 rounded-lg bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-200 hover:bg-slate-200 flex items-center justify-center transition-colors cursor-pointer"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+
+                    <input
+                      type="number"
+                      step="any"
+                      value={line.qty}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        onSetQty(line.key, isNaN(val) ? 0 : val);
+                      }}
+                      className="w-12 text-center bg-transparent font-black text-xs text-slate-900 dark:text-white focus:outline-none"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => onUpdateQty(line.key, 1)}
+                      className="w-8 h-8 rounded-lg bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 hover:bg-slate-200 flex items-center justify-center transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Pricing info */}
+                  <div className="text-left flex flex-col items-end">
+                    <div className="text-[10px] text-slate-400 font-mono">
+                      {line.price.toFixed(2)} ج.م × {line.qty}
+                    </div>
+                    <div className="font-mono font-black text-sm text-emerald-600 dark:text-emerald-400">
+                      {totalLineVal.toFixed(2)} <span className="text-[10px] font-normal text-slate-400">ج.م</span>
+                    </div>
+                    {line.discount > 0 && (
+                      <span className="text-[9px] text-rose-500 font-bold">
+                        خصم: {line.discount} ج.م
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* 2. Desktop/Tablet Table View (>= 768px) */}
+      <div className="hidden md:block bg-white dark:bg-[#111726] border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden overflow-x-auto">
         <table className="w-full text-right text-xs">
           {/* Table Header */}
           <thead className="bg-slate-50/80 dark:bg-slate-900/60 border-b border-slate-200/80 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold">

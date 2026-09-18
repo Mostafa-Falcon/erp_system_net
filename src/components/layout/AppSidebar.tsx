@@ -276,12 +276,20 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onClose }) => {
   return (
     <>
       {/* Mobile Backdrop Overlay (< 1024px) */}
-      <div
-        className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-xs z-40 animate-in fade-in duration-200"
-        onClick={onClose}
-      />
+      {isOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-xs z-40 animate-in fade-in duration-200"
+          onClick={onClose}
+        />
+      )}
 
-      <aside className="w-[280px] h-screen bg-white dark:bg-[#131b2e] border-l border-slate-200 dark:border-slate-800 flex flex-col shrink-0 select-none shadow-2xl lg:shadow-sm transition-colors duration-200 fixed lg:sticky top-0 right-0 z-50 lg:z-40">
+      <aside
+        className={cn(
+          "w-[280px] h-screen bg-white dark:bg-[#131b2e] border-l border-slate-200 dark:border-slate-800 flex flex-col shrink-0 select-none shadow-2xl lg:shadow-sm transition-transform duration-300 ease-in-out fixed lg:sticky top-0 right-0 z-50 lg:z-40",
+          isOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0",
+          !isOpen && "lg:hidden"
+        )}
+      >
         {/* Top Header */}
         <div className="p-4 space-y-4">
           <div className="flex items-center justify-between gap-3 px-1">
