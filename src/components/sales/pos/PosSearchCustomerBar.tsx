@@ -240,6 +240,20 @@ export function PosSearchCustomerBar({
           </button>
         </div>
 
+        {/* Compact Price Tier Selector */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Select value={priceTier} onValueChange={setPriceTier}>
+            <SelectTrigger className="w-28 sm:w-36 h-8 sm:h-9 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border-slate-200/70 dark:border-slate-700/60 text-[11px] sm:text-xs font-bold">
+              <SelectValue placeholder="فئة السعر" />
+            </SelectTrigger>
+            <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
+              <SelectItem value="default">السعر الأساسي...</SelectItem>
+              <SelectItem value="wholesale">سعر الجملة</SelectItem>
+              <SelectItem value="vip">سعر كبار العملاء</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* SMART CUSTOMER SEARCH INPUT - Only rendered when mode is 'customer' or 'both' */}
         {customerMode !== 'cash' && (
           <div ref={customerContainerRef} className="relative w-full sm:w-64 md:w-72 animate-in fade-in duration-150">
@@ -490,23 +504,6 @@ export function PosSearchCustomerBar({
             </div>
           </div>
         )}
-      </div>
-
-      {/* Left side: Price Tier Selector */}
-      <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-        <span className="text-xs font-bold text-slate-500 whitespace-nowrap">فئة السعر</span>
-        <div className="w-40">
-          <Select value={priceTier} onValueChange={setPriceTier}>
-            <SelectTrigger className="w-full h-9 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200/80 dark:border-slate-700/80 text-xs font-bold">
-              <SelectValue placeholder="فئة السعر" />
-            </SelectTrigger>
-            <SelectContent className="z-50 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl">
-              <SelectItem value="default">السعر الأساسي...</SelectItem>
-              <SelectItem value="wholesale">سعر الجملة</SelectItem>
-              <SelectItem value="vip">سعر كبار العملاء</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
       </div>
     </div>
   );

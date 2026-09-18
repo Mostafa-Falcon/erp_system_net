@@ -75,26 +75,17 @@ export function PosPaymentActions({
 
   return (
     <div className="bg-white dark:bg-[#111726] border-t border-slate-200 dark:border-slate-800 p-2 sm:p-3 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1.5 sm:gap-2 shrink-0 select-none">
-      {/* إلغاء (F12) */}
-      <button
-        onClick={onClearCart}
-        className="h-10 sm:h-11 rounded-xl bg-[#ef4444] hover:bg-[#dc2626] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1 shadow-2xs transition-all cursor-pointer"
-      >
-        <X className="w-4 h-4" />
-        <span>إلغاء (F12)</span>
-      </button>
-
-      {/* دفع نقدي (F10) - PRIMARY */}
+      {/* 1. دفع نقدي (F10) - PRIMARY (col-span-2 on mobile) */}
       <button
         onClick={() => onCheckout('cash')}
         disabled={isSaving}
-        className="h-10 sm:h-11 rounded-xl bg-[#10b981] hover:bg-[#059669] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50"
+        className="col-span-2 sm:col-span-1 h-11 rounded-xl bg-[#10b981] hover:bg-[#059669] text-white font-black text-sm flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50"
       >
         <DollarSign className="w-4 h-4" />
         <span>{isSaving ? 'جارٍ الحفظ...' : 'دفع نقدي (F10)'}</span>
       </button>
 
-      {/* دفع بالبطاقة (F7) */}
+      {/* 2. دفع بالبطاقة (F7) */}
       <button
         onClick={() => onCheckout('card')}
         disabled={isSaving}
@@ -104,7 +95,16 @@ export function PosPaymentActions({
         <span>دفع بالبطاقة (F7)</span>
       </button>
 
-      {/* دفع مختلط (F9) */}
+      {/* 3. إلغاء (F12) */}
+      <button
+        onClick={onClearCart}
+        className="h-10 sm:h-11 rounded-xl bg-[#ef4444] hover:bg-[#dc2626] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1 shadow-2xs transition-all cursor-pointer"
+      >
+        <X className="w-4 h-4" />
+        <span>إلغاء (F12)</span>
+      </button>
+
+      {/* 4. دفع مختلط (F9) */}
       <button
         onClick={onOpenSplitModal}
         disabled={isSaving}
@@ -114,7 +114,7 @@ export function PosPaymentActions({
         <span>دفع مختلط (F9)</span>
       </button>
 
-      {/* بيع آجل */}
+      {/* 5. بيع آجل */}
       <button
         onClick={() => onCheckout('credit')}
         disabled={isSaving}
@@ -124,7 +124,7 @@ export function PosPaymentActions({
         <span>بيع آجل</span>
       </button>
 
-      {/* مرتجع */}
+      {/* 6. مرتجع */}
       <Link href="/sales/returns" className="w-full">
         <button className="w-full h-10 sm:h-11 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs sm:text-sm flex items-center justify-center gap-1 transition-all cursor-pointer">
           <RotateCcw className="w-4 h-4 text-slate-400" />
@@ -132,7 +132,7 @@ export function PosPaymentActions({
         </button>
       </Link>
 
-      {/* عرض سعر */}
+      {/* 7. عرض سعر */}
       <button
         onClick={() => {
           if (cartCount === 0) {
@@ -147,7 +147,7 @@ export function PosPaymentActions({
         <span>عرض سعر</span>
       </button>
 
-      {/* مسودة */}
+      {/* 8. مسودة */}
       <button
         onClick={() => {
           if (cartCount === 0) {
