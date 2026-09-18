@@ -6,6 +6,7 @@ import { useSessionStore } from '@/core/state/useSessionStore';
 import { ProductRepository } from '@/modules/inventory/product_repository';
 import { InventoryRepository } from '@/modules/inventory/inventory_repository';
 import { CLOUD_DATA_CHANGED_EVENT } from '@/core/sync/sync_events';
+import { db } from '@/core/db/app_database';
 import { isExpired, daysToExpiry } from '@/lib/format';
 import { toast } from 'sonner';
 import type {
@@ -152,6 +153,44 @@ export function useItemsCatalog() {
     return () => {
       if (timer) clearTimeout(timer);
       window.removeEventListener(CLOUD_DATA_CHANGED_EVENT, onCloudDataChanged);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId]);
+
+  // الاستجابة لأي تغيير محلي في Dexie (إنشاء صنف، حدث realtime، دمج pull ...)
+  // ليظل الجدول محدثاً تلقائياً ولحظياً من كل المصادر.
+  useEffect(() => {
+    if (!orgId) return;
+    const SYNC_TABLES = new Set(['products', 'product_units', 'product_batches', 'stock_levels', 'units', 'product_categories', 'product_brands', 'warehouses']);
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleReload = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        loadData();
+      }, 250);
+    };
+
+    interface DexieChangeRecord {
+      table: string;
+      type: string;
+    }
+    // تيبال Dexie المثبتة لا تغطي حدث 'changes'؛ نستخدم عقداً ضيقاً بنفس شكل DexieEventSet.
+    interface ChangesEventApi {
+      (eventName: 'changes', subscriber: (changes: DexieChangeRecord[]) => void): void;
+      unsubscribe(fn: (changes: DexieChangeRecord[]) => void): void;
+    }
+    const changesApi = db.on as unknown as ChangesEventApi;
+    const onDexieChanged = (changes: DexieChangeRecord[]) => {
+      if (changes.some((c) => SYNC_TABLES.has(c.table))) {
+        scheduleReload();
+      }
+    };
+    changesApi('changes', onDexieChanged);
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      changesApi.unsubscribe(onDexieChanged);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId]);

@@ -133,12 +133,13 @@ export const AppShell: React.FC<AppShellProps> = ({
       }
     });
 
-    // دورة أمان احتياطية كل 60 ثانية لتقارب الحالة بين الأجهزة
+    // دورة أمان احتياطية كل 20 ثانية لتقارب الحالة بين الأجهزة
+    // (الـ realtime مسؤول عن اللحظية؛ هذه الدورة تضمن التقارب حتى لو تأخر الحدث)
     reconcileInterval = setInterval(() => {
       if (networkListener.getStatus()) {
         reconcile();
       }
-    }, 60000);
+    }, 20000);
 
     return () => {
       realtimeSyncListener.stop();
