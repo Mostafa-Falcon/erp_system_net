@@ -58,9 +58,77 @@ export function PosToolbar({
   const router = useRouter();
 
   return (
-    <div className="bg-white/95 dark:bg-[#111726]/95 border-b border-slate-200/80 dark:border-slate-800 px-2 sm:px-4 py-1.5 shrink-0 overflow-x-auto scroll-smooth no-scrollbar sm:custom-scrollbar select-none">
-      {/* Horizontal Scrollable Row for ALL POS Action Pills */}
-      <div className="flex flex-nowrap items-center gap-1.5 sm:gap-2 min-w-max">
+    <div className="bg-white/95 dark:bg-[#111726]/95 border-b border-slate-200/80 dark:border-slate-800 px-2 sm:px-4 py-1.5 shrink-0 select-none">
+      {/* 1. MOBILE CLEAN TOOLBAR (< 768px) - NO OVERFLOW OR CLIPPING */}
+      <div className="flex md:hidden items-center justify-between gap-1.5 w-full">
+        {/* Home */}
+        <Link
+          href="/"
+          title="الرئيسية"
+          className="w-8 h-8 rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-xs transition-colors shrink-0 cursor-pointer"
+        >
+          <Home className="w-4 h-4" />
+        </Link>
+
+        {/* أصناف سريعة */}
+        <button
+          type="button"
+          onClick={onToggleQuickSidebar}
+          className={`flex-1 h-8 px-2 rounded-xl font-black text-xs flex items-center justify-center gap-1 shadow-2xs transition-all cursor-pointer ${
+            isQuickSidebarOpen
+              ? 'bg-[#d97706] text-white ring-2 ring-amber-400/50'
+              : 'bg-[#f59e0b] hover:bg-[#d97706] text-white'
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span>أصناف سريعة</span>
+        </button>
+
+        {/* استعلام أصناف */}
+        <button
+          onClick={onOpenLookupModal}
+          className="flex-1 h-8 px-2 rounded-xl bg-[#8b5cf6] hover:bg-[#7c3aed] text-white font-black text-xs flex items-center justify-center gap-1 shadow-2xs transition-all cursor-pointer"
+        >
+          <Search className="w-3.5 h-3.5" />
+          <span>استعلام (F3)</span>
+        </button>
+
+        {/* المزيد من العمليات Popover */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={onOpenRecentOperations}
+            title="آخر العمليات"
+            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center transition-colors cursor-pointer shrink-0 relative"
+          >
+            <Clock className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* مبيعات معلقة / زر المصروفات السريع */}
+        <button
+          type="button"
+          onClick={onOpenExpenseModal}
+          title="إضافة مصروفات"
+          className="w-8 h-8 rounded-xl bg-[#e11d48] hover:bg-[#be123c] text-white flex items-center justify-center shadow-2xs transition-all cursor-pointer shrink-0"
+        >
+          <Receipt className="w-4 h-4" />
+        </button>
+
+        {heldCount > 0 && (
+          <button
+            onClick={onOpenHeldModal}
+            title="مبيعات معلقة"
+            className="h-8 px-2 rounded-xl bg-[#0d9488] text-white font-black text-xs flex items-center gap-1 shadow-2xs cursor-pointer shrink-0"
+          >
+            <Briefcase className="w-3.5 h-3.5" />
+            <span className="font-mono">{heldCount}</span>
+          </button>
+        )}
+      </div>
+
+      {/* 2. DESKTOP EXPANDED ROW (>= 768px) */}
+      <div className="hidden md:flex flex-nowrap items-center gap-2 overflow-x-auto custom-scrollbar min-w-max">
         {/* Home Icon Square Button */}
         <Link
           href="/"

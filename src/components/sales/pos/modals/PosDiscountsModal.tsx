@@ -147,64 +147,67 @@ export function PosDiscountsModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="max-w-xl max-h-[90vh] overflow-hidden flex flex-col p-6 rounded-3xl border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111726] shadow-2xl text-right"
+        className="w-[95vw] sm:max-w-xl max-h-[92vh] overflow-hidden flex flex-col p-3.5 sm:p-6 rounded-3xl border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111726] shadow-2xl text-right"
         dir="rtl"
       >
         {/* Header matching user's design */}
-        <DialogHeader className="pb-3 border-b border-slate-100 dark:border-slate-800 flex flex-col items-center text-center space-y-1 shrink-0 relative">
+        <DialogHeader className="pb-2.5 sm:pb-3 border-b border-slate-100 dark:border-slate-800 flex flex-col items-center text-center space-y-1 shrink-0 relative">
           <div className="flex items-center justify-center gap-2">
-            <div className="w-9 h-9 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-500 flex items-center justify-center border border-blue-200/60 dark:border-blue-800/60 shadow-xs">
-              <Shield className="w-5 h-5 fill-blue-500/20 text-blue-600 dark:text-blue-400" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-500 flex items-center justify-center border border-blue-200/60 dark:border-blue-800/60 shadow-xs">
+              <Shield className="w-4 h-4 sm:w-5 sm:h-5 fill-blue-500/20 text-blue-600 dark:text-blue-400" />
             </div>
-            <DialogTitle className="text-lg font-black text-slate-900 dark:text-white">
+            <DialogTitle className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
               إضافات وخصومات الفاتورة
             </DialogTitle>
           </div>
-          <DialogDescription className="text-xs font-medium text-slate-500 dark:text-slate-400">
-            تطبيق خصم إجمالي أو خصم على أصناف محددة وإضافة مصاريف الشحن والتوصيل
+          <DialogDescription className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400">
+            تطبيق خصم إجمالي أو على أصناف محددة ومصاريف التوصيل
           </DialogDescription>
         </DialogHeader>
 
         {/* Tab Navigation Controls */}
-        <div className="flex items-center justify-center gap-2 py-2 shrink-0">
-          <div className="flex items-center bg-slate-100 dark:bg-slate-900/80 p-1 rounded-2xl border border-slate-200/80 dark:border-slate-800 w-full">
+        <div className="flex items-center justify-center gap-2 py-1.5 sm:py-2 shrink-0">
+          <div className="flex items-center bg-slate-100 dark:bg-slate-900/80 p-0.5 sm:p-1 rounded-2xl border border-slate-200/80 dark:border-slate-800 w-full">
             <button
               type="button"
               onClick={() => setActiveTab('global')}
-              className={`flex-1 py-1.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`flex-1 py-1.5 rounded-xl text-[11px] sm:text-xs font-black transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${
                 activeTab === 'global'
                   ? 'bg-white dark:bg-slate-800 text-fuchsia-600 dark:text-fuchsia-400 shadow-xs'
                   : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
-              <Tag className="w-3.5 h-3.5" />
-              <span>خصم الفاتورة الإجمالي</span>
+              <Tag className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden xs:inline">خصم الفاتورة الإجمالي</span>
+              <span className="inline xs:hidden">الفاتورة</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab('items')}
-              className={`flex-1 py-1.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`flex-1 py-1.5 rounded-xl text-[11px] sm:text-xs font-black transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${
                 activeTab === 'items'
                   ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
                   : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
-              <Package className="w-3.5 h-3.5" />
-              <span>خصم الأصناف ({cart.length})</span>
+              <Package className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden xs:inline">خصم الأصناف ({cart.length})</span>
+              <span className="inline xs:hidden">الأصناف ({cart.length})</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab('shipping')}
-              className={`flex-1 py-1.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`flex-1 py-1.5 rounded-xl text-[11px] sm:text-xs font-black transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer ${
                 activeTab === 'shipping'
                   ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs'
                   : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
-              <Truck className="w-3.5 h-3.5" />
-              <span>مصاريف الشحن</span>
+              <Truck className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden xs:inline">مصاريف الشحن</span>
+              <span className="inline xs:hidden">الشحن</span>
             </button>
           </div>
         </div>

@@ -200,7 +200,7 @@ export function PosSearchCustomerBar({
               setIsCustomerDropdownOpen(true);
               setTimeout(() => customerInputRef.current?.focus(), 100);
             }}
-            className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all cursor-pointer max-w-[110px] sm:max-w-[160px] truncate ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all cursor-pointer max-w-[105px] sm:max-w-[160px] truncate ${
               customerMode === 'customer'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
@@ -214,7 +214,7 @@ export function PosSearchCustomerBar({
             </span>
           </button>
 
-          {/* 3. عميل/مورد */}
+          {/* 3. عميل/مورد (Desktop only on small screens to prevent crowded width) */}
           <button
             type="button"
             onClick={() => {
@@ -225,7 +225,7 @@ export function PosSearchCustomerBar({
               setIsCustomerDropdownOpen(true);
               setTimeout(() => customerInputRef.current?.focus(), 100);
             }}
-            className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all cursor-pointer max-w-[110px] sm:max-w-[160px] truncate ${
+            className={`hidden sm:flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all cursor-pointer max-w-[120px] sm:max-w-[160px] truncate ${
               customerMode === 'both'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
@@ -241,7 +241,7 @@ export function PosSearchCustomerBar({
         </div>
 
         {/* Compact Price Tier Selector */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           <Select value={priceTier} onValueChange={setPriceTier}>
             <SelectTrigger className="w-24 sm:w-32 h-8 sm:h-9 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border-slate-200/70 dark:border-slate-700/60 text-[10px] sm:text-xs font-bold">
               <SelectValue placeholder="فئة السعر" />

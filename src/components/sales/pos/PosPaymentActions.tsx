@@ -102,7 +102,7 @@ export function PosPaymentActions({
   }
 
   return (
-    <div className="bg-white dark:bg-[#111726] border-t border-slate-200 dark:border-slate-800 p-2 sm:p-3 shrink-0 select-none">
+    <div className="bg-white dark:bg-[#111726] border-t border-slate-200 dark:border-slate-800 p-2 sm:p-3 pl-14 sm:pl-3 shrink-0 select-none">
       {/* 1. MOBILE RESPONSIVE ACTION BAR (< 768px) */}
       <div className="md:hidden flex flex-col gap-2">
         {/* Collapsible Secondary Actions Drawer on Mobile */}
