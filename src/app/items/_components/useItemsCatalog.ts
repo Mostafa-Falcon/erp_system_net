@@ -175,22 +175,28 @@ export function useItemsCatalog() {
       table: string;
       type: string;
     }
-    // تيبال Dexie المثبتة لا تغطي حدث 'changes'؛ نستخدم عقداً ضيقاً بنفس شكل DexieEventSet.
-    interface ChangesEventApi {
-      (eventName: 'changes', subscriber: (changes: DexieChangeRecord[]) => void): void;
-      unsubscribe(fn: (changes: DexieChangeRecord[]) => void): void;
+
+    // التحقق بأمان من وجود حدث 'changes' في Dexie قبل الاشتراك لمنع الأخطاء الاستثنائية
+    const changesEvent = (db.on as unknown as Record<string, { subscribe?: (fn: (changes: DexieChangeRecord[]) => void) => void; unsubscribe?: (fn: (changes: DexieChangeRecord[]) => void) => void }> | undefined)?.changes;
+
+    if (changesEvent && typeof changesEvent.subscribe === 'function') {
+      const onDexieChanged = (changes: DexieChangeRecord[]) => {
+        if (changes.some((c) => SYNC_TABLES.has(c.table))) {
+          scheduleReload();
+        }
+      };
+      changesEvent.subscribe(onDexieChanged);
+
+      return () => {
+        if (timer) clearTimeout(timer);
+        if (typeof changesEvent.unsubscribe === 'function') {
+          changesEvent.unsubscribe(onDexieChanged);
+        }
+      };
     }
-    const changesApi = db.on as unknown as ChangesEventApi;
-    const onDexieChanged = (changes: DexieChangeRecord[]) => {
-      if (changes.some((c) => SYNC_TABLES.has(c.table))) {
-        scheduleReload();
-      }
-    };
-    changesApi('changes', onDexieChanged);
 
     return () => {
       if (timer) clearTimeout(timer);
-      changesApi.unsubscribe(onDexieChanged);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId]);
