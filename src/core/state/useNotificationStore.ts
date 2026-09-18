@@ -126,50 +126,78 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         });
       });
 
-      // 3. Stock Shortages Notifications
-      products.forEach((prod) => {
-        const notifId = `stock-${prod.id}`;
-        if (deletedIds.has(notifId)) return;
+      // 3. Stock Shortages Notifications (Consolidated & Real)
+      const lowStockProducts = products.filter((prod) => {
         const qty = stockMap.get(prod.id) ?? 0;
         const limit = Number(prod.min_stock_alert) || 5;
-        if (qty <= limit) {
-          list.push({
-            id: notifId,
-            type: 'stock',
-            title: `تنبيه انخفاض مخزون #${prod.sku}`,
-            description: `وصل رصيد صنف (${prod.name}) إلى (${qty}) وهو تحت حد الأمان المطلوب (${limit})`,
-            timestamp: prod.updated_at || prod.created_at,
-            timeAgo: formatTimeAgo(prod.updated_at || prod.created_at),
-            isRead: readIds.has(notifId),
-            link: '/inventory/status',
-            iconType: 'alert',
-          });
-        }
+        return qty <= limit;
       });
 
-      // 4. Batch Expiry Alerts
+      if (lowStockProducts.length > 0) {
+        if (lowStockProducts.length <= 3) {
+          lowStockProducts.forEach((prod) => {
+            const notifId = `stock-${prod.id}`;
+            if (deletedIds.has(notifId)) return;
+            const qty = stockMap.get(prod.id) ?? 0;
+            const limit = Number(prod.min_stock_alert) || 5;
+            list.push({
+              id: notifId,
+              type: 'stock',
+              title: `تنبيه مخزون: ${prod.name}`,
+              description: `الرصيد المتوفر (${qty}) وصل لحد الأمان المطلوب (${limit})`,
+              timestamp: prod.updated_at || prod.created_at,
+              timeAgo: formatTimeAgo(prod.updated_at || prod.created_at),
+              isRead: readIds.has(notifId),
+              link: '/inventory/status',
+              iconType: 'alert',
+            });
+          });
+        } else {
+          // Consolidated alert for multiple items
+          const notifId = 'stock-shortage-summary';
+          if (!deletedIds.has(notifId)) {
+            list.push({
+              id: notifId,
+              type: 'stock',
+              title: `تنبيه نواقص المخزون (${lowStockProducts.length} أصناف)`,
+              description: `يوجد ${lowStockProducts.length} صنفاً وصلت أرصدتها للحد الأدنى للمخزون أو نفدت كميتها`,
+              timestamp: new Date().toISOString(),
+              timeAgo: 'الآن',
+              isRead: readIds.has(notifId),
+              link: '/inventory/status',
+              iconType: 'alert',
+            });
+          }
+        }
+      }
+
+      // 4. Batch Expiry Alerts (Only real imminent expiries within 30 days)
       const now = Date.now();
-      batches.forEach((batch) => {
+      const expiringBatches = batches.filter((b) => {
+        if (!b.expiry_date) return false;
+        const days = Math.ceil((new Date(b.expiry_date).getTime() - now) / (1000 * 60 * 60 * 24));
+        return days <= 30;
+      });
+
+      expiringBatches.slice(0, 3).forEach((batch) => {
         const notifId = `exp-${batch.id}`;
         if (deletedIds.has(notifId) || !batch.expiry_date) return;
         const days = Math.ceil((new Date(batch.expiry_date).getTime() - now) / (1000 * 60 * 60 * 24));
-        if (days <= 90) {
-          const prod = productMap.get(batch.product_id);
-          const name = prod?.name || 'صنف غير معرف';
-          list.push({
-            id: notifId,
-            type: 'expiry',
-            title: days < 0 ? `تنبيه صنف منتهي الصلاحية #${batch.batch_number}` : `تنبيه اقتراب انتهاء صلاحية #${batch.batch_number}`,
-            description: days < 0
-              ? `التشغيلة (${batch.batch_number}) للصنف (${name}) منتهية الصلاحية منذ ${Math.abs(days)} يوم`
-              : `التشغيلة (${batch.batch_number}) للصنف (${name}) ستنتهي خلال ${days} يوم`,
-            timestamp: batch.created_at,
-            timeAgo: formatTimeAgo(batch.created_at),
-            isRead: readIds.has(notifId),
-            link: '/reports/expiry',
-            iconType: 'alert',
-          });
-        }
+        const prod = productMap.get(batch.product_id);
+        const name = prod?.name || 'صنف غير معرف';
+        list.push({
+          id: notifId,
+          type: 'expiry',
+          title: days < 0 ? `صنف منتهي الصلاحية: ${name}` : `اقتراب انتهاء صلاحية: ${name}`,
+          description: days < 0
+            ? `التشغيلة (${batch.batch_number}) منتهية الصلاحية منذ ${Math.abs(days)} يوم`
+            : `التشغيلة (${batch.batch_number}) ستنتهي خلال ${days} يوم`,
+          timestamp: batch.created_at,
+          timeAgo: formatTimeAgo(batch.created_at),
+          isRead: readIds.has(notifId),
+          link: '/reports/expiry',
+          iconType: 'alert',
+        });
       });
 
       // Sort newest first

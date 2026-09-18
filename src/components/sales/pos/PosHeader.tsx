@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Menu,
@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { formatNumber } from '@/lib/format';
 import { toast } from 'sonner';
+import { useNotificationStore } from '@/core/state/useNotificationStore';
+import { NotificationDropdown } from '@/components/layout/NotificationDropdown';
 import type { CashierShift, User as UserType } from '@/types';
 
 interface PosHeaderProps {
@@ -37,6 +39,8 @@ export function PosHeader({
   onToggleTheme,
 }: PosHeaderProps) {
   const router = useRouter();
+  const { unreadCount } = useNotificationStore();
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   return (
     <header className="h-13 sm:h-14 bg-white dark:bg-[#111726] border-b border-slate-200/90 dark:border-slate-800 px-2.5 sm:px-4 flex items-center justify-between shadow-2xs shrink-0 select-none">
@@ -68,16 +72,22 @@ export function PosHeader({
           <span>{new Date().toISOString().slice(0, 10)}</span>
         </div>
 
-        {/* Notifications (Desktop/Tablet) */}
-        <button
-          title="الإشعارات"
-          className="hidden md:flex relative p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-        >
-          <Bell className="w-4 h-4" />
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black px-1 rounded-full">
-            +99
-          </span>
-        </button>
+        {/* Notifications (Desktop/Tablet) with real live unread count */}
+        <div className="relative hidden md:block">
+          <button
+            onClick={() => setIsNotificationOpen((prev) => !prev)}
+            title="الإشعارات"
+            className="relative p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            <Bell className="w-4 h-4" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+          <NotificationDropdown isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
+        </div>
 
         {/* Support Headset (Desktop/Tablet) */}
         <button

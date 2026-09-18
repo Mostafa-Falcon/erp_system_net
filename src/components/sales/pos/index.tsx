@@ -17,6 +17,7 @@ import { PosCartTable } from './PosCartTable';
 import { PosTotalsBar } from './PosTotalsBar';
 import { PosPaymentActions } from './PosPaymentActions';
 import { PosQuickItemsSidebar } from './PosQuickItemsSidebar';
+import { PosOpenShiftView } from './PosOpenShiftView';
 
 // Modals
 import { PosCustomerModal } from './modals/PosCustomerModal';
@@ -483,176 +484,192 @@ export function POS() {
         onToggleTheme={toggleTheme}
       />
 
-      {/* 2. Operations Toolbar */}
-      <PosToolbar
-        activeShift={activeShift}
-        onOpenLookupModal={() => setIsLookupModalOpen(true)}
-        onToggleQuickSidebar={() => setIsQuickSidebarOpen((prev) => !prev)}
-        isQuickSidebarOpen={isQuickSidebarOpen}
-        onOpenRecentOperations={() => setIsRecentOperationsOpen(true)}
-        onOpenReturnOptions={() => setIsReturnOptionsOpen(true)}
-        onOpenPurchaseReturnOptions={() => setIsPurchaseReturnOptionsOpen(true)}
-        onOpenExpenseModal={() => setIsExpenseModalOpen(true)}
-        onOpenSupplierPaymentModal={() => setIsSupplierPaymentModalOpen(true)}
-        onOpenCustomerPaymentModal={() => setIsCustomerPaymentModalOpen(true)}
-        onOpenHeldModal={() => setIsHeldModalOpen(true)}
-        onOpenCustomerModal={() => setIsCustomerModalOpen(true)}
-        onOpenShiftModal={() => setIsShiftModalOpen(true)}
-        onReadLiveWeight={() => handleReadLiveWeight()}
-        isReadingScale={isReadingScale}
-        heldCount={heldSales.length}
-      />
-
-      {/* 2.1 Return Mode Active Alert Banner */}
-      {activeReturnInvoice && (
-        <div className="bg-amber-500/10 dark:bg-amber-950/40 border-y border-amber-300/80 dark:border-amber-800/80 px-6 py-2.5 flex items-center justify-between shadow-2xs shrink-0 animate-in fade-in duration-200">
-          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-black text-sm">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
-            <span>وضع المرتجع نشط: #{activeReturnInvoice.invoice_number}</span>
-          </div>
-          <button
-            onClick={cancelReturnMode}
-            className="h-8 px-5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs shadow-xs transition-all cursor-pointer"
-          >
-            إلغاء
-          </button>
-        </div>
-      )}
-
-      {/* 3. Search, Barcode & Customer Segment Bar */}
-      <PosSearchCustomerBar
-        customerMode={customerMode}
-        setCustomerMode={setCustomerMode}
-        selectedCustomerId={selectedCustomerId}
-        setSelectedCustomerId={setSelectedCustomerId}
-        customers={customers}
-        onOpenCustomerModal={() => setIsCustomerModalOpen(true)}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        isSearchOpen={isSearchOpen}
-        setIsSearchOpen={setIsSearchOpen}
-        searchResults={searchResults}
-        searchInputRef={searchInputRef}
-        onSearchKeyDown={handleSearchKeyDown}
-        onAddToCart={addToCart}
-        availableFor={availableFor}
-        cartCount={cart.length}
-        priceTier={priceTier}
-        setPriceTier={setPriceTier}
-      />
-
-      {/* 4. Main Working Area: Cart Table + Left Quick Items Sidebar */}
-      <div className="flex-1 flex flex-row overflow-hidden relative">
-        {/* Main Cart Table */}
-        <div className="flex-1 overflow-y-auto flex flex-col min-w-0">
-          <PosCartTable
-            cart={cart}
-            products={products}
-            unitsById={unitsById}
-            unitOptions={unitOptions}
-            batches={batches}
-            availableFor={availableFor}
-            onUpdateQty={updateQty}
-            onSetQty={setLineQty}
-            onSetLineBatch={setLineBatch}
-            onSetLineDiscount={setLineDiscount}
-            onOpenDiscountsModal={() => setIsDiscountsModalOpen(true)}
-            onRemoveLine={removeLine}
-            onReadLiveWeight={handleReadLiveWeight}
+      {/* 2. Main POS Flow or Open Shift View */}
+      {!activeShift ? (
+        <PosOpenShiftView
+          currentUser={currentUser}
+          orgId={orgId}
+          branchId={branchId}
+          treasuries={treasuries}
+          onShiftOpened={(shift) => {
+            setActiveShift(shift);
+            loadData();
+          }}
+        />
+      ) : (
+        <>
+          {/* Operations Toolbar */}
+          <PosToolbar
+            activeShift={activeShift}
+            onOpenLookupModal={() => setIsLookupModalOpen(true)}
+            onToggleQuickSidebar={() => setIsQuickSidebarOpen((prev) => !prev)}
+            isQuickSidebarOpen={isQuickSidebarOpen}
+            onOpenRecentOperations={() => setIsRecentOperationsOpen(true)}
+            onOpenReturnOptions={() => setIsReturnOptionsOpen(true)}
+            onOpenPurchaseReturnOptions={() => setIsPurchaseReturnOptionsOpen(true)}
+            onOpenExpenseModal={() => setIsExpenseModalOpen(true)}
+            onOpenSupplierPaymentModal={() => setIsSupplierPaymentModalOpen(true)}
+            onOpenCustomerPaymentModal={() => setIsCustomerPaymentModalOpen(true)}
+            onOpenHeldModal={() => setIsHeldModalOpen(true)}
+            onOpenCustomerModal={() => setIsCustomerModalOpen(true)}
+            onOpenShiftModal={() => setIsShiftModalOpen(true)}
+            onReadLiveWeight={() => handleReadLiveWeight()}
             isReadingScale={isReadingScale}
-            onUnitChange={handleUnitChange}
-            lastAddedKey={lastAddedKey}
-            onFocusSearch={() => {
-              searchInputRef.current?.focus();
-              searchInputRef.current?.select();
-            }}
+            heldCount={heldSales.length}
           />
-        </div>
 
-        {/* Resizable Left Quick Items Sidebar */}
-        {isQuickSidebarOpen && (
-          <>
-            {/* Mobile Slide-Over Drawer (< 768px) */}
-            <div className="md:hidden fixed inset-0 z-50 flex animate-in fade-in duration-200">
-              {/* Backdrop */}
-              <div
-                className="fixed inset-0 bg-black/60 backdrop-blur-xs"
-                onClick={() => setIsQuickSidebarOpen(false)}
+          {/* Return Mode Active Alert Banner */}
+          {activeReturnInvoice && (
+            <div className="bg-amber-500/10 dark:bg-amber-950/40 border-y border-amber-300/80 dark:border-amber-800/80 px-6 py-2.5 flex items-center justify-between shadow-2xs shrink-0 animate-in fade-in duration-200">
+              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-black text-sm">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                <span>وضع المرتجع نشط: #{activeReturnInvoice.invoice_number}</span>
+              </div>
+              <button
+                onClick={cancelReturnMode}
+                className="h-8 px-5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs shadow-xs transition-all cursor-pointer"
+              >
+                إلغاء
+              </button>
+            </div>
+          )}
+
+          {/* Search, Barcode & Customer Segment Bar */}
+          <PosSearchCustomerBar
+            customerMode={customerMode}
+            setCustomerMode={setCustomerMode}
+            selectedCustomerId={selectedCustomerId}
+            setSelectedCustomerId={setSelectedCustomerId}
+            customers={customers}
+            onOpenCustomerModal={() => setIsCustomerModalOpen(true)}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            isSearchOpen={isSearchOpen}
+            setIsSearchOpen={setIsSearchOpen}
+            searchResults={searchResults}
+            searchInputRef={searchInputRef}
+            onSearchKeyDown={handleSearchKeyDown}
+            onAddToCart={addToCart}
+            availableFor={availableFor}
+            cartCount={cart.length}
+            priceTier={priceTier}
+            setPriceTier={setPriceTier}
+          />
+
+          {/* Main Working Area: Cart Table + Left Quick Items Sidebar */}
+          <div className="flex-1 flex flex-row overflow-hidden relative">
+            {/* Main Cart Table */}
+            <div className="flex-1 overflow-y-auto flex flex-col min-w-0">
+              <PosCartTable
+                cart={cart}
+                products={products}
+                unitsById={unitsById}
+                unitOptions={unitOptions}
+                batches={batches}
+                availableFor={availableFor}
+                onUpdateQty={updateQty}
+                onSetQty={setLineQty}
+                onSetLineBatch={setLineBatch}
+                onSetLineDiscount={setLineDiscount}
+                onOpenDiscountsModal={() => setIsDiscountsModalOpen(true)}
+                onRemoveLine={removeLine}
+                onReadLiveWeight={handleReadLiveWeight}
+                isReadingScale={isReadingScale}
+                onUnitChange={handleUnitChange}
+                lastAddedKey={lastAddedKey}
+                onFocusSearch={() => {
+                  searchInputRef.current?.focus();
+                  searchInputRef.current?.select();
+                }}
               />
-              {/* Drawer Container */}
-              <div className="relative z-10 w-[88vw] max-w-sm h-full bg-white dark:bg-[#111726] shadow-2xl flex flex-col animate-in slide-in-from-left duration-200">
-                <PosQuickItemsSidebar
-                  products={products}
-                  unitsById={unitsById}
-                  availableFor={availableFor}
-                  onAddToCart={(p) => {
-                    addToCart(p);
-                  }}
-                  onClose={() => setIsQuickSidebarOpen(false)}
-                  orgId={orgId}
-                />
-              </div>
             </div>
 
-            {/* Desktop Resizable Sidebar (>= 768px) */}
-            <div className="hidden md:flex flex-row h-full">
-              {/* Drag Resizer Handle */}
-              <div
-                onMouseDown={startResizing}
-                title="اسحب لتغيير حجم قائمة الأصناف السريعة"
-                className={`w-2 hover:w-2.5 bg-slate-200 hover:bg-amber-400 dark:bg-slate-800 dark:hover:bg-amber-500 cursor-col-resize transition-all shrink-0 select-none flex items-center justify-center group ${
-                  isResizing ? 'bg-amber-500 w-2.5' : ''
-                }`}
-              >
-                <div className="w-0.5 h-8 bg-slate-400 dark:bg-slate-600 group-hover:bg-white rounded-full" />
-              </div>
+            {/* Resizable Left Quick Items Sidebar */}
+            {isQuickSidebarOpen && (
+              <>
+                {/* Mobile Slide-Over Drawer (< 768px) */}
+                <div className="md:hidden fixed inset-0 z-50 flex animate-in fade-in duration-200">
+                  {/* Backdrop */}
+                  <div
+                    className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+                    onClick={() => setIsQuickSidebarOpen(false)}
+                  />
+                  {/* Drawer Container */}
+                  <div className="relative z-10 w-[88vw] max-w-sm h-full bg-white dark:bg-[#111726] shadow-2xl flex flex-col animate-in slide-in-from-left duration-200">
+                    <PosQuickItemsSidebar
+                      products={products}
+                      unitsById={unitsById}
+                      availableFor={availableFor}
+                      onAddToCart={(p) => {
+                        addToCart(p);
+                      }}
+                      onClose={() => setIsQuickSidebarOpen(false)}
+                      orgId={orgId}
+                    />
+                  </div>
+                </div>
 
-              {/* Sidebar Box */}
-              <div
-                style={{ width: `${sidebarWidth}px` }}
-                className="shrink-0 h-full border-r border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#111726] flex flex-col overflow-hidden shadow-sm animate-in slide-in-from-left duration-200"
-              >
-                <PosQuickItemsSidebar
-                  products={products}
-                  unitsById={unitsById}
-                  availableFor={availableFor}
-                  onAddToCart={addToCart}
-                  onClose={() => setIsQuickSidebarOpen(false)}
-                  orgId={orgId}
-                />
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+                {/* Desktop Resizable Sidebar (>= 768px) */}
+                <div className="hidden md:flex flex-row h-full">
+                  {/* Drag Resizer Handle */}
+                  <div
+                    onMouseDown={startResizing}
+                    title="اسحب لتغيير حجم قائمة الأصناف السريعة"
+                    className={`w-2 hover:w-2.5 bg-slate-200 hover:bg-amber-400 dark:bg-slate-800 dark:hover:bg-amber-500 cursor-col-resize transition-all shrink-0 select-none flex items-center justify-center group ${
+                      isResizing ? 'bg-amber-500 w-2.5' : ''
+                    }`}
+                  >
+                    <div className="w-0.5 h-8 bg-slate-400 dark:bg-slate-600 group-hover:bg-white rounded-full" />
+                  </div>
 
-      {/* 5. Totals Bar */}
-      <PosTotalsBar
-        cartCount={cart.length}
-        subtotal={subtotal}
-        totalDiscount={totalDiscount}
-        shippingFee={shippingFee}
-        totalTax={totalTax}
-        total={total}
-        isReturnMode={Boolean(activeReturnInvoice)}
-        onOpenDiscountsModal={() => setIsDiscountsModalOpen(true)}
-      />
+                  {/* Sidebar Box */}
+                  <div
+                    style={{ width: `${sidebarWidth}px` }}
+                    className="shrink-0 h-full border-r border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#111726] flex flex-col overflow-hidden shadow-sm animate-in slide-in-from-left duration-200"
+                  >
+                    <PosQuickItemsSidebar
+                      products={products}
+                      unitsById={unitsById}
+                      availableFor={availableFor}
+                      onAddToCart={addToCart}
+                      onClose={() => setIsQuickSidebarOpen(false)}
+                      orgId={orgId}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
 
-      {/* 6. Action Payment Buttons Bar */}
-      <PosPaymentActions
-        onClearCart={clearCart}
-        onCheckout={(type) => executeCheckout(type)}
-        onOpenSplitModal={() => {
-          if (cart.length === 0) {
-            toast.warning('السلة فارغة! يرجى إضافة أصناف أولاً.');
-            return;
-          }
-          setIsSplitModalOpen(true);
-        }}
-        isSaving={isSaving}
-        cartCount={cart.length}
-        isReturnMode={Boolean(activeReturnInvoice)}
-      />
+          {/* Totals Bar */}
+          <PosTotalsBar
+            cartCount={cart.length}
+            subtotal={subtotal}
+            totalDiscount={totalDiscount}
+            shippingFee={shippingFee}
+            totalTax={totalTax}
+            total={total}
+            isReturnMode={Boolean(activeReturnInvoice)}
+            onOpenDiscountsModal={() => setIsDiscountsModalOpen(true)}
+          />
+
+          {/* Action Payment Buttons Bar */}
+          <PosPaymentActions
+            onClearCart={clearCart}
+            onCheckout={(type) => executeCheckout(type)}
+            onOpenSplitModal={() => {
+              if (cart.length === 0) {
+                toast.warning('السلة فارغة! يرجى إضافة أصناف أولاً.');
+                return;
+              }
+              setIsSplitModalOpen(true);
+            }}
+            isSaving={isSaving}
+            cartCount={cart.length}
+            isReturnMode={Boolean(activeReturnInvoice)}
+          />
+        </>
+      )}
 
       {/* 7. Modals */}
       <PosCustomerModal

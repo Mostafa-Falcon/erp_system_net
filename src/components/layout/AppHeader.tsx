@@ -123,7 +123,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
             {unreadCount > 0 && (
               <span className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 bg-red-500 text-white text-[9px] font-black px-1 min-w-[16px] h-4 rounded-full flex items-center justify-center shadow-xs">
-                {unreadCount > 99 ? '+99' : unreadCount}
+                {unreadCount}
               </span>
             )}
           </button>
