@@ -23,11 +23,11 @@ export function PosTotalsBar({
   onOpenDiscountsModal,
 }: PosTotalsBarProps) {
   return (
-    <div className="bg-[#0b1329] text-white px-6 py-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-4 shadow-lg shrink-0">
+    <div className="bg-[#0b1329] text-white px-3 sm:px-6 py-2 sm:py-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2.5 sm:gap-4 shadow-lg shrink-0 select-none">
       {/* Right: الأصناف */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-bold text-slate-400">الأصناف:</span>
-        <span className="text-2xl font-black text-white font-mono">{cartCount}</span>
+      <div className="flex items-center gap-1.5">
+        <span className="text-[11px] sm:text-xs font-bold text-slate-400">الأصناف:</span>
+        <span className="text-xl sm:text-2xl font-black text-white font-mono">{cartCount}</span>
       </div>
 
       {/* Center: التفاصيل المحاسبية */}

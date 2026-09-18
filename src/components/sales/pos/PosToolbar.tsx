@@ -58,9 +58,9 @@ export function PosToolbar({
   const router = useRouter();
 
   return (
-    <div className="bg-white/90 dark:bg-[#111726]/90 border-b border-slate-200/80 dark:border-slate-800 px-4 py-2.5 flex flex-col gap-2 shrink-0">
-      {/* Row 1: Home & Core Operational Pills */}
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="bg-white/90 dark:bg-[#111726]/90 border-b border-slate-200/80 dark:border-slate-800 px-3 sm:px-4 py-1.5 shrink-0 overflow-x-auto custom-scrollbar select-none">
+      {/* Horizontal Scrollable Row for ALL POS Action Pills */}
+      <div className="flex flex-nowrap items-center gap-2 min-w-max">
         {/* Home Icon Square Button */}
         <Link
           href="/"
@@ -74,7 +74,7 @@ export function PosToolbar({
         <button
           type="button"
           onClick={onOpenExpenseModal}
-          className="h-8 px-3 rounded-xl bg-[#e11d48] hover:bg-[#be123c] text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+          className="h-8 px-3 rounded-xl bg-[#e11d48] hover:bg-[#be123c] text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0"
         >
           <Receipt className="w-3.5 h-3.5" />
           <span>إضافة مصروفات</span>
@@ -83,7 +83,7 @@ export function PosToolbar({
         {/* استعلام أصناف (F3) */}
         <button
           onClick={onOpenLookupModal}
-          className="h-8 px-3 rounded-xl bg-[#8b5cf6] hover:bg-[#7c3aed] text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+          className="h-8 px-3 rounded-xl bg-[#8b5cf6] hover:bg-[#7c3aed] text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0"
         >
           <Search className="w-3.5 h-3.5" />
           <span>استعلام أصناف (F3)</span>
@@ -93,7 +93,7 @@ export function PosToolbar({
         <button
           type="button"
           onClick={onToggleQuickSidebar}
-          className={`h-8 px-3 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer ${
+          className={`h-8 px-3 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0 ${
             isQuickSidebarOpen
               ? 'bg-[#d97706] text-white ring-2 ring-amber-400/50 scale-102'
               : 'bg-[#f59e0b] hover:bg-[#d97706] text-white'
@@ -107,7 +107,7 @@ export function PosToolbar({
         <button
           type="button"
           onClick={onOpenRecentOperations}
-          className="h-8 px-3 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+          className="h-8 px-3 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0"
         >
           <Clock className="w-3.5 h-3.5" />
           <span>آخر العمليات</span>
@@ -116,7 +116,7 @@ export function PosToolbar({
         {/* مبيعات معلقة */}
         <button
           onClick={onOpenHeldModal}
-          className="h-8 px-3 rounded-xl bg-[#0d9488] hover:bg-[#0f766e] text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer relative"
+          className="h-8 px-3 rounded-xl bg-[#0d9488] hover:bg-[#0f766e] text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0 relative"
         >
           <Briefcase className="w-3.5 h-3.5" />
           <span>مبيعات معلقة</span>
@@ -131,7 +131,7 @@ export function PosToolbar({
         <button
           type="button"
           onClick={onOpenReturnOptions}
-          className="h-8 px-3 rounded-xl bg-[#10b981] hover:bg-[#059669] text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+          className="h-8 px-3 rounded-xl bg-[#10b981] hover:bg-[#059669] text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0"
         >
           <RotateCcw className="w-3.5 h-3.5" />
           <span>مرتجع مبيعات</span>
@@ -141,25 +141,10 @@ export function PosToolbar({
         <button
           type="button"
           onClick={onOpenPurchaseReturnOptions}
-          className="h-8 px-3 rounded-xl bg-[#ea580c] hover:bg-[#c2410c] text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+          className="h-8 px-3 rounded-xl bg-[#ea580c] hover:bg-[#c2410c] text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0"
         >
           <RotateCcw className="w-3.5 h-3.5" />
           <span>مرتجع مشتريات</span>
-        </button>
-
-        {/* تفاصيل الجلسة */}
-        <button
-          onClick={() => {
-            if (activeShift) {
-              router.push('/sales/shifts/close');
-            } else {
-              onOpenShiftModal();
-            }
-          }}
-          className="h-8 px-3 rounded-xl bg-[#db2777] hover:bg-[#be185d] text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
-        >
-          <FileText className="w-3.5 h-3.5" />
-          <span>{activeShift ? `تفاصيل الوردية (#${activeShift.shift_number})` : 'فتح وردية كاشير'}</span>
         </button>
 
         {/* وزن الميزان (F6) */}
@@ -167,22 +152,19 @@ export function PosToolbar({
           onClick={onReadLiveWeight}
           disabled={isReadingScale}
           title="سحب الوزن المباشر من الميزان الإلكتروني (F6)"
-          className="h-8 px-3 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+          className="h-8 px-3 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0 disabled:opacity-50"
         >
           <Scale className={`w-3.5 h-3.5 ${isReadingScale ? 'animate-spin' : ''}`} />
           <span>وزن الميزان (F6)</span>
         </button>
-      </div>
 
-      {/* Row 2: Secondary Quick Buttons */}
-      <div className="flex flex-wrap items-center gap-2">
         {/* تحصيل عميل */}
         <button
           type="button"
           onClick={onOpenCustomerPaymentModal || onOpenCustomerModal}
-          className="h-7 px-3 rounded-lg bg-[#059669] hover:bg-[#047857] text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+          className="h-8 px-3 rounded-xl bg-[#059669] hover:bg-[#047857] text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0"
         >
-          <UserCheck className="w-3 h-3" />
+          <UserCheck className="w-3.5 h-3.5" />
           <span>تحصيل عميل</span>
         </button>
 
@@ -190,9 +172,9 @@ export function PosToolbar({
         <button
           type="button"
           onClick={onOpenSupplierPaymentModal}
-          className="h-7 px-3 rounded-lg bg-[#e11d48] hover:bg-[#be123c] text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+          className="h-8 px-3 rounded-xl bg-[#e11d48] hover:bg-[#be123c] text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0"
         >
-          <Truck className="w-3 h-3" />
+          <Truck className="w-3.5 h-3.5" />
           <span>دفع لمورد</span>
         </button>
 
@@ -207,9 +189,9 @@ export function PosToolbar({
               onOpenShiftModal();
             }
           }}
-          className="h-7 px-3 rounded-lg bg-[#be123c] hover:bg-[#9f1239] text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+          className="h-8 px-3 rounded-xl bg-[#be123c] hover:bg-[#9f1239] text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0"
         >
-          <LogOut className="w-3 h-3" />
+          <LogOut className="w-3.5 h-3.5" />
           <span>إغلاق الوردية</span>
         </button>
       </div>
