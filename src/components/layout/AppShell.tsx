@@ -73,6 +73,14 @@ export const AppShell: React.FC<AppShellProps> = ({
   );
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  // Auto-detect mobile screen width & set initial sidebar state
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isMobile = window.innerWidth < 1024;
+      setSidebarOpen(!isMobile);
+    }
+  }, []);
+
   useEffect(() => {
     if (isDark) {
       document.documentElement.classList.add('dark');
@@ -169,7 +177,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 
   return (
     <div className="flex h-screen w-full bg-[#f4f6f9] dark:bg-[#0b0f19] overflow-hidden transition-colors duration-200 select-none">
-      <AppSidebar isOpen={sidebarOpen} />
+      <AppSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         <AppHeader

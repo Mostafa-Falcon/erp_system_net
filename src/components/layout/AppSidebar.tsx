@@ -61,6 +61,7 @@ import type { Branch } from '@/types';
 
 interface AppSidebarProps {
   isOpen: boolean;
+  onClose?: () => void;
 }
 
 interface NavItem {
@@ -71,7 +72,7 @@ interface NavItem {
   subItems?: { label: string; href: string; icon?: React.ReactNode }[];
 }
 
-export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen }) => {
+export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, onClose }) => {
   const pathname = usePathname();
   const { currentUser, activeBranchId, setActiveBranchId } = useSessionStore();
   const [orgName, setOrgName] = useState('لوجيسكا ERP');
@@ -266,97 +267,126 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen }) => {
     })
   )?.id;
 
+  const handleNavClick = () => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024 && onClose) {
+      onClose();
+    }
+  };
+
   return (
-    <aside className="w-[280px] h-screen bg-white dark:bg-[#131b2e] border-l border-slate-200 dark:border-slate-800 flex flex-col shrink-0 sticky top-0 z-40 transition-colors duration-200 select-none shadow-sm">
-      {/* Top Header */}
-      <div className="p-4 space-y-4">
-        <div className="flex items-center gap-3 px-1">
-          <div className="w-10 h-10 rounded-xl bg-[#2563eb] flex items-center justify-center text-white shadow-lg shrink-0 transform -rotate-3 hover:rotate-0 transition-transform">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <rect x="5" y="3" width="14" height="18" rx="2" />
-              <line x1="9" y1="8" x2="15" y2="8" />
-              <line x1="9" y1="12" x2="15" y2="12" />
-              <line x1="9" y1="16" x2="13" y2="16" />
-            </svg>
+    <>
+      {/* Mobile Backdrop Overlay (< 1024px) */}
+      <div
+        className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-xs z-40 animate-in fade-in duration-200"
+        onClick={onClose}
+      />
+
+      <aside className="w-[280px] h-screen bg-white dark:bg-[#131b2e] border-l border-slate-200 dark:border-slate-800 flex flex-col shrink-0 select-none shadow-2xl lg:shadow-sm transition-colors duration-200 fixed lg:sticky top-0 right-0 z-50 lg:z-40">
+        {/* Top Header */}
+        <div className="p-4 space-y-4">
+          <div className="flex items-center justify-between gap-3 px-1">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-[#2563eb] flex items-center justify-center text-white shadow-lg shrink-0 transform -rotate-3 hover:rotate-0 transition-transform">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <rect x="5" y="3" width="14" height="18" rx="2" />
+                  <line x1="9" y1="8" x2="15" y2="8" />
+                  <line x1="9" y1="12" x2="15" y2="12" />
+                  <line x1="9" y1="16" x2="13" y2="16" />
+                </svg>
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="font-black text-slate-900 dark:text-white text-base leading-tight truncate">
+                  {orgName}
+                </span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">
+                  {orgActivity}
+                </span>
+              </div>
+            </div>
+
+            {/* Mobile Close Button (< 1024px) */}
+            <button
+              onClick={onClose}
+              className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              title="إغلاق القائمة"
+            >
+              <svg width="20" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
           </div>
-          <div className="flex flex-col min-w-0">
-            <span className="font-black text-slate-900 dark:text-white text-base leading-tight truncate">
-              {orgName}
-            </span>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">
-              {orgActivity}
-            </span>
+
+          <div className="relative group">
+            <Icons.Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-[#2563eb] transition-colors" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="بحث سريع... (F4)"
+              className="h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl pr-9 pl-3 text-xs font-bold"
+            />
           </div>
         </div>
 
-        <div className="relative group">
-          <Icons.Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-[#2563eb] transition-colors" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="بحث سريع... (F4)"
-            className="h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl pr-9 pl-3 text-xs font-bold"
-          />
-        </div>
-      </div>
+        <Separator className="opacity-50" />
 
-      <Separator className="opacity-50" />
-
-      {/* Nav List with ScrollArea */}
-      <ScrollArea className="flex-1 px-3">
-        <div className="py-4 space-y-1">
-          <Accordion type="single" collapsible defaultValue={activeParentId} className="w-full space-y-1">
-            {filteredNavItems.map((item) => {
-              if (item.href && !item.subItems) {
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.id}
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black transition-all",
-                      isActive
-                        ? "bg-blue-50 dark:bg-blue-950/40 text-[#2563eb] dark:text-[#60a5fa] border-r-4 border-[#2563eb] shadow-sm"
-                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900"
-                    )}
-                  >
-                    <span className={cn("shrink-0", isActive ? "text-[#2563eb]" : "text-slate-400")}>
-                      {item.icon}
-                    </span>
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              }
-
-              const hasActiveChild = item.subItems?.some(s => {
-                const baseHref = s.href.split('?')[0];
-                return pathname === s.href || pathname === baseHref || (baseHref !== '/' && pathname.startsWith(baseHref));
-              });
-
-              return (
-                <AccordionItem key={item.id} value={item.id} className="border-none">
-                  <AccordionTrigger className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black hover:no-underline transition-all",
-                    hasActiveChild
-                      ? "bg-slate-50 dark:bg-slate-900/50 text-[#2563eb] dark:text-[#60a5fa]"
-                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900"
-                  )}>
-                    <div className="flex items-center gap-3">
-                      <span className={cn("shrink-0", hasActiveChild ? "text-[#2563eb]" : "text-slate-400")}>
+        {/* Nav List with ScrollArea */}
+        <ScrollArea className="flex-1 px-3">
+          <div className="py-4 space-y-1">
+            <Accordion type="single" collapsible defaultValue={activeParentId} className="w-full space-y-1">
+              {filteredNavItems.map((item) => {
+                if (item.href && !item.subItems) {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.id}
+                      href={item.href}
+                      onClick={handleNavClick}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black transition-all",
+                        isActive
+                          ? "bg-blue-50 dark:bg-blue-950/40 text-[#2563eb] dark:text-[#60a5fa] border-r-4 border-[#2563eb] shadow-sm"
+                          : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900"
+                      )}
+                    >
+                      <span className={cn("shrink-0", isActive ? "text-[#2563eb]" : "text-slate-400")}>
                         {item.icon}
                       </span>
                       <span>{item.label}</span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="pb-1 pr-9 pl-2 space-y-1">
-                    {item.subItems?.map((sub, idx) => {
-                      const baseHref = sub.href.split('?')[0];
-                      const isSubActive = pathname === baseHref;
-                      return (
-                        <Link
-                          key={idx}
-                          href={sub.href}
-                          className={cn(
+                    </Link>
+                  );
+                }
+
+                const hasActiveChild = item.subItems?.some(s => {
+                  const baseHref = s.href.split('?')[0];
+                  return pathname === s.href || pathname === baseHref || (baseHref !== '/' && pathname.startsWith(baseHref));
+                });
+
+                return (
+                  <AccordionItem key={item.id} value={item.id} className="border-none">
+                    <AccordionTrigger className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black hover:no-underline transition-all",
+                      hasActiveChild
+                        ? "bg-slate-50 dark:bg-slate-900/50 text-[#2563eb] dark:text-[#60a5fa]"
+                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900"
+                    )}>
+                      <div className="flex items-center gap-3">
+                        <span className={cn("shrink-0", hasActiveChild ? "text-[#2563eb]" : "text-slate-400")}>
+                          {item.icon}
+                        </span>
+                        <span>{item.label}</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-1 pr-9 pl-2 space-y-1">
+                      {item.subItems?.map((sub, idx) => {
+                        const baseHref = sub.href.split('?')[0];
+                        const isSubActive = pathname === baseHref;
+                        return (
+                          <Link
+                            key={idx}
+                            href={sub.href}
+                            onClick={handleNavClick}
+                            className={cn(
                             "flex items-center justify-between py-2 px-3 rounded-lg text-[11px] font-black transition-all group",
                             isSubActive
                               ? "bg-blue-50 dark:bg-blue-950/30 text-[#2563eb] dark:text-[#60a5fa] shadow-inner"
@@ -458,5 +488,6 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen }) => {
         </div>
       </div>
     </aside>
+    </>
   );
 };
