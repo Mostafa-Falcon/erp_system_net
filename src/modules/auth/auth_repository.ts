@@ -24,11 +24,9 @@ export class AuthRepository {
       this.saveSession(user);
 
       if (networkListener.getStatus() && isSupabaseConfigured()) {
-        PullSyncService.pullAll(user.org_id).catch(() => {});
-        // Best-effort Supabase Auth session (works when PIN == auth password), so
-        // Realtime RLS can resolve the org from the JWT on this device too.
-        if (user.email) {
-          this.establishAuthSession(user.email, cleanPin).catch(() => {});
+        const aligned = await this.syncDeviceCloudContext(user.email || user.username, cleanPin, user);
+        if (aligned) {
+          return aligned;
         }
       }
 
@@ -70,6 +68,75 @@ export class AuthRepository {
    * يربط الجهاز بجلسة Supabase Auth حقيقية (JWT يحمل user_metadata.org_id)
    * حتى تمر أحداث Realtime من فلتر RLS وتصل للأجهزة الأخرى فوراً.
    */
+  /**
+   * يُحدّث هوية الجهاز على السحابة بعد كل نجاح دخول (حتى المحلي):
+   * 1) يستدعي falcon_authenticate_device للحصول على المنظمة + transport_token الرسميين.
+   * 2) يخزن التوكن الرسمي محلياً (localStorage + Dexie) ليُستخدم في REST RLS.
+   * 3) يزامن المستخدم/المنظمة/الفرع محلياً مع المصدر الموثوق.
+   * 4) يبني جلسة Supabase Auth (JWT حامل org_id) كي يمرر Realtime.
+   * 5) يسحب كامل بيانات المنظمة في الخلفية.
+   */
+  private static async syncDeviceCloudContext(
+    identifier: string,
+    password: string,
+    localUser: User
+  ): Promise<User | null> {
+    if (!networkListener.getStatus() || !isSupabaseConfigured()) {
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('falcon_authenticate_device', {
+        p_identifier: identifier.trim().toLowerCase() || localUser.email?.toLowerCase() || '',
+        p_password: password,
+      });
+
+      if (error || !data?.success || !data.user) {
+        console.warn('[AuthRepository] Cloud context refresh failed:', error?.message);
+        await this.establishAuthSession(identifier, password);
+        PullSyncService.pullAll(localUser.org_id).catch(() => {});
+        return null;
+      }
+
+      // التوكن الرسمي للمنظمة (نفسه لكل أجهزة المنشأة)
+      if (data.transport_token) {
+        setOrgTransportToken(data.transport_token);
+      }
+
+      const cloudOrgId = (data.organization?.id as string) || data.user.org_id;
+      const alignedUser: User = {
+        ...localUser,
+        id: data.user.id,
+        org_id: cloudOrgId,
+        branch_id: data.user.branch_id || data.branch?.id || localUser.branch_id,
+        username: data.user.username || localUser.username,
+        full_name: data.user.full_name || localUser.full_name,
+        email: data.user.email || localUser.email,
+        role: data.user.role || localUser.role,
+      };
+
+      await this.bootstrapDeviceFromCloud(
+        alignedUser,
+        data.organization as Organization,
+        data.branch as Branch,
+        data.transport_token,
+        password
+      );
+
+      this.saveSession(alignedUser);
+      await this.establishAuthSession(data.user.email, password);
+      PullSyncService.pullAll(cloudOrgId).catch((err) => {
+        console.warn('[AuthRepository] Post-login pull failed:', err);
+      });
+
+      return alignedUser;
+    } catch (err) {
+      console.warn('[AuthRepository] Cloud context refresh error:', err);
+      PullSyncService.pullAll(localUser.org_id).catch(() => {});
+      return null;
+    }
+  }
+
   private static async establishAuthSession(identifier: string, password: string): Promise<void> {
     const targetEmail = identifier.trim().toLowerCase();
     if (!networkListener.getStatus() || !isSupabaseConfigured() || !targetEmail.includes('@')) {
@@ -163,10 +230,12 @@ export class AuthRepository {
         await restoreOrgTransportToken();
         this.saveSession(localUser);
 
-        // If online, perform background sync to capture updates from other devices
+        // If online, capture authoritative org/token and pull updates from other devices
         if (networkListener.getStatus() && isSupabaseConfigured()) {
-          PullSyncService.pullAll(localUser.org_id).catch(() => {});
-          await this.establishAuthSession(cleanIdentifier, cleanPassword);
+          const aligned = await this.syncDeviceCloudContext(cleanIdentifier, cleanPassword, localUser);
+          if (aligned) {
+            return { user: aligned };
+          }
         }
 
         return { user: localUser };
