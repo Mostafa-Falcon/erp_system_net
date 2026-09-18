@@ -1,5 +1,3 @@
-import type { InventoryTransactionType } from '@/types';
-
 const AR_NUM = {
   '0': '٠', '1': '١', '2': '٢', '3': '٣', '4': '٤',
   '5': '٥', '6': '٦', '7': '٧', '8': '٨', '9': '٩',
@@ -24,7 +22,7 @@ export function daysToExpiry(dateStr?: string | null): number {
   return Math.floor(diff / (1000 * 60 * 60 * 24));
 }
 
-export const MOVEMENT_TYPE_LABELS: Record<InventoryTransactionType, string> = {
+export const MOVEMENT_TYPE_LABELS: Record<string, string> = {
   opening_stock: 'رصيد افتتاحي',
   opening_balance: 'رصيد افتتاحي',
   purchase: 'مشتريات',

@@ -1,63 +1,63 @@
+'use client';
+
 import { create } from 'zustand';
-import type { User, CashierShift } from '@/types';
-import { AuthRepository } from '@/modules/auth/auth_repository';
+import {
+  cacheSession,
+  readCachedSession,
+  restoreSession,
+  signOut,
+  type PharmacySession,
+} from '@/core/pharmacy/session_service';
 
 interface SessionState {
-  currentUser: User | null;
+  session: PharmacySession | null;
   activeBranchId: string | null;
-  activeShift: CashierShift | null;
-  setCurrentUser: (user: User | null) => void;
+  isReady: boolean;
+  setSession: (session: PharmacySession | null) => void;
   setActiveBranchId: (branchId: string | null) => void;
-  setActiveShift: (shift: CashierShift | null) => void;
+  hydrate: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
-const getInitialUser = (): User | null => {
+const getInitialBranchId = (session: PharmacySession | null): string | null => {
   if (typeof window === 'undefined') return null;
-  return AuthRepository.getCurrentUser();
-};
-
-const getInitialBranchId = (user: User | null): string | null => {
-  if (typeof window === 'undefined') return null;
-  return user?.branch_id || localStorage.getItem('falcon_active_branch_id') || null;
+  return session?.branchId || window.localStorage.getItem('falcon_active_branch_id') || null;
 };
 
 export const useSessionStore = create<SessionState>((set) => {
-  const initialUser = getInitialUser();
-  const initialBranch = getInitialBranchId(initialUser);
+  const cached = readCachedSession();
 
   return {
-    currentUser: initialUser,
-    activeBranchId: initialBranch,
-    activeShift: null,
+    session: cached,
+    activeBranchId: getInitialBranchId(cached),
+    isReady: false,
 
-    setCurrentUser: (user) => {
-      if (user) {
-        AuthRepository.saveSession(user);
-      }
-      const bId = user?.branch_id || (typeof window !== 'undefined' ? localStorage.getItem('falcon_active_branch_id') : null) || null;
-      set({ currentUser: user, activeBranchId: bId });
+    setSession: (session) => {
+      cacheSession(session);
+      set({ session, activeBranchId: getInitialBranchId(session) });
     },
 
     setActiveBranchId: (branchId) => {
       if (typeof window !== 'undefined') {
-        if (branchId) {
-          localStorage.setItem('falcon_active_branch_id', branchId);
-        } else {
-          localStorage.removeItem('falcon_active_branch_id');
-        }
+        if (branchId) window.localStorage.setItem('falcon_active_branch_id', branchId);
+        else window.localStorage.removeItem('falcon_active_branch_id');
       }
       set({ activeBranchId: branchId });
     },
 
-    setActiveShift: (shift) => set({ activeShift: shift }),
+    hydrate: async () => {
+      const session = await restoreSession();
+      set({ session, isReady: true, activeBranchId: getInitialBranchId(session) });
+    },
 
     logout: async () => {
-      await AuthRepository.logout();
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('falcon_active_branch_id');
-      }
-      set({ currentUser: null, activeBranchId: null, activeShift: null });
+      await signOut();
+      if (typeof window !== 'undefined') window.localStorage.removeItem('falcon_active_branch_id');
+      set({ session: null, activeBranchId: null, isReady: true });
     },
   };
 });
+
+/** Convenience selector for the active account id. */
+export const useActiveAccountId = (): string | null =>
+  useSessionStore((state) => state.session?.accountId ?? null);

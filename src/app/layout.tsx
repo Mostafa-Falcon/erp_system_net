@@ -11,8 +11,8 @@ const cairo = Cairo({
 });
 
 export const metadata: Metadata = {
-  title: 'ERP Systems | نظام الإدارة والمحاسبة المتكامل',
-  description: 'منظومة إدارة الموارد الشاملة - تعمل بدون إنترنت وسحابياً',
+  title: 'Falcon Pharmacy | نظام إدارة الصيدلية والمحاسبة',
+  description: 'منظومة متكاملة لإدارة الصيدليات: مبيعات، مخزون، صلاحية، حسابات، وتقارير',
 };
 
 export default function RootLayout({

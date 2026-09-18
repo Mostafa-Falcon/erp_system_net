@@ -44,7 +44,7 @@
   --popover: 0 0% 100%;
   --popover-foreground: 222.2 84% 4.9%;
   --primary: 221.2 83.2% 53.3%;
-  --primary-foreground: 0 0% 100%;
+  --primary-foreground: 210 40% 98%;
   --secondary: 210 40% 96.1%;
   --secondary-foreground: 222.2 47.4% 11.2%;
   --muted: 210 40% 96.1%;
@@ -56,49 +56,30 @@
   --border: 214.3 31.8% 91.4%;
   --input: 214.3 31.8% 91.4%;
   --ring: 221.2 83.2% 53.3%;
-  --radius: 0.5rem;
+  --radius: 0.625rem;
 
-  --bg-app: #f4f6f9;
+  --bg-app: #f8fafc;
   --bg-surface: #ffffff;
-  --bg-surface-secondary: #f8fafc;
+  --bg-surface-secondary: #f1f5f9;
   --border-color: #e2e8f0;
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-muted: #94a3b8;
-  
-  --primary-blue: #2563eb;
-  --primary-blue-hover: #1d4ed8;
-  
-  --sales-accent: #0284c7;
-  --sales-card: #0ea5e9;
-  --sales-card-hover: #0284c7;
-  
-  --purchases-accent: #d97706;
-  --purchases-card: #e67e22;
-  --purchases-card-hover: #d35400;
-  
-  --inventory-accent: #16a34a;
-  --inventory-card: #27ae60;
-  --inventory-card-hover: #219653;
-  
-  --admin-accent: #6366f1;
-  --admin-card: #4f46e5;
-  --admin-card-hover: #4338ca;
 
-  --sidebar-width: 260px;
+  --sidebar-width: 270px;
   --header-height: 64px;
 }
 
 .dark,
 [data-theme='dark'] {
-  --background: 222.2 84% 4.9%;
+  --background: 224 71% 4%;
   --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
+  --card: 224 71% 5%;
   --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
+  --popover: 224 71% 5%;
   --popover-foreground: 210 40% 98%;
   --primary: 217.2 91.2% 59.8%;
-  --primary-foreground: 0 0% 100%;
+  --primary-foreground: 222.2 47.4% 11.2%;
   --secondary: 217.2 32.6% 17.5%;
   --secondary-foreground: 210 40% 98%;
   --muted: 217.2 32.6% 17.5%;
@@ -111,9 +92,9 @@
   --input: 217.2 32.6% 17.5%;
   --ring: 217.2 91.2% 59.8%;
 
-  --bg-app: #0b0f19;
-  --bg-surface: #131b2e;
-  --bg-surface-secondary: #1a233a;
+  --bg-app: #090d16;
+  --bg-surface: #0f172a;
+  --bg-surface-secondary: #1e293b;
   --border-color: #1e293b;
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;

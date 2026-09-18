@@ -53,6 +53,7 @@ export function Calendar({
   // Keep view updated if selected changes from outside
   React.useEffect(() => {
     if (selectedDate) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
     }
   }, [selectedDate]);

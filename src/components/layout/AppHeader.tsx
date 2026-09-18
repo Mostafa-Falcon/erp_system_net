@@ -1,28 +1,29 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Icons } from '@/components/ui/Icons';
-import { useSyncStore } from '@/core/state/useSyncStore';
-import { useSessionStore } from '@/core/state/useSessionStore';
-import { useNotificationStore } from '@/core/state/useNotificationStore';
-import { NotificationDropdown } from './NotificationDropdown';
-import { CalculatorModal } from './CalculatorModal';
-import { SupportModal } from './SupportModal';
 import {
-  Bell,
-  Headphones,
-  Calculator,
-  Store,
-  RefreshCw,
-  Moon,
-  Sun,
-  Calendar,
-  Cloud,
+  Menu, Sun, Moon, Bell, RefreshCw, Calculator,
+  Store, Headphones, Cloud, Calendar, ArrowRight, ArrowLeft,
+  X, Check, LogOut, Settings, Phone, MessageSquare, ExternalLink,
+  ShieldCheck,
 } from 'lucide-react';
+import { useSessionStore } from '@/core/state/useSessionStore';
+import { LookupsRepository } from '@/core/pharmacy/lookups_repository';
+import type { Branch } from '@/types/pharmacy';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface AppHeaderProps {
-  sidebarOpen: boolean;
   onToggleSidebar: () => void;
   isDark: boolean;
   onToggleTheme: () => void;
@@ -30,242 +31,337 @@ interface AppHeaderProps {
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
-  sidebarOpen,
   onToggleSidebar,
   isDark,
   onToggleTheme,
-  title = 'لوحة المتابعة الرئيسية',
 }) => {
   const router = useRouter();
-  const { isOnline, isSyncing, triggerSync } = useSyncStore();
-  const { currentUser, logout } = useSessionStore();
-  const { unreadCount, loadNotifications } = useNotificationStore();
-
-  const [currentDate, setCurrentDate] = useState('2026-09-12');
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const { session, logout } = useSessionStore();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCalcOpen, setIsCalcOpen] = useState(false);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [calcInput, setCalcInput] = useState('0');
 
-  useEffect(() => {
-    // Format dynamic current date
-    const d = new Date();
-    const formatted = d.toISOString().slice(0, 10);
-    setCurrentDate(formatted);
+  // Today's date in YYYY-MM-DD format
+  const todayStr = new Date().toISOString().split('T')[0];
 
-    // Load real notifications from Dexie
-    if (currentUser?.org_id) {
-      loadNotifications(currentUser.org_id);
-    }
-  }, [currentUser, loadNotifications]);
+  // User letter initial
+  const userInitial = session?.name
+    ? session.name.trim().charAt(0)
+    : session?.email
+    ? session.email.charAt(0).toUpperCase()
+    : 'م';
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    window.dispatchEvent(new Event('falcon_data_changed'));
+    setTimeout(() => setIsRefreshing(false), 700);
+  };
 
   const handleLogout = async () => {
     await logout();
     router.replace('/login');
   };
 
-  const getRoleLabel = () => {
-    if (!currentUser) return 'مستخدم';
-    switch (currentUser.role) {
-      case 'super_admin':
-        return 'صاحب المنشأة';
-      case 'manager':
-        return 'مدير فرع';
-      case 'cashier':
-        return 'كاشير';
-      case 'accountant':
-        return 'محاسب مالي';
-      case 'warehouse_keeper':
-        return 'أمين مخزن';
-      default:
-        return 'موظف';
+  // Simple Calculator logic
+  const handleCalcBtn = (val: string) => {
+    if (val === 'C') {
+      setCalcInput('0');
+    } else if (val === '=') {
+      try {
+        // Safe arithmetic evaluation
+        const sanitized = calcInput.replace(/[^0-9+\-*/.]/g, '');
+        // eslint-disable-next-line no-eval
+        const res = Function(`'use strict'; return (${sanitized})`)();
+        setCalcInput(String(res));
+      } catch {
+        setCalcInput('خطأ');
+      }
+    } else {
+      setCalcInput((prev) => (prev === '0' || prev === 'خطأ' ? val : prev + val));
     }
   };
 
-  const userInitial = currentUser?.full_name?.trim()?.charAt(0) || currentUser?.username?.charAt(0) || 'ع';
-
   return (
-    <header className="h-16 bg-white dark:bg-[#131b2e] border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs transition-colors duration-200 select-none">
-      {/* Modals & Dialogs */}
-      <CalculatorModal isOpen={isCalcOpen} onClose={() => setIsCalcOpen(false)} />
-      <SupportModal isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} />
-
-      {/* Right side: Sidebar Toggle & Page Title */}
-      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-        <button
-          onClick={onToggleSidebar}
-          title={sidebarOpen ? 'طي القائمة' : 'توسيع القائمة'}
-          className="p-1.5 sm:p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
-        >
-          <Icons.ToggleSidebar />
-        </button>
-
-        <h1 className="text-sm sm:text-xl font-extrabold text-slate-900 dark:text-white transition-colors truncate max-w-[140px] sm:max-w-none">
-          {title}
-        </h1>
-      </div>
-
-      {/* Left side: The Complete Navbar Control Suite matching Screenshots */}
-      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-        {/* 1. Date Display */}
-        <div className="hidden md:flex items-center gap-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400">
-          <Calendar className="w-3.5 h-3.5 text-slate-400" />
-          <span dir="ltr">{currentDate}</span>
+    <>
+      <header className="h-16 shrink-0 flex items-center justify-between gap-3 px-4 bg-white dark:bg-[#0f172a] border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 select-none">
+        {/* ========================================================================= */}
+        {/* Right Side (in RTL): Menu Hamburger & Collapse Arrow Buttons */}
+        {/* ========================================================================= */}
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={onToggleSidebar}
+            className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            aria-label="تبديل القائمة الجانبية"
+            title="القائمة"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <button
+            onClick={onToggleSidebar}
+            className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            aria-label="تصغير / تكبير"
+            title="طي القائمة"
+          >
+            <ArrowRight className="w-4 h-4" />
+          </button>
         </div>
 
-        {/* 2. Real Notifications Button & Popover Dropdown */}
-        <div className="relative">
+        {/* ========================================================================= */}
+        {/* Left Side (in RTL): Tools, Notifications, Connection & User Avatar */}
+        {/* ========================================================================= */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* 1. Date Pill Display matching screenshot */}
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200">
+            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+            <span dir="ltr">{todayStr}</span>
+          </div>
+
+          {/* 2. Notifications Bell with Badge matching screenshot (+99) */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="relative w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                title="مركز الإشعارات والتنبيهات"
+              >
+                <Bell className="w-5 h-5" />
+                <span className="absolute -top-0.5 -left-0.5 bg-rose-500 text-white text-[9px] font-black px-1 min-w-[17px] h-4 rounded-full flex items-center justify-center shadow-xs">
+                  +99
+                </span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-80 p-2 text-right">
+              <DropdownMenuLabel className="flex items-center justify-between px-2 py-1.5">
+                <span className="text-xs font-black text-slate-900 dark:text-white">مركز التنبيهات</span>
+                <span className="text-[10px] bg-rose-100 dark:bg-rose-950/60 text-rose-600 px-1.5 py-0.5 rounded font-bold">12 تنبيه عاجل</span>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <div className="space-y-1 max-h-64 overflow-y-auto p-1">
+                <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-start gap-2">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 mt-1.5 shrink-0" />
+                  <div className="text-xs">
+                    <p className="font-bold text-slate-800 dark:text-slate-100">نواقص في المخزون</p>
+                    <p className="text-[11px] text-slate-500">أصناف قاربت على النفاد تحتاج أمر توريد عاجل.</p>
+                  </div>
+                </div>
+                <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-start gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                  <div className="text-xs">
+                    <p className="font-bold text-slate-800 dark:text-slate-100">صلاحية تشغيلات قريبة</p>
+                    <p className="text-[11px] text-slate-500">يوجد تشغيلات تنتهي صلاحيتها خلال الـ 90 يوماً القادمة.</p>
+                  </div>
+                </div>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* 3. Technical Support Headset Button */}
           <button
-            onClick={() => setIsNotifOpen(!isNotifOpen)}
-            title="مركز الإشعارات والتنبيهات"
-            className="relative p-1.5 sm:p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            onClick={() => setIsSupportOpen(true)}
+            className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="الدعم الفني والمساعدة"
           >
-            <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
-            {unreadCount > 0 && (
-              <span className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 bg-red-500 text-white text-[9px] font-black px-1 min-w-[16px] h-4 rounded-full flex items-center justify-center shadow-xs">
-                {unreadCount}
-              </span>
-            )}
+            <Headphones className="w-5 h-5" />
           </button>
 
-          {/* Notification Dropdown Popover */}
-          <NotificationDropdown isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
-        </div>
-
-        {/* 3. Technical Support Headset Button (Desktop/Tablet) */}
-        <button
-          onClick={() => setIsSupportOpen(true)}
-          title="الدعم الفني والمساعدة"
-          className="hidden sm:flex p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-        >
-          <Headphones className="w-5 h-5" />
-        </button>
-
-        {/* 4. POS Cashier Quick Workstation Button */}
-        <button
-          onClick={() => router.push('/sales/pos')}
-          title="نقطة البيع السريعة (POS - F1)"
-          className="p-1.5 sm:p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-        >
-          <Store className="w-4 h-4 sm:w-5 sm:h-5" />
-        </button>
-
-        {/* 5. Built-in Interactive Calculator Button (Desktop/Tablet) */}
-        <button
-          onClick={() => setIsCalcOpen(true)}
-          title="الآلة الحاسبة السريعة"
-          className="hidden sm:flex p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-        >
-          <Calculator className="w-5 h-5" />
-        </button>
-
-        {/* 6. Cloud Sync Status Pill Button */}
-        <button
-          onClick={() => triggerSync()}
-          disabled={isSyncing}
-          title={isOnline ? 'المزامنة السحابية نشطة (اضغط للمزامنة الفورية)' : 'أنت غير متصل بالإنترنت'}
-          className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-bold border transition-all cursor-pointer ${
-            isOnline
-              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100/70'
-              : 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800'
-          }`}
-        >
-          {isSyncing ? (
-            <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-600" />
-          ) : (
-            <span
-              className={`w-2 h-2 rounded-full ${
-                isOnline ? 'bg-emerald-500 shadow-[0_0_8px_#22c55e]' : 'bg-red-500'
-              }`}
-            />
-          )}
-          <span className="hidden sm:inline">{isOnline ? 'متصل' : 'غير متصل'}</span>
-          <Cloud className="w-3.5 h-3.5 opacity-70" />
-        </button>
-
-        {/* 7. Dark / Light Mode Toggle Button */}
-        <button
-          onClick={onToggleTheme}
-          title={isDark ? 'التحويل للوضع النهاري (Light Mode)' : 'التحويل للوضع الليلي (Dark Mode)'}
-          className="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-        >
-          {isDark ? (
-            <Sun className="w-5 h-5 text-amber-400" />
-          ) : (
-            <Moon className="w-5 h-5 text-slate-600" />
-          )}
-        </button>
-
-        {/* 8. User Profile Avatar & Menu Popover */}
-        <div className="relative">
+          {/* 4. POS Cashier Quick Button */}
           <button
-            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            onClick={() => router.push('/sales/pos')}
+            className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="نقطة البيع السريعة (POS - F1)"
           >
-            <div className="w-9 h-9 rounded-full bg-emerald-50 dark:bg-emerald-950 border-2 border-emerald-500 text-emerald-600 dark:text-emerald-400 font-black text-sm flex items-center justify-center">
-              {userInitial}
-            </div>
-            <div className="hidden sm:flex flex-col text-right">
-              <span className="text-xs font-black text-slate-900 dark:text-white leading-tight">
-                {currentUser?.full_name || currentUser?.username || 'مستخدم النظام'}
-              </span>
-              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                {getRoleLabel()}
-              </span>
-            </div>
+            <Store className="w-5 h-5" />
           </button>
 
-          {isUserMenuOpen && (
-            <div className="absolute left-0 mt-2 w-56 bg-white dark:bg-[#131b2e] rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-2 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
-              <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
-                <p className="text-xs font-black text-slate-900 dark:text-white">
-                  {currentUser?.full_name || currentUser?.username}
-                </p>
-                <p className="text-[10px] text-slate-400">
-                  {currentUser?.email || currentUser?.username}
-                </p>
-              </div>
+          {/* 5. Built-in Calculator Button */}
+          <button
+            onClick={() => setIsCalcOpen(true)}
+            className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="الآلة الحاسبة السريعة"
+          >
+            <Calculator className="w-5 h-5" />
+          </button>
 
-              <div className="py-1">
-                <button
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    router.push('/employees');
-                  }}
-                  className="w-full text-right px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-lg transition-colors cursor-pointer flex items-center justify-between"
-                >
-                  <span>إدارة الموظفين والصلاحيات</span>
-                  <span className="text-slate-400 text-[10px]">👥</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    router.push('/settings');
-                  }}
-                  className="w-full text-right px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-lg transition-colors cursor-pointer flex items-center justify-between"
-                >
-                  <span>إعدادات النظام والمؤسسة</span>
-                  <span className="text-slate-400 text-[10px]">⚙️</span>
-                </button>
-              </div>
+          {/* 6. Cloud Connection Status Pill matching screenshot (متصل) */}
+          <button
+            onClick={handleRefresh}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 transition-colors cursor-pointer"
+            title="حالة الاتصال: متصل"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <Cloud className="w-3.5 h-3.5 opacity-80" />
+            <span>متصل</span>
+          </button>
 
-              <div className="pt-1 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-right px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer flex items-center justify-between"
-                >
-                  <span>تسجيل الخروج</span>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                    <polyline points="16 17 21 12 16 7" />
-                    <line x1="21" y1="12" x2="9" y2="12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          )}
+          {/* 7. Theme Toggle (Moon / Sun) matching screenshot */}
+          <button
+            onClick={onToggleTheme}
+            className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title={isDark ? 'الوضع الفاتح' : 'الوضع الداكن'}
+          >
+            {isDark ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-600" />}
+          </button>
+
+          {/* 8. User Initial Avatar Circle (ع) matching screenshot */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-950 border border-emerald-400 text-emerald-700 dark:text-emerald-400 font-black text-sm flex items-center justify-center hover:opacity-90 transition-opacity cursor-pointer"
+                title={session?.name || 'المستخدم'}
+              >
+                {userInitial}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56 p-1 text-right" forceMount>
+              <DropdownMenuLabel className="font-normal p-2">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-xs font-black text-slate-900 dark:text-white truncate">
+                    {session?.name || session?.email || 'المستخدم'}
+                  </p>
+                  <p className="text-[11px] font-semibold text-slate-500 truncate">
+                    {session?.role === 'admin' ? 'مدير عام الصيدلية' : session?.role || 'كاشير / مسؤول'}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => router.push('/settings')}
+                className="flex items-center gap-2 text-xs font-semibold cursor-pointer px-2.5 py-2"
+              >
+                <Settings className="w-4 h-4 text-slate-400" />
+                <span>إعدادات النظام</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={handleLogout}
+                className="flex items-center gap-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:text-rose-700 cursor-pointer px-2.5 py-2"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>تسجيل الخروج</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* ========================================================================= */}
+      {/* Quick Calculator Modal */}
+      {/* ========================================================================= */}
+      <Dialog open={isCalcOpen} onOpenChange={setIsCalcOpen}>
+        <DialogContent className="sm:max-w-[320px] p-4 text-right" dir="rtl">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-sm font-black flex items-center gap-2">
+              <Calculator className="w-4 h-4 text-primary" />
+              <span>الآلة الحاسبة السريعة</span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-left mb-3">
+            <div className="text-2xl font-black font-mono text-slate-900 dark:text-white truncate" dir="ltr">
+              {calcInput}
+            </div>
+          </div>
+          <div className="grid grid-cols-4 gap-2" dir="ltr">
+            {['C', '/', '*', '-'].map((b) => (
+              <button
+                key={b}
+                onClick={() => handleCalcBtn(b)}
+                className="h-10 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-bold hover:bg-slate-300 transition-colors"
+              >
+                {b}
+              </button>
+            ))}
+            {['7', '8', '9', '+'].map((b) => (
+              <button
+                key={b}
+                onClick={() => handleCalcBtn(b)}
+                className={cn(
+                  'h-10 rounded-lg font-bold transition-colors',
+                  b === '+'
+                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-100'
+                    : 'bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white'
+                )}
+              >
+                {b}
+              </button>
+            ))}
+            {['4', '5', '6', '='].map((b) => (
+              <button
+                key={b}
+                onClick={() => handleCalcBtn(b)}
+                className={cn(
+                  'h-10 rounded-lg font-bold transition-colors',
+                  b === '='
+                    ? 'bg-primary text-primary-foreground row-span-2 h-[88px]'
+                    : 'bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white'
+                )}
+              >
+                {b}
+              </button>
+            ))}
+            {['1', '2', '3'].map((b) => (
+              <button
+                key={b}
+                onClick={() => handleCalcBtn(b)}
+                className="h-10 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white font-bold"
+              >
+                {b}
+              </button>
+            ))}
+            {['0', '.'].map((b) => (
+              <button
+                key={b}
+                onClick={() => handleCalcBtn(b)}
+                className={cn(
+                  'h-10 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white font-bold',
+                  b === '0' && 'col-span-2'
+                )}
+              >
+                {b}
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ========================================================================= */}
+      {/* Technical Support Modal */}
+      {/* ========================================================================= */}
+      <Dialog open={isSupportOpen} onOpenChange={setIsSupportOpen}>
+        <DialogContent className="sm:max-w-md p-5 text-right" dir="rtl">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-base font-black flex items-center gap-2">
+              <Headphones className="w-5 h-5 text-emerald-600" />
+              <span>مركز الدعم الفني والمساعدة</span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Phone className="w-5 h-5 text-emerald-600" />
+                <div>
+                  <p className="text-xs font-bold text-slate-900 dark:text-white">الخط الساخن المباشر</p>
+                  <p className="text-[11px] text-slate-500 font-mono" dir="ltr">+20 100 000 0000</p>
+                </div>
+              </div>
+              <Button size="sm" variant="outline" className="h-8 text-xs font-bold">
+                اتصال
+              </Button>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <MessageSquare className="w-5 h-5 text-emerald-600" />
+                <div>
+                  <p className="text-xs font-bold text-slate-900 dark:text-white">دعم عبر واتساب</p>
+                  <p className="text-[11px] text-slate-500">محادثة فورية مع فريق لوجيسكا</p>
+                </div>
+              </div>
+              <Button size="sm" className="h-8 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white">
+                فتح واتساب
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
